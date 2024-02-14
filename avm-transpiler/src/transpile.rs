@@ -1,5 +1,3 @@
-use core::num;
-
 use acvm::acir::brillig::Opcode as BrilligOpcode;
 use acvm::acir::circuit::brillig::Brillig;
 
@@ -647,72 +645,75 @@ fn handle_getter_instruction(
     inputs: &Vec<ValueOrArray>,
 ) {
     match function.as_str() {
-        "keccak256" | "sha256" => handle_2_field_hash_instruction(avm_instrs, function, destinations, inputs),
+        "keccak256" | "sha256" => {
+            handle_2_field_hash_instruction(avm_instrs, function, destinations, inputs)
+        }
         "poseidon" => handle_field_hash_instruction(avm_instrs, function, destinations, inputs),
-        _ => handle_getter_instruction(avm_instrs, function, destinations, inputs)
+        _ => handle_getter_instruction(avm_instrs, function, destinations, inputs),
     }
 }
 
 fn handle_2_field_hash_instruction(
     avm_instrs: &mut Vec<AvmInstruction>,
     function: &String,
-    destinations: &Vec<ValueOrArray>,
-    inputs: &Vec<ValueOrArray>,
+    destinations: &[ValueOrArray],
+    inputs: &[ValueOrArray],
 ) {
     // handle field returns differently
     let hash_offset_maybe = inputs[0];
     println!("hash_offset_maybe: {:?}", hash_offset_maybe);
     let (hash_offset, hash_size) = match hash_offset_maybe {
-        ValueOrArray::HeapArray(HeapArray { pointer, size}) => (pointer.0, size),
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0, size),
         _ => panic!("Keccak | Sha256 address inputs destination should be a single value"),
     };
 
     assert!(destinations.len() == 1);
     let dest_offset_maybe = destinations[0];
     let dest_offset = match dest_offset_maybe {
-        ValueOrArray::HeapArray(HeapArray { pointer, size}) => {
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => {
             assert!(size == 2);
             pointer.0
-        },
+        }
         _ => panic!("Keccak | Poseidon address destination should be a single value"),
     };
 
     let opcode = match function.as_str() {
         "keccak256" => AvmOpcode::KECCAK,
         "sha256" => AvmOpcode::SHA256,
-        _ => panic!("Transpiler doesn't know how to process ForeignCall function {:?}", function),
+        _ => panic!(
+            "Transpiler doesn't know how to process ForeignCall function {:?}",
+            function
+        ),
     };
 
-
-            avm_instrs.push(AvmInstruction {
-                opcode,
-                indirect: Some(3), // 11 - addressing mode, indirect for input and output
-                operands: vec![AvmOperand::U32 {
-                    value: dest_offset as u32,
-                },
-                AvmOperand::U32 {
-                    value: hash_offset as u32,
-                },
-                AvmOperand::U32 {
-                    value: hash_size as u32,
-                }],
-                ..Default::default()
-            });
-
+    avm_instrs.push(AvmInstruction {
+        opcode,
+        indirect: Some(3), // 11 - addressing mode, indirect for input and output
+        operands: vec![
+            AvmOperand::U32 {
+                value: dest_offset as u32,
+            },
+            AvmOperand::U32 {
+                value: hash_offset as u32,
+            },
+            AvmOperand::U32 {
+                value: hash_size as u32,
+            },
+        ],
+        ..Default::default()
+    });
 }
-
 
 fn handle_field_hash_instruction(
     avm_instrs: &mut Vec<AvmInstruction>,
     function: &String,
-    destinations: &Vec<ValueOrArray>,
-    inputs: &Vec<ValueOrArray>,
+    destinations: &[ValueOrArray],
+    inputs: &[ValueOrArray],
 ) {
-
     // handle field returns differently
     let hash_offset_maybe = inputs[0];
     let (hash_offset, hash_size) = match hash_offset_maybe {
-        ValueOrArray::HeapArray(HeapArray { pointer, size}) => (pointer.0, size),
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0, size),
         _ => panic!("Poseidon address inputs destination should be a single value"),
     };
 
@@ -725,25 +726,29 @@ fn handle_field_hash_instruction(
 
     let opcode = match function.as_str() {
         "poseidon" => AvmOpcode::POSEIDON,
-        _ => panic!("Transpiler doesn't know how to process ForeignCall function {:?}", function),
+        _ => panic!(
+            "Transpiler doesn't know how to process ForeignCall function {:?}",
+            function
+        ),
     };
 
-
-            avm_instrs.push(AvmInstruction {
-                opcode,
-                indirect: Some(1),
-                operands: vec![AvmOperand::U32 {
-                    value: dest_offset as u32,
-                },
-                AvmOperand::U32 {
-                    value: hash_offset as u32,
-                },
-                AvmOperand::U32 {
-                    value: hash_size as u32,
-                }],
-                ..Default::default()
-            });
- }
+    avm_instrs.push(AvmInstruction {
+        opcode,
+        indirect: Some(1),
+        operands: vec![
+            AvmOperand::U32 {
+                value: dest_offset as u32,
+            },
+            AvmOperand::U32 {
+                value: hash_offset as u32,
+            },
+            AvmOperand::U32 {
+                value: hash_size as u32,
+            },
+        ],
+        ..Default::default()
+    });
+}
 
 fn handle_getter_instruction(
     avm_instrs: &mut Vec<AvmInstruction>,
@@ -780,17 +785,14 @@ fn handle_getter_instruction(
             function
         ),
     };
-avm_instrs.push(AvmInstruction {
-    opcode,
-    indirect: Some(ALL_DIRECT),
-    operands: vec![AvmOperand::U32 {
-        value: dest_offset as u32,
-    }],
-    ..Default::default()
-})
-
-
-
+    avm_instrs.push(AvmInstruction {
+        opcode,
+        indirect: Some(ALL_DIRECT),
+        operands: vec![AvmOperand::U32 {
+            value: dest_offset as u32,
+        }],
+        ..Default::default()
+    })
 }
 
 /// Handles Brillig's CONST opcode.
@@ -934,7 +936,10 @@ fn map_brillig_pcs_to_avm_pcs(initial_offset: usize, brillig: &Brillig) -> Vec<u
             _ => 1,
         };
         if num_avm_instrs_for_this_brillig_instr > 1 {
-            println!("num_avm_instrs_for_this_brillig_instr: {:?}", &brillig.bytecode[i]);
+            println!(
+                "num_avm_instrs_for_this_brillig_instr: {:?}",
+                &brillig.bytecode[i]
+            );
         }
         // next Brillig pc will map to an AVM pc offset by the
         // number of AVM instructions generated for this Brillig one
