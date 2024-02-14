@@ -6,6 +6,7 @@ import { Field } from '../avm_memory_types.js';
 import { Opcode, OperandType } from '../serialization/instruction_serialization.js';
 import { Addressing } from './addressing_mode.js';
 import { Instruction } from './instruction.js';
+import { Addressing } from './addressing_mode.js';
 
 export class Poseidon2 extends Instruction {
   static type: string = 'POSEIDON2';
@@ -38,7 +39,6 @@ export class Poseidon2 extends Instruction {
 
     const hash = poseidonHash(hashData);
     context.machineState.memory.set(this.dstOffset, new Field(hash));
-    console.log("hash: ", hash);
 
     context.machineState.incrementPc();
   }
