@@ -38,6 +38,7 @@ export class Poseidon2 extends Instruction {
 
     const hash = poseidonHash(hashData);
     context.machineState.memory.set(this.dstOffset, new Field(hash));
+    console.log("hash: ", hash);
 
     context.machineState.incrementPc();
   }
