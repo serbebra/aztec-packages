@@ -12,8 +12,14 @@ pub fn storage_read<N>(storage_slot: Field) -> [Field; N] {
 }
 
 #[oracle(storageWrite)]
-fn storage_write_oracle<N>(_storage_slot: Field, _values: [Field; N]) -> [Field; N] {}
+fn storage_write_oracle(_storage_slot: Field, _value: Field) -> Field {}
 
-unconstrained pub fn storage_write<N>(storage_slot: Field, fields: [Field; N]) {
-    let _hash = storage_write_oracle(storage_slot, fields);
-}
+#[oracle(storageWrite)]
+pub fn storage_writes<N>(_storage_slot: Field, _value: [Field; N]) -> [Field; N] {}
+
+#[oracle(storageWrite)]
+pub fn storage_write(_storage_slot: Field, _value: Field) -> Field {}
+
+// unconstrained pub fn storage_write(storage_slot: Field, field: Field) {
+//     let _hash = storage_write_oracle(storage_slot, field);
+// }

@@ -163,10 +163,14 @@ impl<N,M> SlowMap<N,M> {
     fn update_unsafe(self: Self, index: Field, leaf: Leaf, root: Leaf) {
         let derived_storage_slot = pedersen_hash([self.storage_slot, index]);
         let fields = leaf.serialize();
-        storage_write(derived_storage_slot, fields);
+        for i in 0..fields.len() {
+            let _ = storage_write(derived_storage_slot + i as Field, fields[i]);
+        }
 
         let fields = root.serialize();
-        storage_write(self.storage_slot, fields);
+        for i in 0..fields.len() {
+            let _ = storage_write(self.storage_slot + i as Field, fields[i]);
+        }
     }
 }
 

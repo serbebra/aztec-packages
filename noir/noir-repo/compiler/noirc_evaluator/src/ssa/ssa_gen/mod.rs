@@ -466,6 +466,7 @@ impl<'a> FunctionContext<'a> {
     /// loop_end():
     ///   ... This is the current insert point after codegen_for finishes ...
     fn codegen_for(&mut self, for_expr: &ast::For) -> Result<Values, RuntimeError> {
+        println!("in codegen for!");
         let loop_entry = self.builder.insert_block();
         let loop_body = self.builder.insert_block();
         let loop_end = self.builder.insert_block();

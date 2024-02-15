@@ -255,6 +255,7 @@ impl BrilligContext {
         destination_pointer: MemoryAddress,
         num_elements_register: MemoryAddress,
     ) {
+        // println!("copy_array_instruction");
         self.debug_show.copy_array_instruction(
             source_pointer,
             destination_pointer,
@@ -277,6 +278,10 @@ impl BrilligContext {
     where
         F: FnOnce(&mut BrilligContext, MemoryAddress),
     {
+        // println!("loop_instruction");
+        // dbg!(iteration_count);
+        // dbg!(self.section_label);
+
         let iterator_register = self.make_usize_constant(0_u128.into());
 
         let (loop_section, loop_label) = self.reserve_next_section_label();
@@ -310,6 +315,7 @@ impl BrilligContext {
         self.jump_instruction(loop_label);
 
         // Exit the loop
+        // dbg!(exit_loop_section);
         self.enter_section(exit_loop_section);
 
         // Deallocate our temporary registers

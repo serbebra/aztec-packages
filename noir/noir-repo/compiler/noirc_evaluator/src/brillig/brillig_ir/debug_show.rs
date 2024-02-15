@@ -145,8 +145,8 @@ pub(crate) struct DebugShow {
 }
 
 impl DebugShow {
-    pub(crate) fn new(enable_debug_trace: bool) -> DebugShow {
-        DebugShow { enable_debug_trace }
+    pub(crate) fn new(_enable_debug_trace: bool) -> DebugShow {
+        DebugShow { enable_debug_trace: true }
     }
 
     /// Emits brillig bytecode to jump to a trap condition if `condition`

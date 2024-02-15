@@ -5,41 +5,29 @@ contract AvmTest {
 
     // avm lib
     use dep::aztec::avm::hash::{keccak256, poseidon, sha256};
+    use dep::aztec::prelude::PublicMutable;
+
+    struct Storage {
+        owner: PublicMutable<AztecAddress>
+    }
 
     #[aztec(private)]
     fn constructor() {}
 
+    #[aztec(public-vm)]
+    fn setOwner(owner: AztecAddress) {
+        storage.owner.write(owner);
+    }
+
     // Public-vm macro will prefix avm to the function name for transpilation
-    #[aztec(public-vm)]
-    fn addArgsReturn(argA: Field, argB: Field) -> pub Field {
-        argA + argB
-    }
-
-    #[aztec(public-vm)]
-    fn setOpcodeUint8() -> pub u8 {
-        8 as u8
-    }
-
-    // Bit size 16 in Noir is deprecated.
     // #[aztec(public-vm)]
-    // fn setOpcodeUint16() -> pub u16 {
-    //     60000 as u16
+    // fn addArgsReturn(argA: Field, argB: Field) -> pub Field {
+    //     argA + argB
     // }
 
-    #[aztec(public-vm)]
-    fn setOpcodeUint32() -> pub u32 {
-        1 << 30 as u32
-    }
-
-    #[aztec(public-vm)]
-    fn setOpcodeUint64() -> pub u64 {
-        1 << 60 as u64
-    }
-
-    // Can't return this since it doesn't fit in a Noir field.
     // #[aztec(public-vm)]
-    // fn setOpcodeUint128() -> pub u128 {
-    //     1 << 120 as u128
+    // fn setOpcodeUint8() -> pub u8 {
+    //     8 as u8
     // }
 
     // Field should fit in 128 bits
@@ -158,8 +146,8 @@ contract AvmTest {
     }
 
     // #[aztec(public-vm)]
-    // fn getContractCallDepth() -> pub Field {
-    //     context.contract_call_depth()
+    // fn setOpcodeUint32() -> pub u32 {
+    //     1 << 30 as u32
     // }
 
     #[aztec(public-vm)]
