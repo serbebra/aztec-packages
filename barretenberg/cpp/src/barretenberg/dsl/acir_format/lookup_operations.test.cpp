@@ -9,7 +9,7 @@
 namespace acir_format::tests {
 using curve_ct = bb::stdlib::secp256k1<Builder>;
 
-class Sha256Tests : public ::testing::Test {
+class ConstLookupTests : public ::testing::Test {
   protected:
     static void SetUpTestSuite() { bb::srs::init_crs_factory("../srs_db/ignition"); }
 };
