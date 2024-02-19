@@ -1,4 +1,3 @@
-#pragma once
 #include "barretenberg/dsl/types.hpp"
 #include "barretenberg/serialize/msgpack.hpp"
 #include <cstdint>
