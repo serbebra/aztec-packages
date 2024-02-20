@@ -247,8 +247,8 @@ struct BasicTable {
     bb::fr column_2_step_size = bb::fr(0);
     bb::fr column_3_step_size = bb::fr(0);
     std::vector<bb::fr> column_1;
-    std::vector<bb::fr> column_3;
     std::vector<bb::fr> column_2;
+    std::vector<bb::fr> column_3;
     std::vector<KeyEntry> lookup_gates;
 
     std::array<bb::fr, 2> (*get_values_from_key)(const std::array<uint64_t, 2>);
@@ -261,7 +261,7 @@ enum ColumnIdx { C1, C2, C3 };
  *
  * @tparam DataType: a native or stdlib field type, or the witness index type uint32_t
  *
- * @details We us this approach to indexing, using enums, rather than to make member variables column_i, to minimize
+ * @details We use this approach to indexing, using enums, rather than to make member variables column_i, to minimize
  * code changes; both non-const and const versions are in use.
  *
  * The inner index, i.e., the index of each vector v in the array `columns`, could also be treated as an enum, but that
