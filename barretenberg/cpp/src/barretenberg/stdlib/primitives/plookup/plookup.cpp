@@ -10,7 +10,6 @@ class UltraPlonkBuilder;
 namespace bb::stdlib {
 
 using plookup::ColumnIdx;
-using plookup::MultiTableId;
 using namespace bb;
 
 template <typename Builder>
