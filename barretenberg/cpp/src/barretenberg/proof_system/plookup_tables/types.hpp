@@ -73,6 +73,7 @@ enum BasicTableId {
     KECCAK_RHO_7,
     KECCAK_RHO_8,
     KECCAK_RHO_9,
+    KevsNewSimpleTable,
 };
 
 enum MultiTableId {

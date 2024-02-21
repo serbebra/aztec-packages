@@ -73,6 +73,7 @@ inline BasicTable generate_honk_dummy_table(const BasicTableId id, const size_t 
  * @details Consists of 2 Basic tables that are almost identical. Each of those basic tables should only have 4 entries,
  * so the overall overhead is just 8
  *
+ * Why is this needed?
  */
 inline MultiTable get_honk_dummy_multitable()
 {

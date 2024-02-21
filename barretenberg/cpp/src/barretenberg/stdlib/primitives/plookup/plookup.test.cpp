@@ -2,6 +2,8 @@
 #include "../byte_array/byte_array.hpp"
 #include "barretenberg/numeric/bitop/rotate.hpp"
 #include "barretenberg/numeric/random/engine.hpp"
+#include "barretenberg/proof_system/plookup_tables/plookup_tables.hpp"
+#include "barretenberg/proof_system/plookup_tables/types.hpp"
 #include "barretenberg/stdlib/primitives/bigfield/bigfield.hpp"
 #include "barretenberg/stdlib/primitives/biggroup/biggroup.hpp"
 #include "barretenberg/stdlib/primitives/circuit_builders/circuit_builders.hpp"
@@ -615,4 +617,120 @@ TEST(stdlib_plookup, secp256k1_generator)
 
     bool proof_result = builder.check_circuit();
     EXPECT_EQ(proof_result, true);
+}
+
+static std::array<bb::fr, 2> get_value_for_table(const std::array<uint64_t, 2> key)
+{
+    if (key[0] > 5) { // 5 because table size is 6 and we are 0-indexed
+        throw_or_abort("key cannot be greater than 10");
+    }
+
+    return { bb::fr(key[0] + 1), bb::fr(key[0] + 2) };
+}
+
+// Table of values for the following:
+// column_1 | column_2 | column_3
+// 0        | 1        | 2
+// 1        | 2        | 3
+// 2        | 3        | 4
+// 3        | 4        | 5
+// 4        | 5        | 6
+// 5        | 6        | 7
+static BasicTable generate_plus_increment_table(BasicTableId id, const size_t table_index)
+{
+    BasicTable table;
+    table.id = id;
+    table.table_index = table_index;
+    table.use_twin_keys = false;
+    table.size = 6;
+
+    for (size_t i = 0; i < table.size; ++i) {
+        table.column_1.emplace_back((uint64_t)i);
+        table.column_2.emplace_back((uint64_t)i + 1);
+        table.column_3.emplace_back((uint64_t)i + 2);
+    }
+
+    table.get_values_from_key = &get_value_for_table;
+    // There is only one table in our multi table so the step_size will be 0
+    // and have no effect.
+    table.column_1_step_size = bb::fr(0);
+    table.column_2_step_size = bb::fr(0);
+    table.column_3_step_size = bb::fr(0);
+    return table;
+}
+
+TEST(stdlib_plookup, basic_plookup_table)
+{
+    Builder builder = Builder();
+
+    const size_t num_lookups = 1;
+    (void)num_lookups;
+
+    uint256_t left_value = 0;
+    uint256_t right_value = 1;
+
+    field_ct left = witness_ct(&builder, bb::fr(left_value));
+    field_ct right = witness_ct(&builder, bb::fr(right_value));
+    (void)left;
+    (void)right;
+
+    auto basic_table_id = (BasicTableId)123456789;
+    BasicTable table = generate_plus_increment_table(basic_table_id, 0);
+
+    auto multi_table_id = (MultiTableId)987654321;
+
+    MultiTable m_table({ bb::fr(1) }, { bb::fr(1) }, { bb::fr(1) });
+    m_table.id = multi_table_id;
+    m_table.slice_sizes = { 0, 0, 0 };
+    m_table.lookup_ids = { basic_table_id };
+
+    m_table.get_table_values.push_back(&get_value_for_table);
+
+    const auto lookup = plookup_read::get_lookup_accumulators(multi_table_id, left, right, true);
+
+    bool result = builder.check_circuit();
+    EXPECT_EQ(result, true);
+
+    // const auto left_slices = numeric::slice_input(left_value, 1 << 6, num_lookups);
+    // const auto right_slices = numeric::slice_input(right_value, 1 << 6, num_lookups);
+
+    // std::vector<fr> out_expected(num_lookups);
+    // std::vector<fr> left_expected(num_lookups);
+    // std::vector<fr> right_expected(num_lookups);
+
+    // for (size_t i = 0; i < left_slices.size(); ++i) {
+    //     if (i == 1) {
+    //         uint32_t a = static_cast<uint32_t>(left_slices[i]);
+    //         uint32_t b = static_cast<uint32_t>(right_slices[i]);
+    //         uint32_t c = numeric::rotate32(a ^ b, 2);
+    //         out_expected[i] = uint256_t(c);
+    //     } else {
+    //         out_expected[i] = uint256_t(left_slices[i]) ^ uint256_t(right_slices[i]);
+    //     }
+    //     left_expected[i] = left_slices[i];
+    //     right_expected[i] = right_slices[i];
+    // }
+
+    // auto mul_constant = fr(1 << 24);
+    // std::vector<fr> out_coefficients{ (bb::fr(1) / mul_constant), (1 << 4), (1 << 6), (1 << 6), (1 << 6) };
+
+    // for (size_t i = num_lookups - 2; i < num_lookups; --i) {
+    //     out_expected[i] += out_expected[i + 1] * out_coefficients[i];
+    //     left_expected[i] += left_expected[i + 1] * (1 << 6);
+    //     right_expected[i] += right_expected[i + 1] * (1 << 6);
+    // }
+
+    // for (size_t i = 0; i < num_lookups; ++i) {
+    //     EXPECT_EQ(lookup[ColumnIdx::C1][i].get_value(), left_expected[i]);
+    //     EXPECT_EQ(lookup[ColumnIdx::C2][i].get_value(), right_expected[i]);
+    //     EXPECT_EQ(lookup[ColumnIdx::C3][i].get_value(), out_expected[i]);
+    // }
+
+    // fr lookup_output = lookup[ColumnIdx::C3][0].get_value() * mul_constant;
+    // uint32_t xor_rotate_output = numeric::rotate32(uint32_t(left_value) ^ uint32_t(right_value), 8);
+    // EXPECT_EQ(fr(uint256_t(xor_rotate_output)), lookup_output);
+
+    // bool result = builder.check_circuit();
+
+    // EXPECT_EQ(result, true);
 }
