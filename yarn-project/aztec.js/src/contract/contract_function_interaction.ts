@@ -41,12 +41,12 @@ export class ContractFunctionInteraction extends BaseContractInteraction {
    * @param opts - An optional object containing additional configuration for the transaction.
    * @returns A Promise that resolves to a transaction instance.
    */
-  public async create(opts?: SendMethodOptions): Promise<TxExecutionRequest> {
+  public async create(options?: SendMethodOptions): Promise<TxExecutionRequest> {
     if (this.functionDao.functionType === FunctionType.UNCONSTRAINED) {
       throw new Error("Can't call `create` on an unconstrained function.");
     }
     if (!this.txRequest) {
-      this.txRequest = await this.wallet.createTxExecutionRequest([this.request()], opts?.fee);
+      this.txRequest = await this.wallet.createTxExecutionRequest([this.request()], options);
     }
     return this.txRequest;
   }

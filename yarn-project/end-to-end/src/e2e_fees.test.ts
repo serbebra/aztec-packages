@@ -1,4 +1,4 @@
-import { AztecAddress, ContractDeployer, NativeFeePaymentMethod } from '@aztec/aztec.js';
+import { AztecAddress, ContractDeployer, Fr, NativeFeePaymentMethod } from '@aztec/aztec.js';
 import { GasTokenContract, TokenContract } from '@aztec/noir-contracts.js';
 import { getCanonicalGasToken } from '@aztec/protocol-contracts/gas-token';
 
@@ -49,6 +49,7 @@ describe('e2e_fees', () => {
         .send({
           fee: {
             maxFee: 1,
+            nonce: new Fr(0),
             paymentMethod: new NativeFeePaymentMethod(),
           },
         })

@@ -43,7 +43,6 @@ export class ExecutionNoteCache {
   public nullifyNote(contractAddress: AztecAddress, innerNullifier: Fr, innerNoteHash: Fr) {
     const siloedNullifier = siloNullifier(contractAddress, innerNullifier);
     const nullifiers = this.getNullifiers(contractAddress);
-    console.log(`Nullifying note at ${contractAddress.toString()} ${siloedNullifier.value.toString()}`);
     nullifiers.add(siloedNullifier.value);
     this.nullifiers.set(contractAddress.toBigInt(), nullifiers);
 
