@@ -62,6 +62,13 @@ inline BasicTable generate_xor_rotate_table(BasicTableId id)
     return table;
 }
 
+static BasicTable BLAKE_XOR_ROTATE0_GLOBAL = blake2s_tables::generate_xor_rotate_table<6, 0>(BLAKE_XOR_ROTATE0);
+static BasicTable BLAKE_XOR_ROTATE1_GLOBAL = blake2s_tables::generate_xor_rotate_table<6, 1>(BLAKE_XOR_ROTATE1);
+static BasicTable BLAKE_XOR_ROTATE2_GLOBAL = blake2s_tables::generate_xor_rotate_table<6, 2>(BLAKE_XOR_ROTATE2);
+static BasicTable BLAKE_XOR_ROTATE4_GLOBAL = blake2s_tables::generate_xor_rotate_table<6, 4>(BLAKE_XOR_ROTATE4);
+static BasicTable BLAKE_XOR_ROTATE0_SLICE5_MOD4_GLOBAL =
+    blake2s_tables::generate_xor_rotate_table<5, 0, true>(BLAKE_XOR_ROTATE0_SLICE5_MOD4);
+
 /**
  * Generates a multi-lookup-table with 5 slices for 32-bit XOR operation (a ^ b).
  *
@@ -94,12 +101,12 @@ inline MultiTable get_blake2s_xor_table()
 
     for (size_t i = 0; i < num_entries - 1; ++i) {
         table.slice_sizes.emplace_back(base);
-        table.lookup_ids.emplace_back(BLAKE_XOR_ROTATE0);
+        table.lookup_ids.emplace_back(&BLAKE_XOR_ROTATE0_GLOBAL);
         table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 0>);
     }
 
     table.slice_sizes.emplace_back(SIZE_OF_LAST_SLICE);
-    table.lookup_ids.emplace_back(BLAKE_XOR_ROTATE0_SLICE5_MOD4);
+    table.lookup_ids.emplace_back(&BLAKE_XOR_ROTATE0_SLICE5_MOD4_GLOBAL);
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<BITS_IN_LAST_SLICE, 0, true>);
 
     return table;
@@ -126,8 +133,8 @@ inline MultiTable get_blake2s_xor_rotate_16_table()
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
-    table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE4,
-                         BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };
+    table.lookup_ids = { &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE4_GLOBAL,
+                         &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_SLICE5_MOD4_GLOBAL };
 
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 0>);
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 0>);
@@ -160,8 +167,8 @@ inline MultiTable get_blake2s_xor_rotate_8_table()
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
-    table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE2, BLAKE_XOR_ROTATE0,
-                         BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };
+    table.lookup_ids = { &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE2_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL,
+                         &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_SLICE5_MOD4_GLOBAL };
 
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 0>);
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 2>);
@@ -194,8 +201,8 @@ inline MultiTable get_blake2s_xor_rotate_7_table()
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
-    table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE1, BLAKE_XOR_ROTATE0,
-                         BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };
+    table.lookup_ids = { &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE1_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL,
+                         &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_GLOBAL, &BLAKE_XOR_ROTATE0_SLICE5_MOD4_GLOBAL };
 
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 0>);
     table.get_table_values.emplace_back(&get_xor_rotate_values_from_key<6, 1>);
