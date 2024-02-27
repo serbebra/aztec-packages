@@ -617,15 +617,22 @@ uint32_t UltraCircuitBuilder_<Arithmetization>::put_constant_variable(const FF& 
 }
 
 template <typename Arithmetization>
-plookup::BasicTable& UltraCircuitBuilder_<Arithmetization>::get_table(const plookup::BasicTableId id)
+plookup::BasicTable& UltraCircuitBuilder_<Arithmetization>::get_table(const plookup::BasicTableIdOrPtr id)
 {
+
+    // If the id is a pointer, then we can just return the table
+    // it points to.
+    if (id.ptr != nullptr) {
+        return *id.ptr;
+    }
+
     for (plookup::BasicTable& table : lookup_tables) {
-        if (table.id == id) {
+        if (table.id == id.id) {
             return table;
         }
     }
     // Table doesn't exist! So try to create it.
-    lookup_tables.emplace_back(plookup::create_basic_table(id, lookup_tables.size()));
+    lookup_tables.emplace_back(plookup::create_basic_table(id.id));
     return lookup_tables[lookup_tables.size() - 1];
 }
 
@@ -642,6 +649,7 @@ plookup::ReadData<uint32_t> UltraCircuitBuilder_<Arithmetization>::create_gates_
     const uint32_t key_a_index,
     std::optional<uint32_t> key_b_index)
 {
+
     const auto& multi_table = plookup::get_table(id);
     const size_t num_lookups = read_values[plookup::ColumnIdx::C1].size();
 
@@ -697,6 +705,8 @@ plookup::ReadData<uint32_t> UltraCircuitBuilder_<Arithmetization>::create_gates_
         q_lookup_type().emplace_back(FF(1));
         // TODO: The way that this is set is somewhat weird, ideally its set
         // TODO in composer with a running count, see `create_basic_table`
+        //
+        // TODO: Ask Builder for `table_index`
         q_3().emplace_back(FF(table->table_index));
         w_l().emplace_back(first_idx);
         w_r().emplace_back(second_idx);
@@ -3382,12 +3392,15 @@ template <typename Arithmetization> bool UltraCircuitBuilder_<Arithmetization>::
     };
     // The set of all lookup tuples that are in the tables
     std::unordered_set<std::tuple<FF, FF, FF, FF>, HashFrTuple, EqualFrTuple> table_hash;
+
     // Prepare the lookup set for use in the circuit
-    for (auto& table : lookup_tables) {
-        const FF table_index(table.table_index);
-        for (size_t i = 0; i < table.size; ++i) {
+
+    auto table_with_indices = this->get_basic_tables_with_indices();
+    for (const auto& [table_index, table] : table_with_indices) {
+        const FF table_index_fr(table_index);
+        for (size_t i = 0; i < table->size; ++i) {
             const auto components =
-                std::make_tuple(table.column_1[i], table.column_2[i], table.column_3[i], table_index);
+                std::make_tuple(table->column_1[i], table->column_2[i], table->column_3[i], table_index_fr);
             table_hash.insert(components);
         }
     }
