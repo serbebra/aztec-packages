@@ -88,7 +88,7 @@ const config = {
       algolia: {
         appId: "6RXKCCZJK7",
         apiKey: "aa09855dba35e5b48be3a126d7714170",
-        indexName: "yp-aztec",
+        indexName: "yp",
       },
       navbar: {
         title: "Home",
