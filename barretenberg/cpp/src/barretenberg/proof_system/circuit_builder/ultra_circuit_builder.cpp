@@ -6,9 +6,11 @@
  *
  */
 #include "ultra_circuit_builder.hpp"
+#include "barretenberg/proof_system/plookup_tables/types.hpp"
 #include <barretenberg/plonk/proof_system/constants.hpp>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 namespace bb {
 
@@ -640,11 +642,44 @@ plookup::ReadData<uint32_t> UltraCircuitBuilder_<Arithmetization>::create_gates_
 {
     const auto& multi_table = plookup::get_table(id);
     const size_t num_lookups = read_values[plookup::ColumnIdx::C1].size();
+
+    // Put all basic tables into an vector of shared pointers
+    std::vector<std::shared_ptr<plookup::BasicTable>> basic_tables;
+    for (size_t i = 0; i < num_lookups; ++i) {
+        basic_tables.push_back(std::make_shared<plookup::BasicTable>(get_table(multi_table.lookup_ids[i])));
+    }
+
+    // Call the create_gates_from_plookup_accumulators below
+    return create_gates_from_plookup_accumulators(basic_tables,
+                                                  multi_table.column_1_step_sizes,
+                                                  multi_table.column_2_step_sizes,
+                                                  multi_table.column_3_step_sizes,
+                                                  read_values,
+                                                  key_a_index,
+                                                  key_b_index);
+}
+
+/**
+ * @brief Perform a series of lookups, one for each 'row' in read_values.
+ */
+
+template <typename Arithmetization>
+plookup::ReadData<uint32_t> UltraCircuitBuilder_<Arithmetization>::create_gates_from_plookup_accumulators(
+    const std::vector<std::shared_ptr<plookup::BasicTable>> basic_tables,
+    const std::vector<bb::fr>& column_1_step_sizes,
+    const std::vector<bb::fr>& column_2_step_sizes,
+    const std::vector<bb::fr>& column_3_step_sizes,
+    const plookup::ReadData<FF>& read_values,
+    const uint32_t key_a_index,
+    std::optional<uint32_t> key_b_index)
+{
+    const size_t num_lookups = read_values[plookup::ColumnIdx::C1].size();
     plookup::ReadData<uint32_t> read_data;
     for (size_t i = 0; i < num_lookups; ++i) {
-        auto& table = get_table(multi_table.lookup_ids[i]);
+        const auto& table = basic_tables[i];
 
-        table.lookup_gates.emplace_back(read_values.key_entries[i]);
+        // Store the lookup gates, for when we are computing the witness values
+        table->lookup_gates.emplace_back(read_values.key_entries[i]);
 
         const auto first_idx = (i == 0) ? key_a_index : this->add_variable(read_values[plookup::ColumnIdx::C1][i]);
         const auto second_idx = (i == 0 && (key_b_index.has_value()))
@@ -658,15 +693,17 @@ plookup::ReadData<uint32_t> UltraCircuitBuilder_<Arithmetization>::create_gates_
         this->assert_valid_variables({ first_idx, second_idx, third_idx });
 
         q_lookup_type().emplace_back(FF(1));
-        q_3().emplace_back(FF(table.table_index));
+        // TODO: The way that this is set is somewhat weird, ideally its set
+        // TODO in composer with a running count, see `create_basic_table`
+        q_3().emplace_back(FF(table->table_index));
         w_l().emplace_back(first_idx);
         w_r().emplace_back(second_idx);
         w_o().emplace_back(third_idx);
         w_4().emplace_back(this->zero_idx);
         q_1().emplace_back(0);
-        q_2().emplace_back((i == (num_lookups - 1) ? 0 : -multi_table.column_1_step_sizes[i + 1]));
-        q_m().emplace_back((i == (num_lookups - 1) ? 0 : -multi_table.column_2_step_sizes[i + 1]));
-        q_c().emplace_back((i == (num_lookups - 1) ? 0 : -multi_table.column_3_step_sizes[i + 1]));
+        q_2().emplace_back((i == (num_lookups - 1) ? 0 : -column_1_step_sizes[i + 1]));
+        q_m().emplace_back((i == (num_lookups - 1) ? 0 : -column_2_step_sizes[i + 1]));
+        q_c().emplace_back((i == (num_lookups - 1) ? 0 : -column_3_step_sizes[i + 1]));
         q_arith().emplace_back(0);
         q_4().emplace_back(0);
         q_sort().emplace_back(0);

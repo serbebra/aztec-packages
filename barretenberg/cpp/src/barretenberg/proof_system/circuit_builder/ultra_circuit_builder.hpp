@@ -1014,6 +1014,16 @@ class UltraCircuitBuilder_ : public CircuitBuilderBase<typename Arithmetization:
         const uint32_t key_a_index,
         std::optional<uint32_t> key_b_index = std::nullopt);
 
+    plookup::ReadData<uint32_t> create_gates_from_plookup_accumulators(
+        // TODO: Check if shared_pointer the best way to go here for cpp?
+        const std::vector<std::shared_ptr<plookup::BasicTable>> basic_tables,
+        const std::vector<bb::fr>& column_1_step_sizes,
+        const std::vector<bb::fr>& column_2_step_sizes,
+        const std::vector<bb::fr>& column_3_step_sizes,
+        const plookup::ReadData<FF>& read_values,
+        const uint32_t key_a_index,
+        std::optional<uint32_t> key_b_index = std::nullopt);
+
     /**
      * Generalized Permutation Methods
      **/
