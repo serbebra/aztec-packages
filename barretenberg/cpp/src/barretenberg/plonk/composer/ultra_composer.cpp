@@ -75,30 +75,32 @@ void UltraComposer::compute_witness(CircuitBuilder& circuit_constructor)
         s_4[i] = 0;
     }
 
-    for (auto& table : circuit_constructor.lookup_tables) {
-        const fr table_index(table.table_index);
-        auto& lookup_gates = table.lookup_gates;
-        for (size_t i = 0; i < table.size; ++i) {
-            if (table.use_twin_keys) {
+    auto table_with_indices = circuit_constructor.get_basic_tables_with_indices();
+    for (const auto& [table_index, table] : table_with_indices) {
+        const fr table_index_fr(table_index);
+
+        auto& lookup_gates = table->lookup_gates;
+        for (size_t i = 0; i < table->size; ++i) {
+            if (table->use_twin_keys) {
                 lookup_gates.push_back({
                     {
-                        table.column_1[i].from_montgomery_form().data[0],
-                        table.column_2[i].from_montgomery_form().data[0],
+                        table->column_1[i].from_montgomery_form().data[0],
+                        table->column_2[i].from_montgomery_form().data[0],
                     },
                     {
-                        table.column_3[i],
+                        table->column_3[i],
                         0,
                     },
                 });
             } else {
                 lookup_gates.push_back({
                     {
-                        table.column_1[i].from_montgomery_form().data[0],
+                        table->column_1[i].from_montgomery_form().data[0],
                         0,
                     },
                     {
-                        table.column_2[i],
-                        table.column_3[i],
+                        table->column_2[i],
+                        table->column_3[i],
                     },
                 });
             }
@@ -111,11 +113,11 @@ void UltraComposer::compute_witness(CircuitBuilder& circuit_constructor)
 #endif
 
         for (const auto& entry : lookup_gates) {
-            const auto components = entry.to_sorted_list_components(table.use_twin_keys);
+            const auto components = entry.to_sorted_list_components(table->use_twin_keys);
             s_1[count] = components[0];
             s_2[count] = components[1];
             s_3[count] = components[2];
-            s_4[count] = table_index;
+            s_4[count] = table_index_fr;
             ++count;
         }
     }
@@ -402,14 +404,15 @@ std::shared_ptr<proving_key> UltraComposer::compute_proving_key(CircuitBuilder& 
         poly_q_table_column_4[i] = 0;
     }
 
-    for (const auto& table : circuit_constructor.lookup_tables) {
-        const fr table_index(table.table_index);
+    auto table_with_indices = circuit_constructor.get_basic_tables_with_indices();
+    for (const auto& [table_index, table] : table_with_indices) {
+        const fr table_index_fr(table_index);
 
-        for (size_t i = 0; i < table.size; ++i) {
-            poly_q_table_column_1[offset] = table.column_1[i];
-            poly_q_table_column_2[offset] = table.column_2[i];
-            poly_q_table_column_3[offset] = table.column_3[i];
-            poly_q_table_column_4[offset] = table_index;
+        for (size_t i = 0; i < table->size; ++i) {
+            poly_q_table_column_1[offset] = table->column_1[i];
+            poly_q_table_column_2[offset] = table->column_2[i];
+            poly_q_table_column_3[offset] = table->column_3[i];
+            poly_q_table_column_4[offset] = table_index_fr;
             ++offset;
         }
     }
@@ -424,17 +427,19 @@ std::shared_ptr<proving_key> UltraComposer::compute_proving_key(CircuitBuilder& 
         ++offset;
     }
 
-    // // In the case of using UltraPlonkComposer for a circuit which does _not_ make use of any lookup tables, all four
+    // // In the case of using UltraPlonkComposer for a circuit which does _not_ make use of any lookup tables, all
+    // four
     // // table columns would be all zeros. This would result in these polys' commitments all being the point at
     // infinity
     // // (which is bad because our point arithmetic assumes we'll never operate on the point at infinity). To avoid
     // this,
     // // we set the last evaluation of each poly to be nonzero. The last `num_roots_cut_out_of_vanishing_poly = 4`
-    // // evaluations are ignored by constraint checks; we arbitrarily choose the very-last evaluation to be nonzero.
-    // See
+    // // evaluations are ignored by constraint checks; we arbitrarily choose the very-last evaluation to be
+    // nonzero. See
     // // ComposerBase::compute_proving_key_base for further explanation, as a similar trick is done there. We could
     // // have chosen `1` for each such evaluation here, but that would have resulted in identical commitments for
-    // // all four columns. We don't want to have equal commitments, because biggroup operations assume no points are
+    // // all four columns. We don't want to have equal commitments, because biggroup operations assume no points
+    // are
     // // equal, so if we tried to verify an ultra proof in a circuit, the biggroup operations would fail. To combat
     // // this, we just choose distinct values:
     ASSERT(offset == subgroup_size - 1);

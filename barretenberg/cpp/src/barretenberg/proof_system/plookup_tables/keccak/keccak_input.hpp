@@ -52,11 +52,10 @@ class KeccakInput {
      * @param table_index
      * @return BasicTable
      */
-    static BasicTable generate_keccak_input_table(BasicTableId id, const size_t table_index)
+    static BasicTable generate_keccak_input_table(BasicTableId id)
     {
         BasicTable table;
         table.id = id;
-        table.table_index = table_index;
         table.size = (1U << TABLE_BITS);
         table.use_twin_keys = false;
         constexpr size_t msb_shift = (64 % TABLE_BITS == 0) ? TABLE_BITS - 1 : (64 % TABLE_BITS) - 1;

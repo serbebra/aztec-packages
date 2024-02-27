@@ -183,7 +183,7 @@ constexpr function_ptr_table make_function_pointer_table()
  * @return BasicTable
  */
 template <size_t multitable_index>
-BasicTable table::generate_basic_fixed_base_table(BasicTableId id, size_t basic_table_index, size_t table_index)
+BasicTable table::generate_basic_fixed_base_table(BasicTableId id, size_t table_index)
 {
     static_assert(multitable_index < NUM_FIXED_BASE_MULTI_TABLES);
     ASSERT(table_index < MAX_NUM_TABLES_IN_MULTITABLE);
@@ -196,7 +196,6 @@ BasicTable table::generate_basic_fixed_base_table(BasicTableId id, size_t basic_
     const auto table_size = static_cast<size_t>(1ULL << table_bits);
     BasicTable table;
     table.id = id;
-    table.table_index = basic_table_index;
     table.size = table_size;
     table.use_twin_keys = false;
 
@@ -263,10 +262,10 @@ template table::fixed_base_scalar_mul_tables table::generate_tables<table::BITS_
 template table::fixed_base_scalar_mul_tables table::generate_tables<table::BITS_PER_HI_SCALAR>(
     const table::affine_element& input);
 
-template BasicTable table::generate_basic_fixed_base_table<0>(BasicTableId, size_t, size_t);
-template BasicTable table::generate_basic_fixed_base_table<1>(BasicTableId, size_t, size_t);
-template BasicTable table::generate_basic_fixed_base_table<2>(BasicTableId, size_t, size_t);
-template BasicTable table::generate_basic_fixed_base_table<3>(BasicTableId, size_t, size_t);
+template BasicTable table::generate_basic_fixed_base_table<0>(BasicTableId, size_t);
+template BasicTable table::generate_basic_fixed_base_table<1>(BasicTableId, size_t);
+template BasicTable table::generate_basic_fixed_base_table<2>(BasicTableId, size_t);
+template BasicTable table::generate_basic_fixed_base_table<3>(BasicTableId, size_t);
 template MultiTable table::get_fixed_base_table<0, table::BITS_PER_LO_SCALAR>();
 template MultiTable table::get_fixed_base_table<1, table::BITS_PER_HI_SCALAR>();
 template MultiTable table::get_fixed_base_table<2, table::BITS_PER_LO_SCALAR>();

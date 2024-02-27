@@ -38,8 +38,7 @@ template <uint64_t id> inline std::array<bb::fr, 2> get_value_from_key(const std
  * @param table_index The index for this table that is used in this circuit. 0, 1, ...
  * @return A table of values
  */
-template <uint64_t table_id>
-inline BasicTable generate_honk_dummy_table(const BasicTableId id, const size_t table_index)
+template <uint64_t table_id> inline BasicTable generate_honk_dummy_table(const BasicTableId id)
 {
 
     // We do the assertion, since this function is templated, but the general API for these functions contains the id,
@@ -48,7 +47,6 @@ inline BasicTable generate_honk_dummy_table(const BasicTableId id, const size_t 
     const size_t base = 1 << 1; // Probably has to be a power of 2
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     table.size = base * base;
     table.use_twin_keys = true;
     for (uint64_t i = 0; i < base; ++i) {

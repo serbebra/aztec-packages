@@ -20,11 +20,10 @@ inline std::array<bb::fr, 2> get_aes_sparse_values_from_key(const std::array<uin
     return { bb::fr(sparse), bb::fr(0) };
 }
 
-inline BasicTable generate_aes_sparse_table(BasicTableId id, const size_t table_index)
+inline BasicTable generate_aes_sparse_table(BasicTableId id)
 {
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     table.size = 256;
     table.use_twin_keys = true;
     for (uint64_t i = 0; i < table.size; ++i) {
@@ -48,11 +47,10 @@ inline std::array<bb::fr, 2> get_aes_sparse_normalization_values_from_key(const 
     return { bb::fr(numeric::map_into_sparse_form<AES_BASE>(byte)), bb::fr(0) };
 }
 
-inline BasicTable generate_aes_sparse_normalization_table(BasicTableId id, const size_t table_index)
+inline BasicTable generate_aes_sparse_normalization_table(BasicTableId id)
 {
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     for (uint64_t i = 0; i < AES_BASE; ++i) {
         uint64_t i_raw = i * AES_BASE * AES_BASE * AES_BASE;
         uint64_t i_normalized = ((i & 1UL) == 1UL) * AES_BASE * AES_BASE * AES_BASE;
@@ -130,11 +128,10 @@ inline std::array<bb::fr, 2> get_aes_sbox_values_from_key(const std::array<uint6
              bb::fr(numeric::map_into_sparse_form<AES_BASE>((uint8_t)(sbox_value ^ swizzled))) };
 }
 
-inline BasicTable generate_aes_sbox_table(BasicTableId id, const size_t table_index)
+inline BasicTable generate_aes_sbox_table(BasicTableId id)
 {
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     table.size = 256;
     table.use_twin_keys = false;
     for (uint64_t i = 0; i < table.size; ++i) {

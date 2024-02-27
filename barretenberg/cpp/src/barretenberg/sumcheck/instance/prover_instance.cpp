@@ -78,30 +78,31 @@ template <class Flavor> void ProverInstance_<Flavor>::compute_witness(Circuit& c
     size_t s_index = dyadic_circuit_size - tables_size - lookups_size;
     ASSERT(s_index > 0); // We need at least 1 row of zeroes for the permutation argument
 
-    for (auto& table : circuit.lookup_tables) {
-        const fr table_index(table.table_index);
-        auto& lookup_gates = table.lookup_gates;
-        for (size_t i = 0; i < table.size; ++i) {
-            if (table.use_twin_keys) {
+    auto table_with_indices = circuit.get_basic_tables_with_indices();
+    for (const auto& [table_index, table] : table_with_indices) {
+        const fr table_index_fr(table_index);
+        auto& lookup_gates = table->lookup_gates;
+        for (size_t i = 0; i < table->size; ++i) {
+            if (table->use_twin_keys) {
                 lookup_gates.push_back({
                     {
-                        table.column_1[i].from_montgomery_form().data[0],
-                        table.column_2[i].from_montgomery_form().data[0],
+                        table->column_1[i].from_montgomery_form().data[0],
+                        table->column_2[i].from_montgomery_form().data[0],
                     },
                     {
-                        table.column_3[i],
+                        table->column_3[i],
                         0,
                     },
                 });
             } else {
                 lookup_gates.push_back({
                     {
-                        table.column_1[i].from_montgomery_form().data[0],
+                        table->column_1[i].from_montgomery_form().data[0],
                         0,
                     },
                     {
-                        table.column_2[i],
-                        table.column_3[i],
+                        table->column_2[i],
+                        table->column_3[i],
                     },
                 });
             }
@@ -114,11 +115,11 @@ template <class Flavor> void ProverInstance_<Flavor>::compute_witness(Circuit& c
 #endif
 
         for (const auto& entry : lookup_gates) {
-            const auto components = entry.to_sorted_list_components(table.use_twin_keys);
+            const auto components = entry.to_sorted_list_components(table->use_twin_keys);
             sorted_polynomials[0][s_index] = components[0];
             sorted_polynomials[1][s_index] = components[1];
             sorted_polynomials[2][s_index] = components[2];
-            sorted_polynomials[3][s_index] = table_index;
+            sorted_polynomials[3][s_index] = table_index_fr;
             ++s_index;
         }
     }
@@ -161,9 +162,9 @@ template <class Flavor> void ProverInstance_<Flavor>::construct_ecc_op_wire_poly
         poly = static_cast<polynomial>(dyadic_circuit_size);
     }
 
-    // The ECC op wires are constructed to contain the op data on the appropriate range and to vanish everywhere else.
-    // The op data is assumed to have already been stored at the correct location in the convetional wires so the data
-    // can simply be copied over directly.
+    // The ECC op wires are constructed to contain the op data on the appropriate range and to vanish everywhere
+    // else. The op data is assumed to have already been stored at the correct location in the convetional wires so
+    // the data can simply be copied over directly.
     const size_t op_wire_offset = Flavor::has_zero_row ? 1 : 0;
     for (size_t poly_idx = 0; poly_idx < Flavor::NUM_WIRES; ++poly_idx) {
         for (size_t i = 0; i < num_ecc_op_gates; ++i) {
@@ -241,15 +242,16 @@ std::shared_ptr<typename Flavor::ProvingKey> ProverInstance_<Flavor>::compute_pr
         poly_q_table_column_3[i] = 0;
         poly_q_table_column_4[i] = 0;
     }
+    auto table_with_indices = circuit.get_basic_tables_with_indices();
+    for (const auto& [table_index, table] : table_with_indices) {
+        const fr table_index_fr(table_index);
 
-    for (const auto& table : circuit.lookup_tables) {
-        const fr table_index(table.table_index);
-
-        for (size_t i = 0; i < table.size; ++i) {
-            poly_q_table_column_1[offset] = table.column_1[i];
-            poly_q_table_column_2[offset] = table.column_2[i];
-            poly_q_table_column_3[offset] = table.column_3[i];
-            poly_q_table_column_4[offset] = table_index;
+        for (size_t i = 0; i < table->size; ++i) {
+            poly_q_table_column_1[offset] = table->column_1[i];
+            poly_q_table_column_2[offset] = table->column_2[i];
+            poly_q_table_column_3[offset] = table->column_3[i];
+            poly_q_table_column_4[offset] =
+                table_index_fr; // TODO check that this is table_index_fr for all other places and not table_index
             ++offset;
         }
     }
@@ -357,8 +359,8 @@ template <class Flavor> void ProverInstance_<Flavor>::compute_sorted_list_accumu
 /**
  * @brief Add plookup memory records to the fourth wire polynomial
  *
- * @details This operation must be performed after the first three wires have been committed to, hence the dependence on
- * the `eta` challenge.
+ * @details This operation must be performed after the first three wires have been committed to, hence the
+ * dependence on the `eta` challenge.
  *
  * @tparam Flavor
  * @param eta challenge produced after commitment to first three wire polynomials

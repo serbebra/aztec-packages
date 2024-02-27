@@ -21,9 +21,13 @@ plookup::ReadData<field_t<Builder>> plookup_read<Builder>::get_lookup_accumulato
     auto key_a = key_a_in.normalize();
     auto key_b = key_b_in.normalize();
     Builder* ctx = key_a.get_context() ? key_a.get_context() : key_b.get_context();
+    (void)id;
+    (void)ctx;
 
     const plookup::ReadData<bb::fr> lookup_data =
         plookup::get_lookup_accumulators(id, key_a.get_value(), key_b.get_value(), is_2_to_1_lookup);
+
+    (void)lookup_data;
 
     const bool is_key_a_constant = key_a.is_constant();
     plookup::ReadData<field_t<Builder>> lookup;
@@ -48,6 +52,7 @@ plookup::ReadData<field_t<Builder>> plookup_read<Builder>::get_lookup_accumulato
         if (rhs_index == IS_CONSTANT) {
             key_b_witness = std::nullopt;
         }
+        (void)lhs_index;
         const auto accumulator_witnesses =
             ctx->create_gates_from_plookup_accumulators(id, lookup_data, lhs_index, key_b_witness);
 
@@ -82,6 +87,7 @@ field_t<Builder> plookup_read<Builder>::read_from_2_to_1_table(const plookup::Mu
     return lookup[ColumnIdx::C3][0];
 }
 
+// TODO: This is incorrectly named
 template <typename Builder>
 field_t<Builder> plookup_read<Builder>::read_from_1_to_2_table(const plookup::MultiTableIdOrPtr& id,
                                                                const field_t<Builder>& key_a)

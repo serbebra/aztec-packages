@@ -73,7 +73,6 @@ enum BasicTableId {
     KECCAK_RHO_7,
     KECCAK_RHO_8,
     KECCAK_RHO_9,
-    KevsNewSimpleTable,
 };
 
 enum MultiTableId {
@@ -122,12 +121,79 @@ enum MultiTableId {
     NUM_MULTI_TABLES = KECCAK_NORMALIZE_AND_ROTATE + 25,
 };
 
+/**
+ * @brief The structure contains the most basic table serving one function (for, example an xor table)
+ *
+ * @details You can find initialization example at
+ * ../ultra_plonk_composer.cpp#UltraPlonkComposer::initialize_precomputed_table(..)
+ *
+ */
+struct BasicTable {
+    struct KeyEntry {
+        std::array<uint256_t, 2> key{ 0, 0 };
+        std::array<bb::fr, 2> value{ bb::fr(0), bb::fr(0) };
+        bool operator<(const KeyEntry& other) const
+        {
+            return key[0] < other.key[0] || ((key[0] == other.key[0]) && key[1] < other.key[1]);
+        }
+
+        std::array<bb::fr, 3> to_sorted_list_components(const bool use_two_keys) const
+        {
+            return {
+                bb::fr(key[0]),
+                use_two_keys ? bb::fr(key[1]) : value[0],
+                use_two_keys ? value[0] : value[1],
+            };
+        }
+    };
+
+    // Unique id of the table which is used to look it up, when we need its functionality. One of BasicTableId enum
+    BasicTableId id;
+    size_t table_index;
+    // The size of the table
+    size_t size;
+    // This means that we are using two inputs to look up stuff, not translate a single entry into another one.
+    bool use_twin_keys;
+
+    bb::fr column_1_step_size = bb::fr(0);
+    bb::fr column_2_step_size = bb::fr(0);
+    bb::fr column_3_step_size = bb::fr(0);
+    std::vector<bb::fr> column_1;
+    std::vector<bb::fr> column_2;
+    std::vector<bb::fr> column_3;
+    std::vector<KeyEntry> lookup_gates;
+
+    std::array<bb::fr, 2> (*get_values_from_key)(const std::array<uint64_t, 2>);
+};
+
+struct BasicTableIdOrPtr {
+    // Used if we are using a lookup table from our predefined list, otherwise set to NUM_MULTI_TABLES and unused.
+    BasicTableId id;
+    // Used if we are using a lookup table from a lookup table defined by e.g. ACIR, otherwise set to nullptr.
+    BasicTable* ptr;
+
+    // Default constructor, since we need it for when we call resize on a vector of BasicTableIdOrPtr
+    BasicTableIdOrPtr()
+        : id(BasicTableId::XOR)
+        , ptr(nullptr)
+    {}
+
+    BasicTableIdOrPtr(BasicTable* ptr)
+        : id(BasicTableId::XOR) // This value does not matter. It is not used as the pointer is non-null
+        , ptr(ptr)
+    {}
+    BasicTableIdOrPtr(BasicTableId id)
+        : id(id)
+        , ptr(nullptr)
+    {}
+};
+
 struct MultiTable {
     // Coefficients are accumulated products of corresponding step sizes until that point
     std::vector<bb::fr> column_1_coefficients;
     std::vector<bb::fr> column_2_coefficients;
     std::vector<bb::fr> column_3_coefficients;
-    std::vector<BasicTableId> lookup_ids;
+    std::vector<BasicTableIdOrPtr> lookup_ids;
     std::vector<uint64_t> slice_sizes;
     std::vector<bb::fr> column_1_step_sizes;
     std::vector<bb::fr> column_2_step_sizes;
@@ -192,8 +258,8 @@ struct MultiTable {
     MultiTable& operator=(MultiTable&& other) = default;
 };
 
-// Represents either a predefined table from our enum list of supported lookup tables, or a dynamic lookup table defined
-// by ACIR
+// Represents either a predefined table from our enum list of supported lookup tables, or a dynamic lookup table
+// defined by ACIR
 struct MultiTableIdOrPtr {
     // Used if we are using a lookup table from our predefined list, otherwise set to NUM_MULTI_TABLES and unused.
     MultiTableId id;
@@ -209,51 +275,6 @@ struct MultiTableIdOrPtr {
     {}
 };
 
-/**
- * @brief The structure contains the most basic table serving one function (for, example an xor table)
- *
- * @details You can find initialization example at
- * ../ultra_plonk_composer.cpp#UltraPlonkComposer::initialize_precomputed_table(..)
- *
- */
-struct BasicTable {
-    struct KeyEntry {
-        std::array<uint256_t, 2> key{ 0, 0 };
-        std::array<bb::fr, 2> value{ bb::fr(0), bb::fr(0) };
-        bool operator<(const KeyEntry& other) const
-        {
-            return key[0] < other.key[0] || ((key[0] == other.key[0]) && key[1] < other.key[1]);
-        }
-
-        std::array<bb::fr, 3> to_sorted_list_components(const bool use_two_keys) const
-        {
-            return {
-                bb::fr(key[0]),
-                use_two_keys ? bb::fr(key[1]) : value[0],
-                use_two_keys ? value[0] : value[1],
-            };
-        }
-    };
-
-    // Unique id of the table which is used to look it up, when we need its functionality. One of BasicTableId enum
-    BasicTableId id;
-    size_t table_index;
-    // The size of the table
-    size_t size;
-    // This means that we are using two inputs to look up stuff, not translate a single entry into another one.
-    bool use_twin_keys;
-
-    bb::fr column_1_step_size = bb::fr(0);
-    bb::fr column_2_step_size = bb::fr(0);
-    bb::fr column_3_step_size = bb::fr(0);
-    std::vector<bb::fr> column_1;
-    std::vector<bb::fr> column_2;
-    std::vector<bb::fr> column_3;
-    std::vector<KeyEntry> lookup_gates;
-
-    std::array<bb::fr, 2> (*get_values_from_key)(const std::array<uint64_t, 2>);
-};
-
 enum ColumnIdx { C1, C2, C3 };
 
 /**
@@ -261,11 +282,11 @@ enum ColumnIdx { C1, C2, C3 };
  *
  * @tparam DataType: a native or stdlib field type, or the witness index type uint32_t
  *
- * @details We use this approach to indexing, using enums, rather than to make member variables column_i, to minimize
- * code changes; both non-const and const versions are in use.
+ * @details We use this approach to indexing, using enums, rather than to make member variables column_i, to
+ * minimize code changes; both non-const and const versions are in use.
  *
- * The inner index, i.e., the index of each vector v in the array `columns`, could also be treated as an enum, but that
- * might be messier. Note that v[0] represents a full accumulated sum, v[1] represents one step before that,
+ * The inner index, i.e., the index of each vector v in the array `columns`, could also be treated as an enum, but
+ * that might be messier. Note that v[0] represents a full accumulated sum, v[1] represents one step before that,
  * and so on. See the documentation of the native version of get_lookup_accumulators.
  *
  */

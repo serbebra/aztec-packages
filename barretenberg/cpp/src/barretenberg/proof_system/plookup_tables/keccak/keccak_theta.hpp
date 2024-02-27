@@ -162,14 +162,13 @@ class Theta {
      * @param table_index
      * @return BasicTable
      */
-    static BasicTable generate_theta_renormalization_table(BasicTableId id, const size_t table_index)
+    static BasicTable generate_theta_renormalization_table(BasicTableId id)
     {
         // max_base_value_plus_one sometimes may not equal base iff this is an intermediate lookup table
         // (e.g. keccak, we have base11 values that need to be normalized where the actual values-per-base only range
         // from [0, 1, 2])
         BasicTable table;
         table.id = id;
-        table.table_index = table_index;
         table.use_twin_keys = false;
         table.size = numeric::pow64(static_cast<uint64_t>(BASE), TABLE_BITS);
 

@@ -164,11 +164,10 @@ template <size_t TABLE_BITS = 0, size_t LANE_INDEX = 0> class Rho {
      * @param table_index
      * @return BasicTable
      */
-    static BasicTable generate_rho_renormalization_table(BasicTableId id, const size_t table_index)
+    static BasicTable generate_rho_renormalization_table(BasicTableId id)
     {
         BasicTable table;
         table.id = id;
-        table.table_index = table_index;
         table.use_twin_keys = false;
         table.size = numeric::pow64(static_cast<uint64_t>(EFFECTIVE_BASE), TABLE_BITS);
 

@@ -1,5 +1,6 @@
 #include "plookup_tables.hpp"
 #include "barretenberg/common/constexpr_utils.hpp"
+#include "barretenberg/stdlib/primitives/circuit_builders/circuit_builders_fwd.hpp"
 
 namespace bb::plookup {
 
@@ -94,6 +95,7 @@ const MultiTable& create_table(const MultiTableId id)
 
 const MultiTable& get_table(const MultiTableIdOrPtr& id)
 {
+
     if (id.ptr == nullptr) {
         return create_table(id.id);
     }

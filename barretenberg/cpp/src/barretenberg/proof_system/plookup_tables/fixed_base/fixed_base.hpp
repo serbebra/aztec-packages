@@ -70,7 +70,7 @@ class table : public FixedBaseParams {
     static std::optional<affine_element> get_generator_offset_for_table_id(MultiTableId table_id);
 
     template <size_t multitable_index>
-    static BasicTable generate_basic_fixed_base_table(BasicTableId id, size_t basic_table_index, size_t table_index);
+    static BasicTable generate_basic_fixed_base_table(BasicTableId id, size_t table_index);
     template <size_t multitable_index, size_t num_bits> static MultiTable get_fixed_base_table();
 
     template <size_t multitable_index, size_t table_index>

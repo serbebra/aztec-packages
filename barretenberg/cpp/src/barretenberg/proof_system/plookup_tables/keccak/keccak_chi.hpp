@@ -163,11 +163,10 @@ class Chi {
      * @param table_index a circuit-specific ID for the table used by the circuit Composer
      * @return BasicTable
      */
-    static BasicTable generate_chi_renormalization_table(BasicTableId id, const size_t table_index)
+    static BasicTable generate_chi_renormalization_table(BasicTableId id)
     {
         BasicTable table;
         table.id = id;
-        table.table_index = table_index;
         table.use_twin_keys = false;
         table.size = numeric::pow64(static_cast<uint64_t>(EFFECTIVE_BASE), TABLE_BITS);
 
@@ -219,8 +218,8 @@ class Chi {
      *
      * The plookup protocol extracts the 1st and 2nd lookup column values by taking:
      *
-     *      Colunn1 = W1[i] - 11^8 . W1[i + 1]
-     *      Colunn2 = W2[i] - 11^8 . W2[i + 1]
+     *      Column1 = W1[i] - 11^8 . W1[i + 1]
+     *      Column2 = W2[i] - 11^8 . W2[i + 1]
      *
      * (where the -11^8 coefficient is stored in a precomputed selector polynomial)
      *

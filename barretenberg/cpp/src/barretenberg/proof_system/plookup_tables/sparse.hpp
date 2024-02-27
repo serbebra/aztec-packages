@@ -23,11 +23,10 @@ inline std::array<bb::fr, 2> get_sparse_table_with_rotation_values(const std::ar
 }
 
 template <uint64_t base, uint64_t bits_per_slice, uint64_t num_rotated_bits>
-inline BasicTable generate_sparse_table_with_rotation(BasicTableId id, const size_t table_index)
+inline BasicTable generate_sparse_table_with_rotation(BasicTableId id)
 {
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     table.size = (1U << bits_per_slice);
     table.use_twin_keys = false;
 
@@ -77,7 +76,7 @@ inline std::array<bb::fr, 2> get_sparse_normalization_values(const std::array<ui
 }
 
 template <size_t base, uint64_t num_bits, const uint64_t* base_table>
-inline BasicTable generate_sparse_normalization_table(BasicTableId id, const size_t table_index)
+inline BasicTable generate_sparse_normalization_table(BasicTableId id)
 {
     /**
      * If t = 7*((e >>> 6) + (e >>> 11) + (e >>> 25)) + e + 2f + 3g
@@ -87,7 +86,6 @@ inline BasicTable generate_sparse_normalization_table(BasicTableId id, const siz
 
     BasicTable table;
     table.id = id;
-    table.table_index = table_index;
     table.use_twin_keys = false;
     table.size = numeric::pow64(static_cast<uint64_t>(base), num_bits);
 
