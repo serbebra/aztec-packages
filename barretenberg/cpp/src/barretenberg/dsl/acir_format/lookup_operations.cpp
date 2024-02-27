@@ -1,53 +1,36 @@
-#include "barretenberg/dsl/types.hpp"
-#include "barretenberg/serialize/msgpack.hpp"
-#include <cstdint>
-#include <vector>
+#include "lookup_operations.hpp"
+#include "barretenberg/stdlib/primitives/circuit_builders/circuit_builders_fwd.hpp"
 
 namespace acir_format {
-
-// TODO: Ideally we can just put in a field element directly
-// TODO: Then we would not need to marshall and unmarshall each time
-struct FieldElement {
-    std::vector<uint32_t> bytes;
-
-    // For serialization, update with any new fields
-    MSGPACK_FIELDS(bytes);
-    friend bool operator==(FieldElement const& lhs, FieldElement const& rhs) = default;
-};
-
-struct InitConstantLookup {
-    std::vector<FieldElement> first_tuple_elements;
-    std::vector<FieldElement> second_tuple_elements;
-    std::vector<FieldElement> third_tuple_elements;
-
-    // For serialization, update with any new fields
-    MSGPACK_FIELDS(first_tuple_elements, second_tuple_elements, third_tuple_elements);
-    friend bool operator==(InitConstantLookup const& lhs, InitConstantLookup const& rhs) = default;
-};
-
-struct LookupOperation {
-    // A map of the elements we want to lookup
+template <typename Builder> void create_lookup_table(Builder& builder, const InitConstantLookup& init_table)
+{
+    (void)builder;
+    (void)init_table;
+    // Create lookup table with constant value using stdlib
     //
-    // For looking up only the first element in the tuple
-    // this value would be 1, because (0,0,1) maps to 1
+    // Save ID for lookup table in some global state
     //
-    // For looking up the last element, this value would be 4
-    // because (1,0,0)  maps to 4 when you look at it in binary
+    // This should be all thats needed
+}
+
+template <typename Builder> void create_lookup_read(Builder& builder, const ConstLookupRead& read_operation)
+{
+    (void)builder;
+    (void)read_operation;
+    // Take the ID from the global state to get what lookup table we need to read
     //
-    // For looking up the first two elements, we would map
-    // (0,1,1) to 2^2 * 0 + 2^1 * 1 + 2^0 * 1 = 3
-    uint32_t elements_to_lookup;
+    // Perform a lookup read from the BasicTable
+}
 
-    // These are the witnesses that we want to check are in the constant table
-    // The elements_to_lookup value, indicates whiich elements we actually want to
-    // check are in the table and which elements we want to omit
-    uint32_t first_tuple_element;
-    uint32_t second_tuple_element;
-    uint32_t third_tuple_element;
+template void create_lookup_table<UltraCircuitBuilder>(UltraCircuitBuilder& builder,
+                                                       const InitConstantLookup& init_table);
 
-    // For serialization, update with any new fields
-    MSGPACK_FIELDS(elements_to_lookup, first_tuple_element, second_tuple_element, third_tuple_element);
-    friend bool operator==(LookupOperation const& lhs, LookupOperation const& rhs) = default;
-};
+template void create_lookup_table<GoblinUltraCircuitBuilder>(GoblinUltraCircuitBuilder& builder,
+                                                             const InitConstantLookup& init_table);
 
+template void create_lookup_read<UltraCircuitBuilder>(UltraCircuitBuilder& builder,
+                                                      const ConstLookupRead& read_operation);
+
+template void create_lookup_read<GoblinUltraCircuitBuilder>(GoblinUltraCircuitBuilder& builder,
+                                                            const ConstLookupRead& read_operation);
 } // namespace acir_format
