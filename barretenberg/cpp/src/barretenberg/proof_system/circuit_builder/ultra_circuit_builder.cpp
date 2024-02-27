@@ -631,6 +631,8 @@ plookup::BasicTable& UltraCircuitBuilder_<Arithmetization>::get_table(const ploo
 
 /**
  * @brief Perform a series of lookups, one for each 'row' in read_values.
+ * @deprecated This method is being deprecated for the more verbose method below.
+ * This allows us to not need to pass a multitable or reference the global static basic table in the builder.
  */
 
 template <typename Arithmetization>
