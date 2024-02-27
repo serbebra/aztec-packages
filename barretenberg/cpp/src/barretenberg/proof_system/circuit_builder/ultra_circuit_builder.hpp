@@ -828,6 +828,18 @@ class UltraCircuitBuilder_ : public CircuitBuilderBase<typename Arithmetization:
     uint32_t put_constant_variable(const FF& variable);
 
   public:
+    // Return the basic tables with their table indices
+    std::vector<std::pair<size_t, plookup::BasicTable*>> get_basic_tables_with_indices()
+    {
+        std::vector<std::pair<size_t, plookup::BasicTable*>> table_with_indices;
+
+        for (size_t i = 0; i < this->lookup_tables.size(); ++i) {
+            table_with_indices.emplace_back(i, &this->lookup_tables[i]);
+        }
+
+        return table_with_indices;
+    }
+
     size_t get_num_constant_gates() const override { return 0; }
     /**
      * @brief Get the final number of gates in a circuit, which consists of the sum of:
@@ -1005,7 +1017,7 @@ class UltraCircuitBuilder_ : public CircuitBuilderBase<typename Arithmetization:
                                       bool (*generator)(std::vector<FF>&, std::vector<FF>&, std::vector<FF>&),
                                       std::array<FF, 2> (*get_values_from_key)(const std::array<uint64_t, 2>));
 
-    plookup::BasicTable& get_table(const plookup::BasicTableId id);
+    plookup::BasicTable& get_table(const plookup::BasicTableIdOrPtr id);
     plookup::MultiTable& create_table(const plookup::MultiTableId id);
 
     plookup::ReadData<uint32_t> create_gates_from_plookup_accumulators(
