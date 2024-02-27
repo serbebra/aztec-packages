@@ -127,7 +127,6 @@ struct MultiTable {
     std::vector<bb::fr> column_1_coefficients;
     std::vector<bb::fr> column_2_coefficients;
     std::vector<bb::fr> column_3_coefficients;
-    MultiTableId id;
     std::vector<BasicTableId> lookup_ids;
     std::vector<uint64_t> slice_sizes;
     std::vector<bb::fr> column_1_step_sizes;

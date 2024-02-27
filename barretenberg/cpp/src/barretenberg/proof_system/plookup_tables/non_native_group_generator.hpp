@@ -45,14 +45,14 @@ template <typename G1> class ecc_generator_table {
     static BasicTable generate_yhi_table(BasicTableId id, const size_t table_index);
     static BasicTable generate_xyprime_table(BasicTableId id, const size_t table_index);
     static BasicTable generate_xyprime_endo_table(BasicTableId id, const size_t table_index);
-    static MultiTable get_xlo_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_xhi_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_xlo_endo_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_xhi_endo_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_ylo_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_yhi_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_xyprime_table(const MultiTableId id, const BasicTableId basic_id);
-    static MultiTable get_xyprime_endo_table(const MultiTableId id, const BasicTableId basic_id);
+    static MultiTable get_xlo_table(const BasicTableId basic_id);
+    static MultiTable get_xhi_table(const BasicTableId basic_id);
+    static MultiTable get_xlo_endo_table(const BasicTableId basic_id);
+    static MultiTable get_xhi_endo_table(const BasicTableId basic_id);
+    static MultiTable get_ylo_table(const BasicTableId basic_id);
+    static MultiTable get_yhi_table(const BasicTableId basic_id);
+    static MultiTable get_xyprime_table(const BasicTableId basic_id);
+    static MultiTable get_xyprime_endo_table(const BasicTableId basic_id);
 };
 
 } // namespace bb::plookup::ecc_generator_tables

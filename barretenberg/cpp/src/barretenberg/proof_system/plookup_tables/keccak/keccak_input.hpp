@@ -123,13 +123,12 @@ class KeccakInput {
      * @param id
      * @return MultiTable
      */
-    static MultiTable get_keccak_input_table(const MultiTableId id = KECCAK_FORMAT_INPUT)
+    static MultiTable get_keccak_input_table()
     {
         const size_t num_entries = 8;
 
         MultiTable table(1 << 8, uint256_t(11).pow(8), 0, num_entries);
 
-        table.id = id;
         for (size_t i = 0; i < num_entries; ++i) {
             table.slice_sizes.emplace_back(1 << 8);
             table.lookup_ids.emplace_back(KECCAK_INPUT);

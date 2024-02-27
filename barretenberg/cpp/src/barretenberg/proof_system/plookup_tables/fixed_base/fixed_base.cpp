@@ -228,7 +228,7 @@ BasicTable table::generate_basic_fixed_base_table(BasicTableId id, size_t basic_
  * @param id
  * @return MultiTable
  */
-template <size_t multitable_index, size_t num_bits> MultiTable table::get_fixed_base_table(const MultiTableId id)
+template <size_t multitable_index, size_t num_bits> MultiTable table::get_fixed_base_table()
 {
     static_assert(num_bits == BITS_PER_LO_SCALAR || num_bits == BITS_PER_HI_SCALAR);
     constexpr size_t NUM_TABLES = get_num_tables_per_multi_table<num_bits>();
@@ -241,7 +241,7 @@ template <size_t multitable_index, size_t num_bits> MultiTable table::get_fixed_
     constexpr function_ptr_table get_values_from_key_table = make_function_pointer_table();
 
     MultiTable table(MAX_TABLE_SIZE, 0, 0, NUM_TABLES);
-    table.id = id;
+
     table.get_table_values.resize(NUM_TABLES);
     table.lookup_ids.resize(NUM_TABLES);
     for (size_t i = 0; i < NUM_TABLES; ++i) {
@@ -267,10 +267,10 @@ template BasicTable table::generate_basic_fixed_base_table<0>(BasicTableId, size
 template BasicTable table::generate_basic_fixed_base_table<1>(BasicTableId, size_t, size_t);
 template BasicTable table::generate_basic_fixed_base_table<2>(BasicTableId, size_t, size_t);
 template BasicTable table::generate_basic_fixed_base_table<3>(BasicTableId, size_t, size_t);
-template MultiTable table::get_fixed_base_table<0, table::BITS_PER_LO_SCALAR>(MultiTableId);
-template MultiTable table::get_fixed_base_table<1, table::BITS_PER_HI_SCALAR>(MultiTableId);
-template MultiTable table::get_fixed_base_table<2, table::BITS_PER_LO_SCALAR>(MultiTableId);
-template MultiTable table::get_fixed_base_table<3, table::BITS_PER_HI_SCALAR>(MultiTableId);
+template MultiTable table::get_fixed_base_table<0, table::BITS_PER_LO_SCALAR>();
+template MultiTable table::get_fixed_base_table<1, table::BITS_PER_HI_SCALAR>();
+template MultiTable table::get_fixed_base_table<2, table::BITS_PER_LO_SCALAR>();
+template MultiTable table::get_fixed_base_table<3, table::BITS_PER_HI_SCALAR>();
 
 const table::all_multi_tables table::fixed_base_tables = {
     table::generate_tables<BITS_PER_LO_SCALAR>(lhs_base_point_lo),

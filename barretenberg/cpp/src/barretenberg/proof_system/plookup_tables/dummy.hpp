@@ -77,14 +77,12 @@ inline BasicTable generate_honk_dummy_table(const BasicTableId id, const size_t 
  */
 inline MultiTable get_honk_dummy_multitable()
 {
-    const MultiTableId id = HONK_DUMMY_MULTI;
     const size_t number_of_elements_in_argument = 1 << 1; // Probably has to be a power of 2
     const size_t number_of_lookups = 2;
     MultiTable table(number_of_elements_in_argument,
                      number_of_elements_in_argument,
                      number_of_elements_in_argument,
                      number_of_lookups);
-    table.id = id;
     table.slice_sizes.emplace_back(number_of_elements_in_argument);
     table.lookup_ids.emplace_back(HONK_DUMMY_BASIC1);
     table.get_table_values.emplace_back(&get_value_from_key<HONK_DUMMY_BASIC1>);

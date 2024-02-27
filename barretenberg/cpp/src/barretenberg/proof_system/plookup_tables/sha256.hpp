@@ -107,13 +107,12 @@ inline BasicTable generate_majority_normalization_table(BasicTableId id, const s
     return sparse_tables::generate_sparse_normalization_table<16, 3, majority_normalization_table>(id, table_index);
 }
 
-inline MultiTable get_witness_extension_output_table(const MultiTableId id = SHA256_WITNESS_OUTPUT)
+inline MultiTable get_witness_extension_output_table()
 {
     const size_t num_entries = 11;
 
     MultiTable table(numeric::pow64(16, 3), 1 << 3, 0, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(numeric::pow64(16, 3));
         table.lookup_ids.emplace_back(SHA256_WITNESS_NORMALIZE);
@@ -123,13 +122,12 @@ inline MultiTable get_witness_extension_output_table(const MultiTableId id = SHA
     return table;
 }
 
-inline MultiTable get_choose_output_table(const MultiTableId id = SHA256_CH_OUTPUT)
+inline MultiTable get_choose_output_table()
 {
     const size_t num_entries = 16;
 
     MultiTable table(numeric::pow64(28, 2), 1 << 2, 0, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(numeric::pow64(28, 2));
         table.lookup_ids.emplace_back(SHA256_CH_NORMALIZE);
@@ -139,13 +137,12 @@ inline MultiTable get_choose_output_table(const MultiTableId id = SHA256_CH_OUTP
     return table;
 }
 
-inline MultiTable get_majority_output_table(const MultiTableId id = SHA256_MAJ_OUTPUT)
+inline MultiTable get_majority_output_table()
 {
     const size_t num_entries = 11;
 
     MultiTable table(numeric::pow64(16, 3), 1 << 3, 0, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(numeric::pow64(16, 3));
         table.lookup_ids.emplace_back(SHA256_MAJ_NORMALIZE);
@@ -215,13 +212,13 @@ inline std::array<bb::fr, 3> get_choose_rotation_multipliers()
     return rotation_multipliers;
 }
 
-inline MultiTable get_witness_extension_input_table(const MultiTableId id = SHA256_WITNESS_INPUT)
+inline MultiTable get_witness_extension_input_table()
 {
     std::vector<bb::fr> column_1_coefficients{ 1, 1 << 3, 1 << 10, 1 << 18 };
     std::vector<bb::fr> column_2_coefficients{ 0, 0, 0, 0 };
     std::vector<bb::fr> column_3_coefficients{ 0, 0, 0, 0 };
     MultiTable table(column_1_coefficients, column_2_coefficients, column_3_coefficients);
-    table.id = id;
+
     table.slice_sizes = { (1 << 3), (1 << 7), (1 << 8), (1 << 18) };
     table.lookup_ids = { SHA256_WITNESS_SLICE_3,
                          SHA256_WITNESS_SLICE_7_ROTATE_4,
@@ -237,7 +234,7 @@ inline MultiTable get_witness_extension_input_table(const MultiTableId id = SHA2
     return table;
 }
 
-inline MultiTable get_choose_input_table(const MultiTableId id = SHA256_CH_INPUT)
+inline MultiTable get_choose_input_table()
 {
     /**
      * When reading from our lookup tables, we can read from the differences between adjacent rows in program memory,
@@ -319,7 +316,6 @@ inline MultiTable get_choose_input_table(const MultiTableId id = SHA256_CH_INPUT
     std::vector<bb::fr> column_2_coefficients{ bb::fr(1), bb::fr(28).pow(11), bb::fr(28).pow(22) };
     std::vector<bb::fr> column_3_coefficients{ bb::fr(1), column_3_row_2_multiplier + bb::fr(1), bb::fr(1) };
     MultiTable table(column_1_coefficients, column_2_coefficients, column_3_coefficients);
-    table.id = id;
     table.slice_sizes = { (1 << 11), (1 << 11), (1 << 10) };
     table.lookup_ids = { SHA256_BASE28_ROTATE6, SHA256_BASE28, SHA256_BASE28_ROTATE3 };
 
@@ -335,7 +331,7 @@ inline MultiTable get_choose_input_table(const MultiTableId id = SHA256_CH_INPUT
 }
 
 // This table (at third row and column) returns the sum of roations that "non-trivially wrap"
-inline MultiTable get_majority_input_table(const MultiTableId id = SHA256_MAJ_INPUT)
+inline MultiTable get_majority_input_table()
 {
     /**
      * We want to tackle the SHA256 `maj` sub-algorithm
@@ -378,7 +374,7 @@ inline MultiTable get_majority_input_table(const MultiTableId id = SHA256_MAJ_IN
     std::vector<bb::fr> column_3_coefficients{ bb::fr(1), bb::fr(1), bb::fr(1) + column_2_row_3_multiplier };
 
     MultiTable table(column_1_coefficients, column_2_coefficients, column_3_coefficients);
-    table.id = id;
+
     table.slice_sizes = { (1 << 11), (1 << 11), (1 << 10) };
     table.lookup_ids = { SHA256_BASE16_ROTATE2, SHA256_BASE16_ROTATE2, SHA256_BASE16 };
     table.get_table_values = {

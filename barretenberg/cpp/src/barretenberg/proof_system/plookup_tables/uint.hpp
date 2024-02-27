@@ -72,13 +72,12 @@ inline BasicTable generate_and_rotate_table(BasicTableId id, const size_t table_
     return table;
 }
 
-inline MultiTable get_uint32_xor_table(const MultiTableId id = UINT32_XOR)
+inline MultiTable get_uint32_xor_table()
 {
     const size_t num_entries = (32 + 5) / 6;
     const uint64_t base = 1 << 6;
     MultiTable table(base, base, base, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(base);
         table.lookup_ids.emplace_back(UINT_XOR_ROTATE0);
@@ -87,13 +86,12 @@ inline MultiTable get_uint32_xor_table(const MultiTableId id = UINT32_XOR)
     return table;
 }
 
-inline MultiTable get_uint32_and_table(const MultiTableId id = UINT32_AND)
+inline MultiTable get_uint32_and_table()
 {
     const size_t num_entries = (32 + 5) / 6;
     const uint64_t base = 1 << 6;
     MultiTable table(base, base, base, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(base);
         table.lookup_ids.emplace_back(UINT_AND_ROTATE0);

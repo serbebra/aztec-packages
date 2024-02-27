@@ -84,7 +84,7 @@ inline BasicTable generate_aes_sparse_normalization_table(BasicTableId id, const
     return table;
 }
 
-inline MultiTable get_aes_normalization_table(const MultiTableId id = AES_NORMALIZE)
+inline MultiTable get_aes_normalization_table()
 {
     const size_t num_entries = 2;
     std::vector<bb::fr> column_1_coefficients;
@@ -99,7 +99,6 @@ inline MultiTable get_aes_normalization_table(const MultiTableId id = AES_NORMAL
 
     MultiTable table(column_1_coefficients, column_2_coefficients, column_3_coefficients);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(AES_BASE * AES_BASE * AES_BASE * AES_BASE);
         table.lookup_ids.emplace_back(AES_SPARSE_NORMALIZE);
@@ -108,13 +107,12 @@ inline MultiTable get_aes_normalization_table(const MultiTableId id = AES_NORMAL
     return table;
 }
 
-inline MultiTable get_aes_input_table(const MultiTableId id = AES_INPUT)
+inline MultiTable get_aes_input_table()
 {
     const size_t num_entries = 16;
 
     MultiTable table(256, 0, 0, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(256);
         table.lookup_ids.emplace_back(AES_SPARSE_MAP);
@@ -158,13 +156,12 @@ inline BasicTable generate_aes_sbox_table(BasicTableId id, const size_t table_in
     return table;
 }
 
-inline MultiTable get_aes_sbox_table(const MultiTableId id = AES_SBOX)
+inline MultiTable get_aes_sbox_table()
 {
     const size_t num_entries = 1;
 
     MultiTable table(0, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(numeric::pow64(AES_BASE, 8));
         table.lookup_ids.emplace_back(AES_SBOX_MAP);

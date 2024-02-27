@@ -233,7 +233,7 @@ class Theta {
      * @param id
      * @return MultiTable
      */
-    static MultiTable get_theta_output_table(const MultiTableId id = KECCAK_THETA_OUTPUT)
+    static MultiTable get_theta_output_table()
     {
         constexpr size_t num_tables_per_multitable =
             (64 / TABLE_BITS) + (64 % TABLE_BITS == 0 ? 0 : 1); // 64 bits, 5 bits per entry
@@ -241,7 +241,6 @@ class Theta {
         uint64_t column_multiplier = numeric::pow64(BASE, TABLE_BITS);
         MultiTable table(column_multiplier, column_multiplier, 0, num_tables_per_multitable);
 
-        table.id = id;
         for (size_t i = 0; i < num_tables_per_multitable; ++i) {
             table.slice_sizes.emplace_back(numeric::pow64(BASE, TABLE_BITS));
             table.lookup_ids.emplace_back(KECCAK_THETA);

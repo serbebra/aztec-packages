@@ -228,7 +228,7 @@ template <size_t TABLE_BITS = 0, size_t LANE_INDEX = 0> class Rho {
      * @param id
      * @return MultiTable
      */
-    static MultiTable get_rho_output_table(const MultiTableId id = KECCAK_NORMALIZE_AND_ROTATE)
+    static MultiTable get_rho_output_table()
     {
         constexpr size_t left_bits = ROTATIONS[LANE_INDEX];
         constexpr size_t right_bits = 64 - ROTATIONS[LANE_INDEX];
@@ -238,7 +238,6 @@ template <size_t TABLE_BITS = 0, size_t LANE_INDEX = 0> class Rho {
             right_bits / MAXIMUM_MULTITABLE_BITS + (right_bits % MAXIMUM_MULTITABLE_BITS > 0 ? 1 : 0);
 
         MultiTable table;
-        table.id = id;
 
         table.column_1_step_sizes.push_back(1);
         table.column_2_step_sizes.push_back(1);

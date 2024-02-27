@@ -21,6 +21,7 @@ plookup::ReadData<field_t<Builder>> plookup_read<Builder>::get_lookup_accumulato
     auto key_a = key_a_in.normalize();
     auto key_b = key_b_in.normalize();
     Builder* ctx = key_a.get_context() ? key_a.get_context() : key_b.get_context();
+
     const plookup::ReadData<bb::fr> lookup_data =
         plookup::get_lookup_accumulators(id, key_a.get_value(), key_b.get_value(), is_2_to_1_lookup);
 

@@ -86,13 +86,12 @@ inline BasicTable generate_xor_rotate_table(BasicTableId id, const size_t table_
  * We don't need to have a separate table for ROTR_12 as its output can be derived from an XOR table.
  * Thus, we have a blake2s_xor_table function below.
  */
-inline MultiTable get_blake2s_xor_table(const MultiTableId id = BLAKE_XOR)
+inline MultiTable get_blake2s_xor_table()
 {
     const size_t num_entries = (32 + 2) / 6 + 1;
     const uint64_t base = 1 << 6;
     MultiTable table(base, base, base, num_entries);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries - 1; ++i) {
         table.slice_sizes.emplace_back(base);
         table.lookup_ids.emplace_back(BLAKE_XOR_ROTATE0);
@@ -109,7 +108,7 @@ inline MultiTable get_blake2s_xor_table(const MultiTableId id = BLAKE_XOR)
 /**
  * Generates a multi-lookup-table with 5 slices for 32-bit operation ROTR^{16}(a ^ b).
  */
-inline MultiTable get_blake2s_xor_rotate_16_table(const MultiTableId id = BLAKE_XOR_ROTATE_16)
+inline MultiTable get_blake2s_xor_rotate_16_table()
 {
     const uint64_t base = 1 << 6;
     constexpr bb::fr coefficient_16 = bb::fr(1) / bb::fr(1 << 16);
@@ -126,7 +125,6 @@ inline MultiTable get_blake2s_xor_rotate_16_table(const MultiTableId id = BLAKE_
 
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
-    table.id = id;
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
     table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE4,
                          BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };
@@ -144,7 +142,7 @@ inline MultiTable get_blake2s_xor_rotate_16_table(const MultiTableId id = BLAKE_
 /**
  * Generates a multi-lookup-table with 5 slices for 32-bit operation ROTR^{8}(a ^ b).
  */
-inline MultiTable get_blake2s_xor_rotate_8_table(const MultiTableId id = BLAKE_XOR_ROTATE_8)
+inline MultiTable get_blake2s_xor_rotate_8_table()
 {
     const uint64_t base = 1 << 6;
     constexpr bb::fr coefficient_24 = bb::fr(1) / bb::fr(1 << 24);
@@ -161,7 +159,6 @@ inline MultiTable get_blake2s_xor_rotate_8_table(const MultiTableId id = BLAKE_X
 
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
-    table.id = id;
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
     table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE2, BLAKE_XOR_ROTATE0,
                          BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };
@@ -179,7 +176,7 @@ inline MultiTable get_blake2s_xor_rotate_8_table(const MultiTableId id = BLAKE_X
 /**
  * Generates a multi-lookup-table with 5 slices for 32-bit operation ROTR^{7}(a ^ b).
  */
-inline MultiTable get_blake2s_xor_rotate_7_table(const MultiTableId id = BLAKE_XOR_ROTATE_7)
+inline MultiTable get_blake2s_xor_rotate_7_table()
 {
     const uint64_t base = 1 << 6;
     constexpr bb::fr coefficient_25 = bb::fr(1) / bb::fr(1 << 25);
@@ -196,7 +193,6 @@ inline MultiTable get_blake2s_xor_rotate_7_table(const MultiTableId id = BLAKE_X
 
     MultiTable table(column_1_coefficients, column_1_coefficients, column_3_coefficients);
 
-    table.id = id;
     table.slice_sizes = { base, base, base, base, base, SIZE_OF_LAST_SLICE };
     table.lookup_ids = { BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE1, BLAKE_XOR_ROTATE0,
                          BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0, BLAKE_XOR_ROTATE0_SLICE5_MOD4 };

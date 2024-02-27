@@ -365,13 +365,11 @@ BasicTable ecc_generator_table<G1>::generate_xyprime_endo_table(BasicTableId id,
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xlo_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xlo_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -380,13 +378,11 @@ MultiTable ecc_generator_table<G1>::get_xlo_table(const MultiTableId id, const B
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xhi_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xhi_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -395,13 +391,11 @@ MultiTable ecc_generator_table<G1>::get_xhi_table(const MultiTableId id, const B
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xlo_endo_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xlo_endo_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -410,13 +404,11 @@ MultiTable ecc_generator_table<G1>::get_xlo_endo_table(const MultiTableId id, co
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xhi_endo_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xhi_endo_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -425,13 +417,11 @@ MultiTable ecc_generator_table<G1>::get_xhi_endo_table(const MultiTableId id, co
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_ylo_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_ylo_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -440,13 +430,11 @@ MultiTable ecc_generator_table<G1>::get_ylo_table(const MultiTableId id, const B
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_yhi_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_yhi_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -455,13 +443,11 @@ MultiTable ecc_generator_table<G1>::get_yhi_table(const MultiTableId id, const B
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xyprime_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xyprime_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
@@ -470,13 +456,11 @@ MultiTable ecc_generator_table<G1>::get_xyprime_table(const MultiTableId id, con
     return table;
 }
 
-template <typename G1>
-MultiTable ecc_generator_table<G1>::get_xyprime_endo_table(const MultiTableId id, const BasicTableId basic_id)
+template <typename G1> MultiTable ecc_generator_table<G1>::get_xyprime_endo_table(const BasicTableId basic_id)
 {
     const size_t num_entries = 1;
     MultiTable table(256, 0, 0, 1);
 
-    table.id = id;
     for (size_t i = 0; i < num_entries; ++i) {
         table.slice_sizes.emplace_back(512);
         table.lookup_ids.emplace_back(basic_id);
