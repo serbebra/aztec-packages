@@ -19,9 +19,9 @@ impl Empty for Field { fn empty() -> Self {0} }
 
 impl Empty for u1 { fn empty() -> Self {0} }
 impl Empty for u8 { fn empty() -> Self {0} }
-impl Empty for u16 { fn empty() -> Self {0} }
 impl Empty for u32 { fn empty() -> Self {0} }
 impl Empty for u64 { fn empty() -> Self {0} }
+impl Empty for U128 { fn empty() -> Self {U128::from_integer(0)} }
 
 pub fn is_empty<T>(item: T) -> bool where T: Empty + Eq {
     item.eq(T::empty())
@@ -47,9 +47,13 @@ impl ToField for Field {
 
 impl ToField for u1 { fn to_field(self) -> Field { self as Field } }
 impl ToField for u8 { fn to_field(self) -> Field { self as Field } }
-impl ToField for u16 { fn to_field(self) -> Field { self as Field } }
 impl ToField for u32 { fn to_field(self) -> Field { self as Field } }
 impl ToField for u64 { fn to_field(self) -> Field { self as Field } }
+impl ToField for U128 {
+    fn to_field(self) -> Field {
+        self.to_integer()
+    }
+}
 
 trait FromField {
     fn from_field(value: Field) -> Self;
@@ -63,10 +67,13 @@ impl FromField for Field {
 
 impl FromField for u1 { fn from_field(value: Field) -> Self { value as u1 } }
 impl FromField for u8 { fn from_field(value: Field) -> Self { value as u8 } }
-impl FromField for u16 { fn from_field(value: Field) -> Self { value as u16 } }
 impl FromField for u32 { fn from_field(value: Field) -> Self { value as u32 } }
 impl FromField for u64 { fn from_field(value: Field) -> Self { value as u64 } }
-
+impl FromField for U128 {
+    fn from_field(value: Field) -> Self {
+        U128::from_integer(value)
+    }
+}
 
 // docs:start:serialize
 trait Serialize<N> {

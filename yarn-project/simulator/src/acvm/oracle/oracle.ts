@@ -45,6 +45,20 @@ export class Oracle {
     return [publicKey.x, publicKey.y, partialAddress].map(toACVMField);
   }
 
+  async getContractInstance([address]: ACVMField[]) {
+    const instance = await this.typedOracle.getContractInstance(AztecAddress.fromField(fromACVMField(address)));
+    // TODO(#4434) Add deployer field to ContractInstance
+    const deployer = Fr.ZERO;
+    return [
+      instance.salt,
+      deployer,
+      instance.contractClassId,
+      instance.initializationHash,
+      instance.portalContractAddress,
+      instance.publicKeysHash,
+    ].map(toACVMField);
+  }
+
   async getMembershipWitness(
     [blockNumber]: ACVMField[],
     [treeId]: ACVMField[],
@@ -297,6 +311,7 @@ export class Oracle {
     [argsHash]: ACVMField[],
     [sideffectCounter]: ACVMField[],
     [isStaticCall]: ACVMField[],
+    [isDelegateCall]: ACVMField[],
   ): Promise<ACVMField[]> {
     const callStackItem = await this.typedOracle.callPrivateFunction(
       AztecAddress.fromField(fromACVMField(contractAddress)),
@@ -304,6 +319,7 @@ export class Oracle {
       fromACVMField(argsHash),
       frToNumber(fromACVMField(sideffectCounter)),
       frToBoolean(fromACVMField(isStaticCall)),
+      frToBoolean(fromACVMField(isDelegateCall)),
     );
     return callStackItem.toFields().map(toACVMField);
   }
@@ -313,12 +329,14 @@ export class Oracle {
     [functionSelector]: ACVMField[],
     [argsHash]: ACVMField[],
     [isStaticCall]: ACVMField[],
+    [isDelegateCall]: ACVMField[],
   ): Promise<ACVMField[]> {
     const returnValues = await this.typedOracle.callPublicFunction(
       AztecAddress.fromField(fromACVMField(contractAddress)),
       FunctionSelector.fromField(fromACVMField(functionSelector)),
       fromACVMField(argsHash),
       frToBoolean(fromACVMField(isStaticCall)),
+      frToBoolean(fromACVMField(isDelegateCall)),
     );
     return padArrayEnd(returnValues, Fr.ZERO, RETURN_VALUES_LENGTH).map(toACVMField);
   }
@@ -329,6 +347,7 @@ export class Oracle {
     [argsHash]: ACVMField[],
     [sideffectCounter]: ACVMField[],
     [isStaticCall]: ACVMField[],
+    [isDelegateCall]: ACVMField[],
   ) {
     const enqueuedRequest = await this.typedOracle.enqueuePublicFunctionCall(
       AztecAddress.fromString(contractAddress),
@@ -336,6 +355,7 @@ export class Oracle {
       fromACVMField(argsHash),
       frToNumber(fromACVMField(sideffectCounter)),
       frToBoolean(fromACVMField(isStaticCall)),
+      frToBoolean(fromACVMField(isDelegateCall)),
     );
     return toAcvmEnqueuePublicFunctionResult(enqueuedRequest);
   }
