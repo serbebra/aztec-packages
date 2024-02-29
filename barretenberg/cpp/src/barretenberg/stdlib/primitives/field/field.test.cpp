@@ -37,6 +37,19 @@ template <typename Builder> class stdlib_field : public testing::Test {
             c = a + b;
         }
     }
+    static void boomerang_fibbonaci(Builder& builder)
+    {
+        field_ct a(witness_ct(&builder, fr::one()));
+        field_ct b(witness_ct(&builder, fr::one()));
+
+        field_ct c = a + b;
+
+        for (size_t i = 0; i < 17; ++i) {
+            b = a;
+            a = field_ct(witness_ct(&builder, c.get_value()));
+            c = a + b;
+        }
+    }
     static uint64_t fidget(Builder& builder)
     {
         field_ct a(public_witness_ct(&builder, fr::one())); // a is a legit wire value in our circuit
@@ -258,6 +271,24 @@ template <typename Builder> class stdlib_field : public testing::Test {
         Builder builder = Builder();
         auto gates_before = builder.get_num_gates();
         fibbonaci(builder);
+        auto gates_after = builder.get_num_gates();
+        if constexpr (IsAnyOf<bb::StandardCircuitBuilder, Builder>) {
+            EXPECT_EQ(builder.get_variable(builder.blocks.arithmetic.w_l()[builder.get_num_gates() - 1]), fr(4181));
+        }
+        if constexpr (IsAnyOf<bb::UltraCircuitBuilder, Builder>) {
+            EXPECT_EQ(builder.get_variable(builder.blocks.main.w_l()[builder.get_num_gates() - 1]), fr(4181));
+        }
+        EXPECT_EQ(gates_after - gates_before, 18UL);
+
+        bool result = builder.check_circuit();
+        EXPECT_EQ(result, true);
+    }
+
+    static void test_boomerang_fibbonaci()
+    {
+        Builder builder = Builder();
+        auto gates_before = builder.get_num_gates();
+        boomerang_fibbonaci(builder);
         auto gates_after = builder.get_num_gates();
         if constexpr (IsAnyOf<bb::StandardCircuitBuilder, Builder>) {
             EXPECT_EQ(builder.get_variable(builder.blocks.arithmetic.w_l()[builder.get_num_gates() - 1]), fr(4181));
@@ -946,6 +977,10 @@ TYPED_TEST(stdlib_field, test_prefix_increment)
 TYPED_TEST(stdlib_field, test_field_fibbonaci)
 {
     TestFixture::test_field_fibbonaci();
+}
+TYPED_TEST(stdlib_field, test_boomerang_fibbonaci)
+{
+    TestFixture::test_boomerang_fibbonaci();
 }
 TYPED_TEST(stdlib_field, test_field_pythagorean)
 {

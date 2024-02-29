@@ -65,6 +65,27 @@ TEST(standard_circuit_constructor, grumpkin_base_case)
     EXPECT_EQ(result, true);
 }
 
+TEST(standard_circuit_constructor, test_boomerang_value)
+{
+    StandardCircuitBuilder circuit_constructor = StandardCircuitBuilder();
+    fr a = fr::random_element();
+    uint32_t a_idx = circuit_constructor.add_public_variable(a);
+    fr b = fr::random_element();
+    fr c = a + b;
+    fr d = a + c;
+    // uint32_t a_idx = circuit_constructor.add_variable(a);
+    uint32_t b_idx = circuit_constructor.add_variable(b);
+    uint32_t c_idx = circuit_constructor.add_variable(c);
+    uint32_t d_idx = circuit_constructor.add_variable(d);
+    uint32_t a_duplicate_idx = circuit_constructor.add_variable(a);
+    circuit_constructor.create_add_gate({ a_idx, b_idx, c_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+    circuit_constructor.create_add_gate(
+        { a_duplicate_idx, c_idx, d_idx, fr::one(), fr::one(), fr::neg_one(), fr::zero() });
+
+    bool result = circuit_constructor.check_circuit(); // instance, prover.reference_string.SRS_T2);
+    EXPECT_EQ(result, true);
+}
+
 TEST(standard_circuit_constructor, test_add_gate)
 {
     StandardCircuitBuilder circuit_constructor = StandardCircuitBuilder();
