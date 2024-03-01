@@ -42,15 +42,6 @@ impl CardNote {
 }
 
 impl NoteInterface<CARD_NOTE_LEN> for CardNote {
-    fn deserialize_content(serialized_note: [Field; CARD_NOTE_LEN]) -> Self {
-        CardNote {
-            points: serialized_note[0] as u8,
-            randomness: serialized_note[1],
-            owner: AztecAddress::from_field(serialized_note[2]),
-            header: NoteHeader::empty(),
-        }
-    }
-
     fn compute_note_content_hash(self) -> Field {
         pedersen_hash(self.serialize_content(), 0)
     }

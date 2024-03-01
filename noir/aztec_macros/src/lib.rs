@@ -1,3 +1,4 @@
+use regex::Regex;
 use std::borrow::{Borrow, BorrowMut};
 use std::vec;
 
@@ -74,6 +75,7 @@ pub enum AztecMacroError {
     UnsupportedFunctionArgumentType { span: Span, typ: UnresolvedTypeData },
     UnsupportedStorageType { span: Option<Span>, typ: UnresolvedTypeData },
     CouldNotAssignStorageSlots { secondary_message: Option<String> },
+    CouldNotImplementNoteSerialization { span: Option<Span>, typ: UnresolvedTypeData },
     EventError { span: Span, message: String },
 }
 
@@ -109,6 +111,11 @@ impl From<AztecMacroError> for MacroError {
                 primary_message: "Could not assign storage slots, please provide a custom storage implementation".to_string(),
                 secondary_message,
                 span: None,
+            },
+            AztecMacroError::CouldNotImplementNoteSerialization { span, typ } => MacroError {
+                primary_message: format!("Could not implement serialization methods for note `{typ:?}`, please provide a serialize_content and deserialize_content methods"),
+                secondary_message: None,
+                span,
             },
             AztecMacroError::EventError { span, message } => MacroError {
                 primary_message: message,
@@ -509,7 +516,10 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
     for trait_imp in note_interface_trait_impls {
         let const_path = match &trait_imp.trait_generics[0].typ {
             UnresolvedTypeData::Named(path, _, _) => Ok(path.clone()),
-            _ => Err(AztecMacroError::AztecDepNotFound),
+            _ => Err(AztecMacroError::CouldNotImplementNoteSerialization {
+                span: trait_imp.object_type.span,
+                typ: trait_imp.object_type.typ.clone(),
+            }),
         }?;
         match &trait_imp.object_type.typ {
             UnresolvedTypeData::Named(struct_path, _, _) => {
@@ -519,7 +529,10 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                     .find(|typ| {
                         typ.name.0.contents == struct_path.segments.last().unwrap().0.contents
                     })
-                    .ok_or(AztecMacroError::AztecDepNotFound)?;
+                    .ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
+                        span: trait_imp.object_type.span,
+                        typ: trait_imp.object_type.typ.clone(),
+                    })?;
                 if let Some(_) = trait_imp.items.iter().find(|item| match item {
                     TraitImplItem::Function(func) => {
                         func.def.name.0.contents == "serialize_content"
@@ -567,8 +580,49 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                         ))),
                     ),
                 )));
+                let note_type = note_struct.name.0.contents.to_string();
+                let mut note_fields = vec![];
+                let note_serialized_len = match &trait_imp.trait_generics[0].typ {
+                    UnresolvedTypeData::Named(path, _, _) => {
+                        println!(
+                            "note_serialize_length (named): {}",
+                            path.segments.last().unwrap().0.contents.to_string()
+                        );
+                        Ok(path.segments.last().unwrap().0.contents.to_string())
+                    }
+                    UnresolvedTypeData::FieldElement => {
+                        println!(
+                            "note_serialize_length (fieldElement): {}",
+                            trait_imp.impl_generics[0].0.contents.to_string()
+                        );
+                        Ok(trait_imp.impl_generics[0].0.contents.to_string())
+                    }
+                    _ => Err(AztecMacroError::CouldNotImplementNoteSerialization {
+                        span: trait_imp.object_type.span,
+                        typ: trait_imp.object_type.typ.clone(),
+                    }),
+                }?;
+                for (field_ident, field_type) in note_struct.fields.iter() {
+                    note_fields.push((
+                        field_ident.0.contents.to_string(),
+                        field_type.typ.to_string().replace("plain::", ""),
+                    ));
+                }
+                println!("note_type: {}", note_type);
+                println!("note_fields: {:?}", note_fields);
+                println!("note_serialized_len: {}", note_serialized_len);
+                trait_imp.items.push(TraitImplItem::Function(generate_note_deserialize_content(
+                    note_type,
+                    note_fields,
+                    note_serialized_len,
+                )));
             }
-            _ => return Err(AztecMacroError::AztecDepNotFound),
+            _ => {
+                return Err(AztecMacroError::CouldNotImplementNoteSerialization {
+                    span: trait_imp.object_type.span,
+                    typ: trait_imp.object_type.typ.clone(),
+                })
+            }
         };
     }
     Ok(())
@@ -1838,6 +1892,24 @@ fn fetch_struct_trait_impls(
     struct_typenames
 }
 
+fn generate_note_deserialize_content(
+    note_type: String,
+    note_fields: Vec<(String, String)>,
+    note_serialize_len: String,
+) -> NoirFunction {
+    let function_source =
+        generate_note_deserialize_content_source(note_type, note_fields, note_serialize_len);
+
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    function_ast.functions.remove(0)
+}
+
 fn generate_compute_note_hash_and_nullifier(note_types: &Vec<String>) -> NoirFunction {
     let function_source = generate_compute_note_hash_and_nullifier_source(note_types);
 
@@ -1849,6 +1921,44 @@ fn generate_compute_note_hash_and_nullifier(note_types: &Vec<String>) -> NoirFun
 
     let mut function_ast = function_ast.into_sorted();
     function_ast.functions.remove(0)
+}
+
+fn generate_note_deserialize_content_source(
+    note_type: String,
+    note_fields: Vec<(String, String)>,
+    note_serialize_len: String,
+) -> String {
+    let note_fields = note_fields
+        .iter()
+        .enumerate()
+        .map(|(index, (field_name, field_type))| {
+            if field_name != "header" {
+                if field_type.eq("Field") || Regex::new(r"u[0-9]+").unwrap().is_match(&field_type) {
+                    format!("{}: serialized_note[{}] as {},", field_name, index, field_type)
+                } else {
+                    format!(
+                        "{}: {}::from_field(serialized_note[{}]),",
+                        field_name, field_type, index
+                    )
+                }
+            } else {
+                "header: NoteHeader::empty()".to_string()
+            }
+        })
+        .collect::<Vec<String>>()
+        .join("\n");
+    let result = format!(
+        "
+        fn deserialize_content(serialized_note: [Field; {}]) -> Self {{
+            {} {{
+                {}
+            }}
+        }}",
+        note_serialize_len, note_type, note_fields
+    )
+    .to_string();
+    println!("result: {}", result);
+    result
 }
 
 fn generate_compute_note_hash_and_nullifier_source(note_types: &Vec<String>) -> String {
