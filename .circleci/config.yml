@@ -124,6 +124,18 @@ jobs:
           command: create_ecr_manifest noir x86_64,arm64
           aztec_manifest_key: noir
 
+  noir-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: "Build"
+          command: cond_spot_run_build noir-tests 32
+          aztec_manifest_key: noir-tests
+
   noir-packages:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -135,6 +147,18 @@ jobs:
           name: "Build"
           command: cond_spot_run_build noir-packages 32
           aztec_manifest_key: noir-packages
+
+  noir-packages-tests:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: "Build"
+          command: cond_spot_run_build noir-packages-tests 32
+          aztec_manifest_key: noir-packages-tests
 
   noir-compile-acir-tests:
     docker:
@@ -675,6 +699,19 @@ jobs:
           command: cond_spot_run_compose end-to-end 4 ./scripts/docker-compose.yml TEST=e2e_token_contract.test.ts
           aztec_manifest_key: end-to-end
 
+  e2e-authwit-test:
+    docker:
+      - image: aztecprotocol/alpine-build-image
+    resource_class: small
+    steps:
+      - *checkout
+      - *setup_env
+      - run:
+          name: "Test"
+          command: cond_spot_run_compose end-to-end 4 ./scripts/docker-compose.yml TEST=e2e_authwit.test.ts
+          aztec_manifest_key: end-to-end
+
+
   e2e-blacklist-token-contract:
     docker:
       - image: aztecprotocol/alpine-build-image
@@ -856,7 +893,7 @@ jobs:
           command: cond_spot_run_compose end-to-end 4 ./scripts/docker-compose.yml TEST=e2e_inclusion_proofs_contract.test.ts
           aztec_manifest_key: end-to-end
 
-  e2e-pending-commitments-contract:
+  e2e-pending-note-hashes-contract:
     docker:
       - image: aztecprotocol/alpine-build-image
     resource_class: small
@@ -865,7 +902,7 @@ jobs:
       - *setup_env
       - run:
           name: "Test"
-          command: cond_spot_run_compose end-to-end 4 ./scripts/docker-compose.yml TEST=e2e_pending_commitments_contract.test.ts
+          command: cond_spot_run_compose end-to-end 4 ./scripts/docker-compose.yml TEST=e2e_pending_note_hashes_contract.test.ts
           aztec_manifest_key: end-to-end
 
   e2e-ordering:
@@ -1322,7 +1359,12 @@ workflows:
             - noir-x86_64
             - noir-arm64
           <<: *defaults
+      - noir-tests: *defaults
       - noir-packages: *defaults
+      - noir-packages-tests:
+          requires:
+            - noir-ecr-manifest
+          <<: *defaults
       - noir-compile-acir-tests:
           requires:
             - noir-ecr-manifest
@@ -1432,6 +1474,7 @@ workflows:
       - e2e-deploy-contract: *e2e_test
       - e2e-lending-contract: *e2e_test
       - e2e-token-contract: *e2e_test
+      - e2e-authwit-test: *e2e_test
       - e2e-blacklist-token-contract: *e2e_test
       # TODO(3458): Investigate intermittent failure
       # - e2e-slow-tree: *e2e_test
@@ -1450,7 +1493,7 @@ workflows:
       - e2e-account-contracts: *e2e_test
       - e2e-escrow-contract: *e2e_test
       - e2e-inclusion-proofs-contract: *e2e_test
-      - e2e-pending-commitments-contract: *e2e_test
+      - e2e-pending-note-hashes-contract: *e2e_test
       - e2e-ordering: *e2e_test
       - e2e-counter: *e2e_test
       - e2e-private-voting: *e2e_test
@@ -1479,6 +1522,7 @@ workflows:
             - e2e-deploy-contract
             - e2e-lending-contract
             - e2e-token-contract
+            - e2e-authwit-test
             - e2e-blacklist-token-contract
             - e2e-sandbox-example
             - e2e-state-vars
@@ -1495,7 +1539,7 @@ workflows:
             - e2e-account-contracts
             - e2e-escrow-contract
             - e2e-inclusion-proofs-contract
-            - e2e-pending-commitments-contract
+            - e2e-pending-note-hashes-contract
             - e2e-ordering
             - e2e-counter
             - e2e-private-voting
