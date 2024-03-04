@@ -10,13 +10,13 @@ use noirc_frontend::hir::def_map::{LocalModuleId, ModuleId};
 use noirc_frontend::macros_api::parse_program;
 use noirc_frontend::macros_api::FieldElement;
 use noirc_frontend::macros_api::{
-    ArrayLiteral, BlockExpression, CallExpression, CastExpression, Distinctness, Expression,
-    ExpressionKind, ForLoopStatement, ForRange, FunctionDefinition, FunctionReturnType,
-    FunctionVisibility, HirContext, HirExpression, HirLiteral, HirStatement, Ident,
-    ImportStatement, IndexExpression, LetStatement, Literal, MemberAccessExpression,
-    MethodCallExpression, NoirFunction, NoirStruct, Param, Path, PathKind, Pattern,
-    PrefixExpression, SecondaryAttribute, Signedness, Span, Statement, StatementKind, StructType,
-    Type, TypeImpl, UnaryOp, UnresolvedType, UnresolvedTypeData, Visibility,
+    BlockExpression, CallExpression, CastExpression, Distinctness, Expression, ExpressionKind,
+    ForLoopStatement, ForRange, FunctionDefinition, FunctionReturnType, FunctionVisibility,
+    HirContext, HirExpression, HirLiteral, HirStatement, Ident, ImportStatement, IndexExpression,
+    LetStatement, Literal, MemberAccessExpression, MethodCallExpression, NoirFunction, NoirStruct,
+    Param, Path, PathKind, Pattern, PrefixExpression, SecondaryAttribute, Signedness, Span,
+    Statement, StatementKind, StructType, Type, TypeImpl, UnaryOp, UnresolvedType,
+    UnresolvedTypeData, Visibility,
 };
 use noirc_frontend::macros_api::{CrateId, FileId};
 use noirc_frontend::macros_api::{MacroError, MacroProcessor};
@@ -123,7 +123,7 @@ impl From<AztecMacroError> for MacroError {
                 secondary_message: None,
                 span: Some(span),
             },
-            AztecMacroError::UnsupportedAttributes { span, secondary_message } => MacroError {
+AztecMacroError::UnsupportedAttributes { span, secondary_message } => MacroError {
                 primary_message: "Unsupported attributes in contract function".to_string(),
                 secondary_message,
                 span: Some(span),
@@ -299,8 +299,7 @@ fn transform(
     // Usage -> mut ast -> aztec_library::transform(&mut ast)
 
     let crate_graph = &context.crate_graph[crate_id];
-    generate_note_serialization_impl(&mut ast)
-        .map_err(|err| (err.into(), crate_graph.root_file_id))?;
+    generate_note_interface_impl(&mut ast).map_err(|err| (err.into(), crate_graph.root_file_id))?;
 
     // Covers all functions in the ast
     for submodule in ast.submodules.iter_mut().filter(|submodule| submodule.is_contract) {
@@ -538,7 +537,7 @@ fn transform_module(
     Ok(has_transformed_module)
 }
 
-fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), AztecMacroError> {
+fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMacroError> {
     let mut note_interface_trait_impls = vec![];
 
     module.trait_impls.iter_mut().for_each(|trait_imp| {
@@ -551,20 +550,13 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
     });
 
     for trait_imp in note_interface_trait_impls {
-        let const_path = match &trait_imp.trait_generics[0].typ {
-            UnresolvedTypeData::Named(path, _, _) => Ok(path.clone()),
-            _ => Err(AztecMacroError::CouldNotImplementNoteSerialization {
-                span: trait_imp.object_type.span,
-                typ: trait_imp.object_type.typ.clone(),
-            }),
-        }?;
         match &trait_imp.object_type.typ {
             UnresolvedTypeData::Named(struct_path, _, _) => {
                 let note_struct = module
                     .types
                     .iter()
                     .find(|typ| {
-                        typ.name.0.contents == struct_path.segments.last().unwrap().0.contents
+                        typ.name.0.contents == struct_path.last_segment().0.contents
                     })
                     .ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
                         span: trait_imp.object_type.span,
@@ -572,59 +564,31 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                     })?;
                 if let Some(_) = trait_imp.items.iter().find(|item| match item {
                     TraitImplItem::Function(func) => {
-                        func.def.name.0.contents == "serialize_content"
+                        func.def.name.0.contents == "deserialize_content"
                     }
                     _ => false,
                 }) {
                     continue;
                 }
-                let struct_fields_as_fields = note_struct
-                    .fields
-                    .iter()
-                    .filter(|(ident, _)| ident.0.contents != "header")
-                    .map(|(id, _)| {
-                        method_call(
-                            member_access("self", id.0.contents.as_str()),
-                            "to_field",
-                            vec![],
-                        )
-                    })
-                    .collect();
-                trait_imp.items.push(TraitImplItem::Function(NoirFunction::normal(
-                    FunctionDefinition::normal(
-                        &ident("serialize_content"),
-                        &vec![],
-                        &[(
-                            ident("self"),
-                            make_type(UnresolvedTypeData::Named(
-                                chained_path!("Self"),
-                                vec![],
-                                false,
-                            )),
-                        )],
-                        &BlockExpression(vec![make_statement(StatementKind::Expression(
-                            Expression::new(
-                                ExpressionKind::Literal(Literal::Array(ArrayLiteral::Standard(
-                                    struct_fields_as_fields,
-                                ))),
-                                Span::default(),
-                            ),
-                        ))]),
-                        &[],
-                        &FunctionReturnType::Ty(make_type(UnresolvedTypeData::Array(
-                            Some(UnresolvedTypeExpression::Variable(const_path)),
-                            Box::new(make_type(UnresolvedTypeData::FieldElement)),
-                        ))),
-                    ),
-                )));
+                let note_impl = module.impls.iter_mut().find(| r#impl| {
+                    match &r#impl.object_type.typ {
+                        UnresolvedTypeData::Named(path, _, _) => {
+                            path.last_segment().eq(&struct_path.last_segment())
+                        }
+                        _ => false
+                    }
+                }).ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
+                    span: trait_imp.object_type.span,
+                    typ: trait_imp.object_type.typ.clone(),
+                })?;
                 let note_type = note_struct.name.0.contents.to_string();
                 let mut note_fields = vec![];
                 let note_serialized_len = match &trait_imp.trait_generics[0].typ {
                     UnresolvedTypeData::Named(path, _, _) => {
-                        Ok(path.segments.last().unwrap().0.contents.to_string())
+                        Ok(path.last_segment().0.contents.to_string())
                     }
-                    UnresolvedTypeData::FieldElement => {
-                        Ok(trait_imp.impl_generics[0].0.contents.to_string())
+                    UnresolvedTypeData::Expression(UnresolvedTypeExpression::Constant(val, _)) => {
+                        Ok(val.to_string())
                     }
                     _ => Err(AztecMacroError::CouldNotImplementNoteSerialization {
                         span: trait_imp.object_type.span,
@@ -637,11 +601,26 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                         field_type.typ.to_string().replace("plain::", ""),
                     ));
                 }
-                trait_imp.items.push(TraitImplItem::Function(generate_note_deserialize_content(
-                    note_type,
-                    note_fields,
-                    note_serialized_len,
+                module.types.push(generate_note_fields_struct(&note_type, &note_fields));
+                note_impl.methods.push((generate_note_fields_fn(
+                    &note_type,
+                    &note_fields,
+                ), Span::default()));
+                trait_imp.items.push(TraitImplItem::Function(generate_note_serialize_content(
+                    &note_type,
+                    &note_fields,
+                    &note_serialized_len,
                 )));
+                trait_imp.items.push(TraitImplItem::Function(generate_note_deserialize_content(
+                    &note_type,
+                    &note_fields,
+                    &note_serialized_len,
+                )));
+                trait_imp.items.push(TraitImplItem::Function(generate_note_get_header(&note_type)));
+                trait_imp.items.push(TraitImplItem::Function(generate_note_set_header(&note_type)));
+                trait_imp
+                    .items
+                    .push(TraitImplItem::Function(generate_note_get_type_id(&note_type)));
             }
             _ => {
                 return Err(AztecMacroError::CouldNotImplementNoteSerialization {
@@ -1978,10 +1957,96 @@ fn fetch_struct_trait_impls(
     struct_typenames
 }
 
+fn generate_note_get_header(note_type: &String) -> NoirFunction {
+    let function_source = format!(
+        "
+        fn get_header(note: {}) -> dep::aztec::note::note_header::NoteHeader {{
+            note.header
+        }}
+    ",
+        note_type
+    )
+    .to_string();
+
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
+}
+
+fn generate_note_set_header(note_type: &String) -> NoirFunction {
+    let function_source = format!(
+        "
+        fn set_header(self: &mut {}, header: dep::aztec::note::note_header::NoteHeader) {{
+            self.header = header;
+        }}
+    ",
+        note_type
+    );
+
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
+}
+
+fn generate_note_get_type_id(note_type: &String) -> NoirFunction {
+    let note_id =
+        note_type.chars().map(|c| (c as u32).to_string()).collect::<Vec<String>>().join("");
+    let function_source = format!(
+        "
+        fn get_note_type_id() -> Field {{
+            {}
+        }}
+    ",
+        note_id
+    )
+    .to_string();
+
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
+}
+
+fn generate_note_fields_struct(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+) -> NoirStruct {
+    let struct_source = generate_note_fields_struct_source(note_type, note_fields);
+
+    let (struct_ast, errors) = parse_program(&struct_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut struct_ast = struct_ast.into_sorted();
+    struct_ast.types.remove(0)
+}
+
 fn generate_note_deserialize_content(
-    note_type: String,
-    note_fields: Vec<(String, String)>,
-    note_serialize_len: String,
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+    note_serialize_len: &String,
 ) -> NoirFunction {
     let function_source =
         generate_note_deserialize_content_source(note_type, note_fields, note_serialize_len);
@@ -1993,7 +2058,47 @@ fn generate_note_deserialize_content(
     assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
 
     let mut function_ast = function_ast.into_sorted();
-    function_ast.functions.remove(0)
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
+}
+
+fn generate_note_serialize_content(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+    note_serialize_len: &String,
+) -> NoirFunction {
+    let function_source =
+        generate_note_serialize_content_source(note_type, note_fields, note_serialize_len);
+
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
+}
+
+fn generate_note_fields_fn(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+) -> NoirFunction {
+    let function_source =
+        generate_note_fields_fn_source(note_type, note_fields);
+    let (function_ast, errors) = parse_program(&function_source);
+    if !errors.is_empty() {
+        dbg!(errors.clone());
+    }
+    assert_eq!(errors.len(), 0, "Failed to parse Noir macro code. This is either a bug in the compiler or the Noir macro code");
+
+    let mut function_ast = function_ast.into_sorted();
+    let mut noir_fn = function_ast.functions.remove(0);
+    noir_fn.def.visibility = FunctionVisibility::Public;
+    noir_fn
 }
 
 fn generate_compute_note_hash_and_nullifier(note_types: &Vec<String>) -> NoirFunction {
@@ -2009,10 +2114,100 @@ fn generate_compute_note_hash_and_nullifier(note_types: &Vec<String>) -> NoirFun
     function_ast.functions.remove(0)
 }
 
+fn generate_note_fields_struct_source(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+) -> String {
+    let note_field_selectors = note_fields
+        .iter()
+        .filter_map(|(field_name, _)| {
+            if field_name != "header" {
+                Some(format!(
+                    "{}: dep::aztec::note::note_getter_options::FieldSelector",
+                    field_name
+                ))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(",\n");
+    format!(
+        "
+        struct {}Fields {{
+            {}
+        }}",
+        note_type, note_field_selectors
+    )
+    .to_string()
+}
+
+fn generate_note_fields_fn_source(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+) -> String {
+    let note_field_selectors = note_fields
+        .iter()
+        .enumerate()
+        .filter_map(|(index, (field_name, _))| {
+            if field_name != "header" {
+                Some(format!(
+                    "{}: dep::aztec::note::note_getter_options::FieldSelector {{ index: {}, offset: 0, length: 32 }}",
+                    field_name, 
+                    index
+                ))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(", ");
+    format!(
+        "
+        pub fn fields() -> {}Fields {{
+            {}Fields {{
+                {}
+            }}
+        }}",
+        note_type, note_type, note_field_selectors
+    )
+    .to_string()
+}
+
+fn generate_note_serialize_content_source(
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+    note_serialize_len: &String,
+) -> String {
+    let note_fields = note_fields
+        .iter()
+        .filter_map(|(field_name, field_type)| {
+            if field_name != "header" {
+                if field_type == "Field" {
+                    Some(format!("self.{}", field_name))
+                } else {
+                    Some(format!("self.{}.to_field()", field_name))
+                }
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(", ");
+    format!(
+        "
+        fn serialize_content(self: {}) -> [Field; {}] {{
+            [{}]
+        }}",
+        note_type, note_serialize_len, note_fields
+    )
+    .to_string()
+}
+
 fn generate_note_deserialize_content_source(
-    note_type: String,
-    note_fields: Vec<(String, String)>,
-    note_serialize_len: String,
+    note_type: &String,
+    note_fields: &Vec<(String, String)>,
+    note_serialize_len: &String,
 ) -> String {
     let note_fields = note_fields
         .iter()
@@ -2029,12 +2224,12 @@ fn generate_note_deserialize_content_source(
                     )
                 }
             } else {
-                "header: NoteHeader::empty()".to_string()
+                "header: dep::aztec::note::note_header::NoteHeader::empty()".to_string()
             }
         })
         .collect::<Vec<String>>()
         .join("\n");
-    let result = format!(
+    format!(
         "
         fn deserialize_content(serialized_note: [Field; {}]) -> Self {{
             {} {{
@@ -2043,8 +2238,7 @@ fn generate_note_deserialize_content_source(
         }}",
         note_serialize_len, note_type, note_fields
     )
-    .to_string();
-    result
+    .to_string()
 }
 
 fn generate_compute_note_hash_and_nullifier_source(note_types: &Vec<String>) -> String {

@@ -21,23 +21,9 @@ struct CardNote {
 }
 // docs:end:state_vars-CardNote
 
-struct CardNoteFields {
-    points: FieldSelector,
-    randomness: FieldSelector,
-    owner: FieldSelector,
-}
-
 impl CardNote {
     pub fn new(points: u8, randomness: Field, owner: AztecAddress) -> Self {
         CardNote { points, randomness, owner, header: NoteHeader::empty() }
-    }
-
-    pub fn fields() -> CardNoteFields {
-        CardNoteFields {
-            points: FieldSelector { index: 0, offset: 0, length: 32 },
-            randomness: FieldSelector { index: 1, offset: 0, length: 32 },
-            owner: FieldSelector { index: 2, offset: 0, length: 32 }
-        }
     }
 }
 
@@ -66,14 +52,6 @@ impl NoteInterface<CARD_NOTE_LEN> for CardNote {
         ],0)
     }
 
-    fn set_header(&mut self, header: NoteHeader) {
-        self.header = header;
-    }
-
-    fn get_header(note: CardNote) -> NoteHeader {
-        note.header
-    }
-
     // Broadcasts the note as an encrypted log on L1.
     fn broadcast(self, context: &mut PrivateContext, slot: Field) {
         let encryption_pub_key = get_public_key(self.owner);
@@ -85,11 +63,5 @@ impl NoteInterface<CARD_NOTE_LEN> for CardNote {
             encryption_pub_key,
             self.serialize_content(),
         );
-    }
-
-    fn get_note_type_id() -> Field {
-        // TODO(#4519): autogenerate
-        // python -c "print(int(''.join(str(ord(c)) for c in 'CardNote')))"
-        679711410078111116101
     }
 }
