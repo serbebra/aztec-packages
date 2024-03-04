@@ -584,17 +584,9 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                 let mut note_fields = vec![];
                 let note_serialized_len = match &trait_imp.trait_generics[0].typ {
                     UnresolvedTypeData::Named(path, _, _) => {
-                        println!(
-                            "note_serialize_length (named): {}",
-                            path.segments.last().unwrap().0.contents.to_string()
-                        );
                         Ok(path.segments.last().unwrap().0.contents.to_string())
                     }
                     UnresolvedTypeData::FieldElement => {
-                        println!(
-                            "note_serialize_length (fieldElement): {}",
-                            trait_imp.impl_generics[0].0.contents.to_string()
-                        );
                         Ok(trait_imp.impl_generics[0].0.contents.to_string())
                     }
                     _ => Err(AztecMacroError::CouldNotImplementNoteSerialization {
@@ -608,9 +600,6 @@ fn generate_note_serialization_impl(module: &mut SortedModule) -> Result<(), Azt
                         field_type.typ.to_string().replace("plain::", ""),
                     ));
                 }
-                println!("note_type: {}", note_type);
-                println!("note_fields: {:?}", note_fields);
-                println!("note_serialized_len: {}", note_serialized_len);
                 trait_imp.items.push(TraitImplItem::Function(generate_note_deserialize_content(
                     note_type,
                     note_fields,
@@ -1933,6 +1922,7 @@ fn generate_note_deserialize_content_source(
         .enumerate()
         .map(|(index, (field_name, field_type))| {
             if field_name != "header" {
+                // TODO: Simplify this when https://github.com/noir-lang/noir/issues/4463 is fixed
                 if field_type.eq("Field") || Regex::new(r"u[0-9]+").unwrap().is_match(&field_type) {
                     format!("{}: serialized_note[{}] as {},", field_name, index, field_type)
                 } else {
@@ -1957,7 +1947,6 @@ fn generate_note_deserialize_content_source(
         note_serialize_len, note_type, note_fields
     )
     .to_string();
-    println!("result: {}", result);
     result
 }
 
