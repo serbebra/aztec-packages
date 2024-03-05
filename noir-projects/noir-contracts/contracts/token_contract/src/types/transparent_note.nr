@@ -1,10 +1,8 @@
 // docs:start:token_types_all
+use dep::aztec::prelude::{NoteHeader, NoteInterface, PrivateContext};
 use dep::aztec::{
-    note::{
-    note_header::NoteHeader, note_interface::NoteInterface, utils::compute_note_hash_for_consumption,
-    note_getter_options::FieldSelector
-},
-    hash::{compute_secret_hash, pedersen_hash}, context::PrivateContext
+    note::{note_getter_options::FieldSelector, utils::compute_note_hash_for_consumption},
+    hash::{compute_secret_hash, pedersen_hash}
 };
 
 global TRANSPARENT_NOTE_LEN: Field = 2;
