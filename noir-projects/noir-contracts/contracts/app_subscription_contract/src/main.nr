@@ -87,7 +87,6 @@ contract AppSubscription {
 
     #[aztec(public)]
     #[aztec(internal)]
-    #[aztec(noinitcheck)]
     fn init(
         target_address: AztecAddress,
         subscription_token_address: AztecAddress,
