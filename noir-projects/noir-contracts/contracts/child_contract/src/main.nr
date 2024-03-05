@@ -8,7 +8,7 @@ contract Child {
         protocol_types::{abis::{function_selector::FunctionSelector, call_context::CallContext}, address::AztecAddress},
         note::{note_getter_options::NoteGetterOptions, note_header::NoteHeader, utils as note_utils}
     };
-    use dep::value_note::value_note::{ValueNote, VALUE_NOTE_LEN};
+    use dep::value_note::value_note::ValueNote;
 
     struct Storage {
         current_value: PublicMutable<Field>,
@@ -68,7 +68,7 @@ contract Child {
 
     #[aztec(private)]
     fn privateGetValue(amount: Field, owner: AztecAddress) -> Field {
-        let options = NoteGetterOptions::new().select(0, amount, Option::none()).select(1, owner.to_field(), Option::none()).set_limit(1);
+        let options = NoteGetterOptions::new().select(ValueNote::fields().value, amount, Option::none()).select(ValueNote::fields().owner, owner.to_field(), Option::none()).set_limit(1);
         let notes = storage.a_private_value.get_notes(options);
         notes[0].unwrap_unchecked().value
     }

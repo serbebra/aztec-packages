@@ -10,7 +10,7 @@ contract Escrow {
         oracle::get_public_key::get_public_key, state_vars::PrivateSet
     };
 
-    use dep::address_note::address_note::{AddressNote, ADDRESS_NOTE_LEN};
+    use dep::address_note::address_note::AddressNote;
 
     struct Storage {
         owners: PrivateSet<AddressNote>,
@@ -38,7 +38,11 @@ contract Escrow {
         let sender = context.msg_sender();
 
         // We don't remove note from the owners set. If a note exists, the owner and recipient are legit.
-        let options = NoteGetterOptions::new().select(0, sender.to_field(), Option::none()).select(1, this.to_field(), Option::none()).set_limit(1);
+        let options = NoteGetterOptions::new().select(
+            AddressNote::fields().address,
+            sender.to_field(),
+            Option::none()
+        ).select(AddressNote::fields().owner, this.to_field(), Option::none()).set_limit(1);
         let notes = storage.owners.get_notes(options);
         assert(notes[0].is_some(), "Sender is not an owner.");
 

@@ -11,7 +11,7 @@ contract DelegatedOn {
         utils as note_utils, note_header::NoteHeader
     }
     };
-    use dep::value_note::value_note::{ValueNote, VALUE_NOTE_LEN};
+    use dep::value_note::value_note::ValueNote;
 
     struct Storage {
         current_value: PublicMutable<Field>,
@@ -35,7 +35,7 @@ contract DelegatedOn {
     }
 
     unconstrained fn view_private_value(amount: Field, owner: AztecAddress) -> pub Field {
-        let options = NoteViewerOptions::new().select(0, amount, Option::none()).select(1, owner.to_field(), Option::none()).set_limit(1);
+        let options = NoteViewerOptions::new().select(ValueNote::fields().value, amount, Option::none()).select(ValueNote::fields().owner, owner.to_field(), Option::none()).set_limit(1);
         let notes = storage.a_private_value.view_notes(options);
         notes[0].unwrap_unchecked().value
     }
@@ -43,15 +43,5 @@ contract DelegatedOn {
     unconstrained fn view_public_value() -> pub Field {
         storage.current_value.read()
     }
-
-    // TODO: remove this placeholder once https://github.com/AztecProtocol/aztec-packages/issues/2918 is implemented
-    unconstrained fn compute_note_hash_and_nullifier(
-        contract_address: AztecAddress,
-        nonce: Field,
-        storage_slot: Field,
-        note_type_id: Field,
-        serialized_note: [Field; 0]
-    ) -> pub [Field; 4] {
-        [0, 0, 0, 0]
-    }
 }
+

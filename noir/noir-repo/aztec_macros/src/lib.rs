@@ -22,7 +22,7 @@ use noirc_frontend::macros_api::{CrateId, FileId};
 use noirc_frontend::macros_api::{MacroError, MacroProcessor};
 use noirc_frontend::macros_api::{ModuleDefId, NodeInterner, SortedModule, StructId};
 use noirc_frontend::node_interner::{FuncId, TraitId, TraitImplId, TraitImplKind};
-use noirc_frontend::{Lambda, TraitImplItem, UnresolvedTypeExpression};
+use noirc_frontend::{Lambda, NoirTraitImpl, TraitImplItem, UnresolvedTypeExpression};
 
 pub struct AztecMacro;
 
@@ -298,8 +298,8 @@ fn transform(
 ) -> Result<SortedModule, (MacroError, FileId)> {
     // Usage -> mut ast -> aztec_library::transform(&mut ast)
 
-    let crate_graph = &context.crate_graph[crate_id];
-    generate_note_interface_impl(&mut ast).map_err(|err| (err.into(), crate_graph.root_file_id))?;
+    generate_note_interface_impl(&mut ast)
+        .map_err(|err| (err.into(), context.crate_graph[crate_id].root_file_id))?;
 
     // Covers all functions in the ast
     for submodule in ast.submodules.iter_mut().filter(|submodule| submodule.is_contract) {
@@ -537,6 +537,13 @@ fn transform_module(
     Ok(has_transformed_module)
 }
 
+fn check_trait_method_implemented(trait_impl: &NoirTraitImpl, method_name: &str) -> bool {
+    trait_impl.items.iter().any(|item| match item {
+        TraitImplItem::Function(func) => func.def.name.0.contents == method_name,
+        _ => false,
+    })
+}
+
 fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMacroError> {
     let mut note_interface_trait_impls = vec![];
 
@@ -555,32 +562,31 @@ fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMa
                 let note_struct = module
                     .types
                     .iter()
-                    .find(|typ| {
-                        typ.name.0.contents == struct_path.last_segment().0.contents
-                    })
+                    .find(|typ| typ.name.0.contents == struct_path.last_segment().0.contents)
                     .ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
                         span: trait_imp.object_type.span,
                         typ: trait_imp.object_type.typ.clone(),
                     })?;
-                if let Some(_) = trait_imp.items.iter().find(|item| match item {
-                    TraitImplItem::Function(func) => {
-                        func.def.name.0.contents == "deserialize_content"
-                    }
-                    _ => false,
-                }) {
-                    continue;
-                }
-                let note_impl = module.impls.iter_mut().find(| r#impl| {
-                    match &r#impl.object_type.typ {
+
+                let existing_impl =
+                    module.impls.iter_mut().find(|r#impl| match &r#impl.object_type.typ {
                         UnresolvedTypeData::Named(path, _, _) => {
                             path.last_segment().eq(&struct_path.last_segment())
                         }
-                        _ => false
-                    }
-                }).ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
-                    span: trait_imp.object_type.span,
-                    typ: trait_imp.object_type.typ.clone(),
-                })?;
+                        _ => false,
+                    });
+                let note_impl = if existing_impl.is_none() {
+                    let default_impl = TypeImpl {
+                        object_type: trait_imp.object_type.clone(),
+                        type_span: Span::default(),
+                        generics: vec![],
+                        methods: vec![],
+                    };
+                    module.impls.push(default_impl.clone());
+                    module.impls.last_mut().unwrap()
+                } else {
+                    existing_impl.unwrap()
+                };
                 let note_type = note_struct.name.0.contents.to_string();
                 let mut note_fields = vec![];
                 let note_serialized_len = match &trait_imp.trait_generics[0].typ {
@@ -601,26 +607,46 @@ fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMa
                         field_type.typ.to_string().replace("plain::", ""),
                     ));
                 }
-                module.types.push(generate_note_fields_struct(&note_type, &note_fields));
-                note_impl.methods.push((generate_note_fields_fn(
-                    &note_type,
-                    &note_fields,
-                ), Span::default()));
-                trait_imp.items.push(TraitImplItem::Function(generate_note_serialize_content(
-                    &note_type,
-                    &note_fields,
-                    &note_serialized_len,
-                )));
-                trait_imp.items.push(TraitImplItem::Function(generate_note_deserialize_content(
-                    &note_type,
-                    &note_fields,
-                    &note_serialized_len,
-                )));
-                trait_imp.items.push(TraitImplItem::Function(generate_note_get_header(&note_type)));
-                trait_imp.items.push(TraitImplItem::Function(generate_note_set_header(&note_type)));
-                trait_imp
-                    .items
-                    .push(TraitImplItem::Function(generate_note_get_type_id(&note_type)));
+                if !check_trait_method_implemented(trait_imp, "serialize_content")
+                    && !check_trait_method_implemented(trait_imp, "deserialize_content")
+                    && note_impl
+                        .methods
+                        .iter()
+                        .find(|(func, _)| func.def.name.0.contents == "fields")
+                        .is_none()
+                {
+                    module.types.push(generate_note_fields_struct(&note_type, &note_fields));
+                    note_impl
+                        .methods
+                        .push((generate_note_fields_fn(&note_type, &note_fields), Span::default()));
+                    trait_imp.items.push(TraitImplItem::Function(generate_note_serialize_content(
+                        &note_type,
+                        &note_fields,
+                        &note_serialized_len,
+                    )));
+                    trait_imp.items.push(TraitImplItem::Function(
+                        generate_note_deserialize_content(
+                            &note_type,
+                            &note_fields,
+                            &note_serialized_len,
+                        ),
+                    ));
+                }
+                if !check_trait_method_implemented(trait_imp, "get_header") {
+                    trait_imp
+                        .items
+                        .push(TraitImplItem::Function(generate_note_get_header(&note_type)));
+                }
+                if !check_trait_method_implemented(trait_imp, "set_header") {
+                    trait_imp
+                        .items
+                        .push(TraitImplItem::Function(generate_note_set_header(&note_type)));
+                }
+                if !check_trait_method_implemented(trait_imp, "get_note_type_id") {
+                    trait_imp
+                        .items
+                        .push(TraitImplItem::Function(generate_note_get_type_id(&note_type)));
+                }
             }
             _ => {
                 return Err(AztecMacroError::CouldNotImplementNoteSerialization {
@@ -2087,8 +2113,7 @@ fn generate_note_fields_fn(
     note_type: &String,
     note_fields: &Vec<(String, String)>,
 ) -> NoirFunction {
-    let function_source =
-        generate_note_fields_fn_source(note_type, note_fields);
+    let function_source = generate_note_fields_fn_source(note_type, note_fields);
     let (function_ast, errors) = parse_program(&function_source);
     if !errors.is_empty() {
         dbg!(errors.clone());
@@ -2152,8 +2177,8 @@ fn generate_note_fields_fn_source(
         .filter_map(|(index, (field_name, _))| {
             if field_name != "header" {
                 Some(format!(
-                    "{}: dep::aztec::note::note_getter_options::FieldSelector {{ index: {}, offset: 0, length: 32 }}",
-                    field_name, 
+                    "{}: dep::aztec::note::note_getter_options::FieldSelector {{ index: {}, offset: 0, length: 31 }}",
+                    field_name,
                     index
                 ))
             } else {
