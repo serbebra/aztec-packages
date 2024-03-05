@@ -2157,7 +2157,7 @@ fn generate_note_fields_fn_source(
         .filter_map(|(index, (field_name, _))| {
             if field_name != "header" {
                 Some(format!(
-                    "{}: dep::aztec::note::note_getter_options::FieldSelector {{ index: {}, offset: 0, length: 31 }}",
+                    "{}: dep::aztec::note::note_getter_options::FieldSelector {{ index: {}, offset: 0, length: 32 }}",
                     field_name,
                     index
                 ))

@@ -81,8 +81,8 @@ impl TransparentNote {
 
     pub fn fields() -> TransparentNoteFields {
         TransparentNoteFields {
-            amount: FieldSelector { index: 0, offset: 0, length: 31 },
-            secret_hash: FieldSelector { index: 1, offset: 0, length: 31 }
+            amount: FieldSelector { index: 0, offset: 0, length: 32 },
+            secret_hash: FieldSelector { index: 1, offset: 0, length: 32 }
         }
     }
 }
