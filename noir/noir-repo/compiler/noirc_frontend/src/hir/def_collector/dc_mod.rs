@@ -7,7 +7,6 @@ use noirc_errors::Location;
 use crate::{
     graph::CrateId,
     hir::def_collector::dc_crate::{UnresolvedStruct, UnresolvedTrait},
-    macros_api::MacroProcessor,
     node_interner::{FunctionModifiers, TraitId, TypeAliasId},
     parser::{SortedModule, SortedSubModule},
     FunctionDefinition, Ident, LetStatement, NoirFunction, NoirStruct, NoirTrait, NoirTraitImpl,
@@ -26,10 +25,10 @@ use crate::hir::resolution::import::ImportDirective;
 use crate::hir::Context;
 
 /// Given a module collect all definitions into ModuleData
-struct ModCollector<'a> {
-    pub(crate) def_collector: &'a mut DefCollector,
-    pub(crate) file_id: FileId,
-    pub(crate) module_id: LocalModuleId,
+pub struct ModCollector<'a> {
+    pub def_collector: &'a mut DefCollector,
+    pub file_id: FileId,
+    pub module_id: LocalModuleId,
 }
 
 /// Walk a module and collect its definitions.
@@ -42,28 +41,16 @@ pub fn collect_defs(
     module_id: LocalModuleId,
     crate_id: CrateId,
     context: &mut Context,
-    macro_processors: &Vec<&dyn MacroProcessor>,
 ) -> Vec<(CompilationError, FileId)> {
     let mut collector = ModCollector { def_collector, file_id, module_id };
     let mut errors: Vec<(CompilationError, FileId)> = vec![];
 
     // First resolve the module declarations
     for decl in ast.module_decls {
-        errors.extend(collector.parse_module_declaration(
-            context,
-            &decl,
-            crate_id,
-            macro_processors,
-        ));
+        errors.extend(collector.parse_module_declaration(context, &decl, crate_id));
     }
 
-    errors.extend(collector.collect_submodules(
-        context,
-        crate_id,
-        ast.submodules,
-        file_id,
-        macro_processors,
-    ));
+    errors.extend(collector.collect_submodules(context, crate_id, ast.submodules, file_id));
 
     // Then add the imports to defCollector to resolve once all modules in the hierarchy have been resolved
     for import in ast.imports {
@@ -93,7 +80,7 @@ pub fn collect_defs(
 }
 
 impl<'a> ModCollector<'a> {
-    fn collect_globals(
+    pub fn collect_globals(
         &mut self,
         context: &mut Context,
         globals: Vec<LetStatement>,
@@ -128,7 +115,7 @@ impl<'a> ModCollector<'a> {
         errors
     }
 
-    fn collect_impls(&mut self, context: &mut Context, impls: Vec<TypeImpl>, krate: CrateId) {
+    pub fn collect_impls(&mut self, context: &mut Context, impls: Vec<TypeImpl>, krate: CrateId) {
         let module_id = ModuleId { krate, local_id: self.module_id };
 
         for r#impl in impls {
@@ -151,7 +138,7 @@ impl<'a> ModCollector<'a> {
         }
     }
 
-    fn collect_trait_impls(
+    pub fn collect_trait_impls(
         &mut self,
         context: &mut Context,
         impls: Vec<NoirTraitImpl>,
@@ -187,7 +174,7 @@ impl<'a> ModCollector<'a> {
         }
     }
 
-    fn collect_trait_impl_function_overrides(
+    pub fn collect_trait_impl_function_overrides(
         &mut self,
         context: &mut Context,
         trait_impl: &NoirTraitImpl,
@@ -210,7 +197,7 @@ impl<'a> ModCollector<'a> {
         unresolved_functions
     }
 
-    fn collect_functions(
+    pub fn collect_functions(
         &mut self,
         context: &mut Context,
         functions: Vec<NoirFunction>,
@@ -266,7 +253,7 @@ impl<'a> ModCollector<'a> {
 
     /// Collect any struct definitions declared within the ast.
     /// Returns a vector of errors if any structs were already defined.
-    fn collect_structs(
+    pub fn collect_structs(
         &mut self,
         context: &mut Context,
         types: Vec<NoirStruct>,
@@ -314,7 +301,7 @@ impl<'a> ModCollector<'a> {
 
     /// Collect any type aliases definitions declared within the ast.
     /// Returns a vector of errors if any type aliases were already defined.
-    fn collect_type_aliases(
+    pub fn collect_type_aliases(
         &mut self,
         context: &mut Context,
         type_aliases: Vec<NoirTypeAlias>,
@@ -352,7 +339,7 @@ impl<'a> ModCollector<'a> {
 
     /// Collect any traits definitions declared within the ast.
     /// Returns a vector of errors if any traits were already defined.
-    fn collect_traits(
+    pub fn collect_traits(
         &mut self,
         context: &mut Context,
         traits: Vec<NoirTrait>,
@@ -501,13 +488,12 @@ impl<'a> ModCollector<'a> {
         errors
     }
 
-    fn collect_submodules(
+    pub fn collect_submodules(
         &mut self,
         context: &mut Context,
         crate_id: CrateId,
         submodules: Vec<SortedSubModule>,
         file_id: FileId,
-        macro_processors: &Vec<&dyn MacroProcessor>,
     ) -> Vec<(CompilationError, FileId)> {
         let mut errors: Vec<(CompilationError, FileId)> = vec![];
         for submodule in submodules {
@@ -520,7 +506,6 @@ impl<'a> ModCollector<'a> {
                         child,
                         crate_id,
                         context,
-                        macro_processors,
                     ));
                 }
                 Err(error) => {
@@ -539,7 +524,6 @@ impl<'a> ModCollector<'a> {
         context: &mut Context,
         mod_name: &Ident,
         crate_id: CrateId,
-        macro_processors: &Vec<&dyn MacroProcessor>,
     ) -> Vec<(CompilationError, FileId)> {
         let mut errors: Vec<(CompilationError, FileId)> = vec![];
         let child_file_id =
@@ -575,19 +559,7 @@ impl<'a> ModCollector<'a> {
 
         // Parse the AST for the module we just found and then recursively look for it's defs
         let (ast, parsing_errors) = context.parsed_file_results(child_file_id);
-        let mut ast = ast.into_sorted();
-
-        for macro_processor in macro_processors {
-            match macro_processor.process_untyped_ast(ast.clone(), &crate_id, context) {
-                Ok(processed_ast) => {
-                    ast = processed_ast;
-                }
-                Err((error, file_id)) => {
-                    let def_error = DefCollectorErrorKind::MacroError(error);
-                    errors.push((def_error.into(), file_id));
-                }
-            }
-        }
+        let ast = ast.into_sorted();
 
         errors.extend(
             parsing_errors.iter().map(|e| (e.clone().into(), child_file_id)).collect::<Vec<_>>(),
@@ -603,7 +575,6 @@ impl<'a> ModCollector<'a> {
                     child_mod_id,
                     crate_id,
                     context,
-                    macro_processors,
                 ));
             }
             Err(error) => {

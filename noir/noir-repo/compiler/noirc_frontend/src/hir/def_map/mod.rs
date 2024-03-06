@@ -56,7 +56,7 @@ impl ModuleId {
 /// Map of all modules and scopes defined within a crate.
 ///
 /// The definitions of the crate are accessible indirectly via the scopes of each module.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CrateDefMap {
     pub(crate) root: LocalModuleId,
 

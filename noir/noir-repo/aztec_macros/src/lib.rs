@@ -1,11 +1,16 @@
+use noirc_frontend::hir::def_collector;
+use noirc_frontend::hir::def_collector::dc_mod::ModCollector;
 use regex::Regex;
 use std::borrow::{Borrow, BorrowMut};
+use std::collections::BTreeMap;
 use std::vec;
 
 use convert_case::{Case, Casing};
 use iter_extended::vecmap;
 use noirc_errors::Location;
-use noirc_frontend::hir::def_collector::dc_crate::{UnresolvedFunctions, UnresolvedTraitImpl};
+use noirc_frontend::hir::def_collector::dc_crate::{
+    DefCollector, ImplMap, UnresolvedFunctions, UnresolvedStruct, UnresolvedTraitImpl,
+};
 use noirc_frontend::hir::def_map::{LocalModuleId, ModuleId};
 use noirc_frontend::macros_api::parse_program;
 use noirc_frontend::macros_api::FieldElement;
@@ -36,20 +41,21 @@ impl MacroProcessor for AztecMacro {
         transform(ast, crate_id, context)
     }
 
-    fn process_unresolved_traits_impls(
+    fn process_collected_defs(
         &self,
         crate_id: &CrateId,
         context: &mut HirContext,
-        unresolved_traits_impls: &[UnresolvedTraitImpl],
-        collected_functions: &mut Vec<UnresolvedFunctions>,
+        def_collector: &mut DefCollector,
     ) -> Result<(), (MacroError, FileId)> {
         if has_aztec_dependency(crate_id, context) {
             inject_compute_note_hash_and_nullifier(
                 crate_id,
                 context,
-                unresolved_traits_impls,
-                collected_functions,
-            )
+                &mut def_collector.collected_traits_impls,
+                &mut def_collector.collected_functions,
+            )?;
+            generate_note_interface_impl(crate_id, context, def_collector)
+                .map_err(|err| (err.into(), context.crate_graph[crate_id].root_file_id))
         } else {
             Ok(())
         }
@@ -293,10 +299,6 @@ fn transform(
     context: &HirContext,
 ) -> Result<SortedModule, (MacroError, FileId)> {
     // Usage -> mut ast -> aztec_library::transform(&mut ast)
-
-    generate_note_interface_impl(&mut ast)
-        .map_err(|err| (err.into(), context.crate_graph[crate_id].root_file_id))?;
-
     // Covers all functions in the ast
     for submodule in ast.submodules.iter_mut().filter(|submodule| submodule.is_contract) {
         if transform_module(&mut submodule.contents, crate_id, context)
@@ -517,57 +519,33 @@ fn transform_module(
     Ok(has_transformed_module)
 }
 
-fn check_trait_method_implemented(trait_impl: &NoirTraitImpl, method_name: &str) -> bool {
-    trait_impl.items.iter().any(|item| match item {
-        TraitImplItem::Function(func) => func.def.name.0.contents == method_name,
-        _ => false,
-    })
+fn check_trait_method_implemented(trait_impl: &UnresolvedTraitImpl, method_name: &str) -> bool {
+    trait_impl.methods.functions.iter().any(|func| func.2.def.name.0.contents == method_name)
 }
 
-fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMacroError> {
-    let mut note_interface_trait_impls = vec![];
-
-    module.trait_impls.iter_mut().for_each(|trait_imp| {
-        let trait_name = trait_imp.trait_name.segments.last();
-        if trait_name.is_some() {
-            if trait_name.unwrap().0.contents == "NoteInterface" {
-                note_interface_trait_impls.push(trait_imp)
-            }
-        }
-    });
-
-    for trait_imp in note_interface_trait_impls {
+fn generate_note_interface_impl(
+    crate_id: &CrateId,
+    context: &mut HirContext,
+    def_collector: &mut DefCollector,
+) -> Result<(), AztecMacroError> {
+    for trait_imp in def_collector
+        .collected_traits_impls
+        .iter()
+        .filter(|trait_imp| trait_imp.trait_path.last_segment().0.contents == "NoteInterface")
+    {
         match &trait_imp.object_type.typ {
             UnresolvedTypeData::Named(struct_path, _, _) => {
-                let note_struct = module
-                    .types
+                let (_, note_struct) = def_collector
+                    .collected_types
                     .iter()
-                    .find(|typ| typ.name.0.contents == struct_path.last_segment().0.contents)
+                    .find(|(_, typ)| {
+                        typ.struct_def.name.0.contents == struct_path.last_segment().0.contents
+                    })
                     .ok_or(AztecMacroError::CouldNotImplementNoteSerialization {
                         span: trait_imp.object_type.span,
                         typ: trait_imp.object_type.typ.clone(),
                     })?;
-
-                let existing_impl =
-                    module.impls.iter_mut().find(|r#impl| match &r#impl.object_type.typ {
-                        UnresolvedTypeData::Named(path, _, _) => {
-                            path.last_segment().eq(&struct_path.last_segment())
-                        }
-                        _ => false,
-                    });
-                let note_impl = if existing_impl.is_none() {
-                    let default_impl = TypeImpl {
-                        object_type: trait_imp.object_type.clone(),
-                        type_span: Span::default(),
-                        generics: vec![],
-                        methods: vec![],
-                    };
-                    module.impls.push(default_impl.clone());
-                    module.impls.last_mut().unwrap()
-                } else {
-                    existing_impl.unwrap()
-                };
-                let note_type = note_struct.name.0.contents.to_string();
+                let note_type = note_struct.struct_def.name.0.contents.to_string();
                 let mut note_fields = vec![];
                 let note_serialized_len = match &trait_imp.trait_generics[0].typ {
                     UnresolvedTypeData::Named(path, _, _) => {
@@ -581,51 +559,124 @@ fn generate_note_interface_impl(module: &mut SortedModule) -> Result<(), AztecMa
                         typ: trait_imp.object_type.typ.clone(),
                     }),
                 }?;
-                for (field_ident, field_type) in note_struct.fields.iter() {
+                for (field_ident, field_type) in note_struct.struct_def.fields.iter() {
                     note_fields.push((
                         field_ident.0.contents.to_string(),
                         field_type.typ.to_string().replace("plain::", ""),
                     ));
                 }
-                if !check_trait_method_implemented(trait_imp, "serialize_content")
-                    && !check_trait_method_implemented(trait_imp, "deserialize_content")
-                    && note_impl
-                        .methods
-                        .iter()
-                        .find(|(func, _)| func.def.name.0.contents == "fields")
-                        .is_none()
+                let existing_impl =
+                    def_collector.collected_impls.iter_mut().find(|((r#impl, _), _)| match &r#impl
+                        .typ
+                    {
+                        UnresolvedTypeData::Named(path, _, _) => {
+                            path.last_segment().eq(&struct_path.last_segment())
+                        }
+                        _ => false,
+                    });
+                let mut collector = ModCollector {
+                    def_collector,
+                    file_id: trait_imp.file_id,
+                    module_id: trait_imp.module_id,
+                };
+                let note_fields_fn = generate_note_fields_fn(&note_type, &note_fields);
+                if existing_impl.is_none() {
+                    let default_impl = TypeImpl {
+                        object_type: trait_imp.object_type.clone(),
+                        type_span: Span::default(),
+                        generics: vec![],
+                        methods: vec![(note_fields_fn, Span::default())],
+                    };
+
+                    let fields_struct = generate_note_fields_struct(&note_type, &note_fields);
+
+                    collector.collect_structs(context, vec![fields_struct], *crate_id);
+                    collector.collect_impls(context, vec![default_impl], *crate_id);
+                } else if !existing_impl
+                    .as_ref()
+                    .unwrap()
+                    .1
+                    .iter()
+                    .any(|impls| impls.2.functions.iter().any(|f| f.2.name() == "fields"))
                 {
-                    module.types.push(generate_note_fields_struct(&note_type, &note_fields));
-                    note_impl
-                        .methods
-                        .push((generate_note_fields_fn(&note_type, &note_fields), Span::default()));
-                    trait_imp.items.push(TraitImplItem::Function(generate_note_serialize_content(
-                        &note_type,
-                        &note_fields,
-                        &note_serialized_len,
-                    )));
-                    trait_imp.items.push(TraitImplItem::Function(
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
+                        note_fields_fn.def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
+
+                    existing_impl.unwrap().1.last_mut().unwrap().2.functions.push((
+                        trait_imp.module_id,
+                        func_id,
+                        note_fields_fn,
+                    ));
+
+                    let fields_struct = generate_note_fields_struct(&note_type, &note_fields);
+                    collector.collect_structs(context, vec![fields_struct], *crate_id);
+                }
+
+                if !check_trait_method_implemented(trait_imp, "serialize_content") {
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
+                        generate_note_serialize_content(
+                            &note_type,
+                            &note_fields,
+                            &note_serialized_len,
+                        )
+                        .def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
+                }
+                if !check_trait_method_implemented(trait_imp, "deserialize_content") {
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
                         generate_note_deserialize_content(
                             &note_type,
                             &note_fields,
                             &note_serialized_len,
-                        ),
-                    ));
+                        )
+                        .def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
                 }
                 if !check_trait_method_implemented(trait_imp, "get_header") {
-                    trait_imp
-                        .items
-                        .push(TraitImplItem::Function(generate_note_get_header(&note_type)));
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
+                        generate_note_get_header(&note_type).def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
                 }
                 if !check_trait_method_implemented(trait_imp, "set_header") {
-                    trait_imp
-                        .items
-                        .push(TraitImplItem::Function(generate_note_set_header(&note_type)));
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
+                        generate_note_set_header(&note_type).def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
                 }
                 if !check_trait_method_implemented(trait_imp, "get_note_type_id") {
-                    trait_imp
-                        .items
-                        .push(TraitImplItem::Function(generate_note_get_type_id(&note_type)));
+                    let func_id = context.def_interner.push_empty_fn();
+                    let location = Location::new(Span::default(), trait_imp.file_id);
+                    context.def_interner.push_function(
+                        func_id,
+                        generate_note_get_type_id(&note_type).def(),
+                        ModuleId { krate: *crate_id, local_id: trait_imp.module_id },
+                        location,
+                    );
                 }
             }
             _ => {
