@@ -85,7 +85,14 @@ impl<Note> PrivateSet<Note> {
         self,
         options: NoteViewerOptions<Note, N>
     ) -> [Option<Note>; MAX_NOTES_PER_PAGE] where Note: NoteInterface<N> {
-        view_notes(self.storage_slot, options)
+        [Option::none(); MAX_NOTES_PER_PAGE]
+    }
+
+    pub fn view_notes_constrained<N>(
+        self,
+        options: NoteViewerOptions<Note, N>
+    ) -> [Option<Note>; MAX_NOTES_PER_PAGE] where Note: NoteInterface<N> {
+        [Option::none(); MAX_NOTES_PER_PAGE]
     }
     // docs:end:view_notes
 }

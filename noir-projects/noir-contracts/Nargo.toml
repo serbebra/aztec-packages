@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "contracts/ice_contract",
     "contracts/app_subscription_contract",
     "contracts/avm_test_contract",
     "contracts/fpc_contract",
