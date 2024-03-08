@@ -1,11 +1,7 @@
 contract ICEExample {
-    use dep::aztec::prelude::{AztecAddress, NoteViewerOptions, PrivateSet};
+    use dep::aztec::prelude::AztecAddress;
+    use dep::ice_dependency::{Struct, parameters::Parameters};
 
-    use dep::value_note::value_note::ValueNote;
-
-    struct Storage {
-        set: PrivateSet<ValueNote>,
-    }
 
     #[aztec(public)]
     #[aztec(initializer)]
@@ -13,11 +9,10 @@ contract ICEExample {
 
     #[aztec(private)]
     fn ice_trigger() {
-        let options = NoteViewerOptions::new();
+        let ztruct: Struct<Field> = Struct{};
+        let parameters = Parameters::new();
 
         // Causes an ICE
-        let _ = storage.set.view_notes(options);
-        // This alternative function is the exact same, except unconstrained. No ICE.
-        // let _ = storage.set.view_notes_constrained(options);
+        let _ = ztruct.view_notes(parameters);
     }
 }
