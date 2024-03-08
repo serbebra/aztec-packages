@@ -4,7 +4,6 @@ use dep::aztec::{
     oracle::{nullifier_key::get_nullifier_secret_key, get_public_key::get_public_key},
     hash::pedersen_hash, protocol_types::traits::Empty
 };
-
 // Shows how to create a custom note
 
 global CARD_NOTE_LEN: Field = 3;
@@ -23,6 +22,12 @@ impl CardNote {
         CardNote { points, randomness, owner, header: NoteHeader::empty() }
     }
 }
+
+// struct CardNoteFields {
+//     points: dep::aztec::note::note_getter_options::FieldSelector,
+//     randomness: dep::aztec::note::note_getter_options::FieldSelector,
+//     owner: dep::aztec::note::note_getter_options::FieldSelector
+// }
 
 impl NoteInterface<CARD_NOTE_LEN> for CardNote {
     fn compute_note_content_hash(self) -> Field {

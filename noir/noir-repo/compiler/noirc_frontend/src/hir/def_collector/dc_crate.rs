@@ -70,6 +70,7 @@ impl UnresolvedFunctions {
     }
 }
 
+#[derive(Clone, Debug)]
 pub struct UnresolvedStruct {
     pub file_id: FileId,
     pub module_id: LocalModuleId,
@@ -85,7 +86,7 @@ pub struct UnresolvedTrait {
     pub method_ids: HashMap<String, FuncId>,
     pub fns_with_default_impl: UnresolvedFunctions,
 }
-
+#[derive(Clone)]
 pub struct UnresolvedTraitImpl {
     pub file_id: FileId,
     pub module_id: LocalModuleId,

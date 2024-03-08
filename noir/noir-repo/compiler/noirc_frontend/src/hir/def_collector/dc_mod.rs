@@ -280,6 +280,10 @@ impl<'a> ModCollector<'a> {
                 }
             };
 
+            if name.0.contents == "CardNoteFields" {
+                println!("CardNoteFields {:?}", id);
+            }
+
             // Add the struct to scope so its path can be looked up later
             let result =
                 self.def_collector.def_map.modules[self.module_id.0].declare_struct(name, id);
