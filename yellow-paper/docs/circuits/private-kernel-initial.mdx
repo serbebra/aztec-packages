@@ -1,5 +1,7 @@
 # Private Kernel Circuit - Initial
 
+import ZoomableMermaid from "@site/src/components/ZoomableMermaid";
+
 <!--
 Mike review:
 Missing Gas Measurement?
@@ -325,6 +327,303 @@ C ..> D: Copy the data from the inputs A to the outputs B\n(possibly with some m
 </div>
 
 ---
+
+<ZoomableMermaid
+  chart={
+    `classDiagram 
+  direction TB
+
+class PrivateInputs {
+transaction\*request: TransactionRequest
+private_call: PrivateCall
+}
+
+PrivateInputs *-- TransactionRequest: transaction*request
+PrivateInputs *-- PrivateCall: private*call
+
+class TransactionRequest {
+origin: AztecAddress
+function*data: FunctionData
+args*hash: field
+tx\*context: TransactionContext
+}
+
+TransactionRequest *-- FunctionData: function*data
+TransactionRequest *-- TransactionContext: tx*context
+TransactionRequest ..> ConstantData: tx_context
+class PrivateCall {
+call*stack*item: PrivateCallStackItem
+proof: Proof
+vk: VerificationKey
+bytecode_hash: field
+contract_instance: ContractInstance
+contract_class: ContractClass
+function_leaf_membership_witness: MembershipWitness
+}
+PrivateCall *-- PrivateCallStackItem: call*stack_item
+PrivateCall *-- Proof: proof
+PrivateCall \*-- VerificationKey: vk
+PrivateCall \_-- ContractInstance: contract*instance
+PrivateCall *-- ContractClass: contract*class
+PrivateCall *-- MembershipWitness: function*leaf_membership_witness
+VerificationKey ..> FUNCTION_EXISTENCE_CHECK: Check vk exists within function leaf
+FunctionData ..> FUNCTION_EXISTENCE_CHECK: Check function_data exists within function leaf
+MembershipWitness ..> FUNCTION_EXISTENCE_CHECK: Check function leaf exists within \nprivate function tree
+FUNCTION_EXISTENCE_CHECK .. ContractClass: computed_root == private_functions
+VerificationKey ..> PROOF_VERIFICATION
+Proof ..> PROOF_VERIFICATION
+PrivateFunctionPublicInputs ..> PROOF_VERIFICATION
+ContractClass .. ContractInstance: hash(contract_class) == contract_class_id
+class ContractClass {
+version: u8
+registerer_address: AztecAddress
+artifact_hash: field
+private_functions: field
+public_functions: field
+unconstrained_functions: field
+}
+class TransactionContext {
+tx_type: standard|fee_paying|fee_rebate
+chain_id: field
+version: field
+}
+class PrivateCallStackItem {
+contract*address: AztecAddress
+function*data: FunctionData
+public_inputs: PrivateFunctionPublicInputs
+}
+PrivateCallStackItem *-- FunctionData: function*data
+PrivateCallStackItem *-- PrivateFunctionPublicInputs: public_inputs
+PrivateCallStackItem .. TransactionRequest: function_data==function_data
+PrivateCallStackItem .. CallContext: if is_delegatecall then\n contract_address == msg_sender \nelse \n contract_address == storage_contract_address
+PrivateCallStackItem .. PrivateFunctionPublicInputs: Validate counter_start & counter_end\nvs. the counters of the ordered arrays
+PrivateCallStackItem .. PrivateCallRequestContext: Validate all counter_start\n& counter_end values.
+TransactionRequest .. PrivateFunctionPublicInputs: args_hash == args_hash
+TransactionRequest .. CallContext: origin == msg_sender
+ContractInstance .. PrivateCallStackItem: hash(contract_instance) == contract_address
+class FunctionData {
+function_selector: u32
+function_type: private|public
+}
+class PrivateFunctionPublicInputs {
+call*context: CallContext
+args_hash: field
+return_values: List~field~
+note_hashes: List~NoteHash~
+nullifiers: List~Nullifier~
+l2_to_l1_messages: List~field~
+note_hash_read_requests: List~ReadRequest~
+nullifier_read_requests: List~ReadRequest~
+nullifier_key_validation_requests: List~ParentSecretKeyValidationRequest~
+unencrypted_log_hashes: List~UnencryptedLogHash~
+encrypted_log_hashes: List~EncryptedLogHash~
+encrypted_note_preimage_hashes: List~EncryptedNotePreimageHash~
+public_call_requests: List~PublicCallRequest~
+private_call_requests: List~PrivateCallRequest~
+counter_start: u32
+counter_end: u32
+min_revertible_side_effect_counter: u32
+block_header: BlockHeader
+chain_id: field
+version: field
+}
+PrivateFunctionPublicInputs *-- CallContext: call*context
+PrivateFunctionPublicInputs *-- NoteHash: note*hashes
+PrivateFunctionPublicInputs *-- Nullifier: nullifiers
+PrivateFunctionPublicInputs \_-- ReadRequest: note*hash_read_requests
+PrivateFunctionPublicInputs *-- ReadRequest: nullifier*read_requests
+PrivateFunctionPublicInputs *-- ParentSecretKeyValidationRequest: nullifier*key_validation_requests
+PrivateFunctionPublicInputs *-- UnencryptedLogHash: unencrypted*log_hashes
+PrivateFunctionPublicInputs *-- EncryptedLogHash: encrypted*log_hashes
+PrivateFunctionPublicInputs *-- EncryptedNotePreimageHash: encrypted*note_preimage_hashes
+PrivateFunctionPublicInputs *-- BlockHeader: block_header
+TransactionContext .. PrivateFunctionPublicInputs: chain_id==chain_id\nversion==version
+class FUNCTION_EXISTENCE_CHECK {
+Check the vk, function_data,
+exist within the private function tree root
+}
+class PROOF_VERIFICATION {
+Verify the proof
+}
+class CallContext {
+msg_sender: AztecAddress
+storage_contract_address: AztecAddress
+portal_contract_address: AztecAddress
+is_delegate_call: bool
+is_static_call: bool
+}
+CallContext ..> CallerContext : call_context
+CallContext .. NoteHashContext: storage_contract_address\n== contract_address
+CallContext .. NullifierContext: storage_contract_address\n== contract_address
+CallContext .. ParentSecretKeyValidationRequestContext: storage_contract_address\n== contract_address
+CallContext .. UnencryptedLogHashContext: storage_contract_address\n== contract_address
+CallContext .. EncryptedLogHashContext: storage_contract_address\n== contract_address
+CallContext .. EncryptedNotePreimageHashContext: storage_contract_address\n== contract_address
+PrivateFunctionPublicInputs ..> L2ToL1MessageContext: l2_to_l1_messages\n->l2_to_l1_message_contexts
+class NoteHash {
+value: field
+counter: field
+}
+NoteHash ..> NoteHashContext: note_hashes\n->note_hash_contexts
+class Nullifier {
+value: field
+counter: field
+note_hash_counter: field
+}
+Nullifier ..> NullifierContext: nullifiers\n->nullifier_contexts
+class ReadRequest {
+note_hash: field
+contract_address: AztecAddress
+counter: field
+}
+class ParentSecretKeyValidationRequest {
+parent_public_key: GrumpkinPoint
+hardened_child_secret_key: fq
+}
+ParentSecretKeyValidationRequest ..> ParentSecretKeyValidationRequestContext: nullifier_key_validation_requests\n->nullifier_key_validation_request_contexts
+class UnencryptedLogHash {
+hash: field
+length: field
+counter: field
+}
+UnencryptedLogHash ..> UnencryptedLogHashContext: unencrypted_log_hashes\n->unencrypted_log_hash_contexts
+class EncryptedLogHash {
+hash: field
+length: field
+counter: field
+randomness: field
+}
+EncryptedLogHash ..> EncryptedLogHashContext: encrypted_log_hashes\n->encrypted_log_hash_contexts
+class EncryptedNotePreimageHash {
+hash: field
+length: field
+counter: field
+note_hash_counter: field
+}
+EncryptedNotePreimageHash ..> EncryptedNotePreimageHashContext: encrypted_note_preimage_hashes\n->encrypted_note_preimage_hash_contexts
+class BlockHeader {
+note_hash_tree_root: field
+nullifier_tree_root: field
+l1_to_l2_message_tree_root: field
+public_data_tree_root: field
+archive_tree_root: field
+global_variables_hash: field
+}
+class PublicCallRequestContext {
+call_stack_item_hash: field
+caller_contract_address: AztecAddress
+caller_context: CallerContext
+counter: field
+}
+CallerContext --\* PublicCallRequestContext : caller_context
+PublicCallRequest ..> PublicCallRequestContext: public_call_requests->public_call_request_contexts
+class PrivateCallRequestContext {
+call_stack_item_hash: field
+caller_contract_address: AztecAddress
+caller_context: CallerContext
+counter_start: field
+counter_end: field
+}
+CallerContext --\* PrivateCallRequestContext : caller_context
+PrivateCallRequest ..> PrivateCallRequestContext: private_call_requests->private_call_request_stack
+class CallerContext {
+msg_sender: AztecAddress
+storage_contract_address: AztecAddress
+is_static_call: bool
+}
+class NoteHashContext {
+value: field
+counter: field
+nullifier_counter: field
+contract_address: AztecAddress
+}
+class NullifierContext {
+value: field
+counter: field
+note_hash_counter: field
+contract_address: AztecAddress
+}
+class L2ToL1MessageContext {
+value: field
+portal_contract_address: AztecAddress
+contract_address: AztecAddress
+}
+class ParentSecretKeyValidationRequestContext {
+parent_public_key: GrumpkinPoint
+hardened_child_secret_key: fq
+contract_address: AztecAddress
+}
+class UnencryptedLogHashContext {
+hash: field
+length: field
+counter: field
+contract_address: AztecAddress
+}
+class EncryptedLogHashContext {
+hash: field
+length: field
+counter: field
+contract_address: AztecAddress
+randomness: field
+}
+class EncryptedNotePreimageHashContext {
+hash: field
+length: field
+counter: field
+contract_address: AztecAddress
+note_hash_counter: field
+}
+class MembershipWitness {
+leaf_index: field
+sibling_path: List~field~
+}
+class ContractInstance {
+version: u8
+deployer_address: AztecAddress
+salt: field
+contract_class_id: field
+contract_args_hash: field
+portal_contract_address: EthereumAddress
+public_keys_hash: field
+}
+class TransientAccumulatedData {
+note*hash_contexts: List~NoteHashContext~
+nullifier_contexts: List~NullifierContext~
+l2_to_l1_message_contexts: List~L2ToL1MessageContext~
+nullifier_key_validation_request_contexts: List~ParentSecretKeyValidationRequestContext~
+unencrypted_log_hash_contexts: List~UnencryptedLogHashContext~
+encrypted_log_hash_contexts: List~EncryptedLogHashContext~
+encrypted_note_preimage_hash_contexts: List~EncryptedNotePreimageHashContext~
+note_hash_read_requests: List~ReadRequest~
+nullifier_read_requests: List~ReadRequest~
+public_call_requests: List~PublicCallRequestContext~
+private_call_request_stack: List~PrivateCallRequestContext~
+}
+NoteHashContext --* TransientAccumulatedData: note*hash_contexts
+NullifierContext --* TransientAccumulatedData: nullifier*contexts
+L2ToL1MessageContext --* TransientAccumulatedData: l2*to_l1_message_contexts
+ReadRequest --* TransientAccumulatedData: note*hash_read_requests
+ReadRequest --* TransientAccumulatedData: nullifier*read_requests
+ParentSecretKeyValidationRequestContext --* TransientAccumulatedData: nullifier*key_validation_request_contexts
+UnencryptedLogHashContext --* TransientAccumulatedData: unencrypted*log_hash_contexts
+EncryptedLogHashContext --* TransientAccumulatedData: encrypted*log_hash_contexts
+EncryptedNotePreimageHashContext --* TransientAccumulatedData: encrypted*note_preimage_hash_contexts
+PublicCallRequestContext --* TransientAccumulatedData: public_call_requests
+PrivateCallRequestContext --\* TransientAccumulatedData: private_call_request_stack
+class ConstantData {
+block_header: BlockHeader
+tx_context: TransactionContext
+}
+BlockHeader ..> ConstantData: block_header
+class PublicInputs {
+constant*data: ConstantData
+transient_accumulated_data: TransientAccumulatedData
+}
+ConstantData --* PublicInputs : constant*data
+TransientAccumulatedData --\* PublicInputs: transient_accumulated_data
+
+`}
+/>
 
 The diagram:
 

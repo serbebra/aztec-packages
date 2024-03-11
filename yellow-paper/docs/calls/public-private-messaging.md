@@ -1,5 +1,7 @@
 # Inter-Layer Calls
 
+import ZoomableMermaid from '@site/src/components/ZoomableMermaid';
+
 <!-- Mike: come back to this one -->
 
 ## Public-Private messaging
@@ -18,6 +20,18 @@ Given this natural flow from private-land to public-land, private functions can 
 Since private functions execute first, they cannot 'wait' on the results of any of their calls to public functions.
 
 By way of example, suppose a function makes a call to a public function, and then to a private function. The public function will not be executed immediately, but will instead be enqueued for the sequencer to execute later.
+
+
+<ZoomableMermaid
+chart={`graph LR
+    A[Private Function 1] --> |1st call| B(Public Function 1)
+    A --> |2nd call| C[Private Function 2]
+    C --> |return values| A
+    A --> |3rd call| D(Public Function 2)
+    A --> |4th call| E[Private Function 3]
+    E --> |return values| A
+ `}
+/>
 
 ```mermaid
 graph LR
