@@ -36,7 +36,7 @@ import {
  * @param privateKey - Optional peer ID private key as hex string
  * @returns The peer ID.
  */
-export async function createLibP2PPeerId(privateKey?: string) {
+export async function createLibP2PPeerId(privateKey?: string): Promise<PeerId> {
   if (!privateKey?.length) {
     return await createSecp256k1PeerId();
   }

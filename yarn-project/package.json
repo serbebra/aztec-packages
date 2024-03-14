@@ -43,6 +43,7 @@
     "noir-protocol-circuits-types",
     "p2p",
     "p2p-bootstrap",
+    "p2p-discV5",
     "protocol-contracts",
     "prover-client",
     "rollup-provider",
