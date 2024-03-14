@@ -3,6 +3,7 @@ import { createDebugLogger } from '@aztec/foundation/log';
 import { noise } from '@chainsafe/libp2p-noise';
 import { yamux } from '@chainsafe/libp2p-yamux';
 import type { ServiceMap } from '@libp2p/interface-libp2p';
+import { PeerId } from '@libp2p/interface-peer-id';
 import { kadDHT } from '@libp2p/kad-dht';
 import { mplex } from '@libp2p/mplex';
 import { tcp } from '@libp2p/tcp';
@@ -110,7 +111,7 @@ export class BootstrapNode {
    * Returns the peerId of this node.
    * @returns The node's peer Id
    */
-  public getPeerId() {
+  public getPeerId(): PeerId | undefined {
     return this.node?.peerId;
   }
 }

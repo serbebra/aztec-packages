@@ -706,6 +706,8 @@ __metadata:
     "@multiformats/multiaddr": ^12.1.14
     dgram: ^1.0.1
     libp2p: ^1.2.4
+    ts-node: ^10.9.2
+    typescript: ^5.4.2
   languageName: unknown
   linkType: soft
 
@@ -13256,7 +13258,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-node@npm:^10.9.1":
+"ts-node@npm:^10.9.1, ts-node@npm:^10.9.2":
   version: 10.9.2
   resolution: "ts-node@npm:10.9.2"
   dependencies:
@@ -13517,7 +13519,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^5.0.4":
+"typescript@npm:^5.0.4, typescript@npm:^5.4.2":
   version: 5.4.2
   resolution: "typescript@npm:5.4.2"
   bin:
@@ -13547,7 +13549,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^5.0.4#~builtin<compat/typescript>":
+"typescript@patch:typescript@^5.0.4#~builtin<compat/typescript>, typescript@patch:typescript@^5.4.2#~builtin<compat/typescript>":
   version: 5.4.2
   resolution: "typescript@patch:typescript@npm%3A5.4.2#~builtin<compat/typescript>::version=5.4.2&hash=f3b441"
   bin:
