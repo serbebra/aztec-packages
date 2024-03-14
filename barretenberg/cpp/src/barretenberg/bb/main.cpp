@@ -98,30 +98,39 @@ acir_format::AcirFormat get_constraint_system(std::string const& bytecode_path)
  */
 bool proveAndVerify(const std::string& bytecodePath, const std::string& witnessPath)
 {
+    std::cout << "Prove and verify..." << std::endl;
     auto constraint_system = get_constraint_system(bytecodePath);
     auto witness = get_witness(witnessPath);
-
+    std::cout << "creating circuit..." << std::endl;
     acir_proofs::AcirComposer acir_composer{ 0, verbose };
     acir_composer.create_circuit(constraint_system, witness);
-
+    std::cout << "created circuit with size " << acir_composer.get_dyadic_circuit_size() << std::endl;
     init_bn254_crs(acir_composer.get_dyadic_circuit_size());
 
     Timer pk_timer;
+    std::cout << "Init proving key..." << std::endl;
     acir_composer.init_proving_key();
+    std::cout << "Init proving key completed in " << pk_timer.milliseconds() << "ms" << std::endl;
     write_benchmark("pk_construction_time", pk_timer.milliseconds(), "acir_test", current_dir);
-
+    std::cout << "Total circuit size: " << acir_composer.get_total_circuit_size() << std::endl;
     write_benchmark("gate_count", acir_composer.get_total_circuit_size(), "acir_test", current_dir);
     write_benchmark("subgroup_size", acir_composer.get_dyadic_circuit_size(), "acir_test", current_dir);
 
     Timer proof_timer;
+    std::cout << "Creating proof..." << std::endl;
     auto proof = acir_composer.create_proof();
+    std::cout << "Proof created in " << proof_timer.milliseconds() << "ms" << std::endl;
     write_benchmark("proof_construction_time", proof_timer.milliseconds(), "acir_test", current_dir);
 
     Timer vk_timer;
+    std::cout << "Creating verification key..." << std::endl;
     acir_composer.init_verification_key();
+    std::cout << "Verification key created in " << vk_timer.milliseconds() << "ms" << std::endl;
     write_benchmark("vk_construction_time", vk_timer.milliseconds(), "acir_test", current_dir);
 
+    std::cout << "Verifying proof..." << std::endl;
     auto verified = acir_composer.verify_proof(proof);
+    std::cout << "Proof verified!" << std::endl;
 
     vinfo("verified: ", verified);
     return verified;
@@ -311,13 +320,17 @@ void write_vk(const std::string& bytecodePath, const std::string& outputPath)
 
 void write_pk(const std::string& bytecodePath, const std::string& outputPath)
 {
+    std::cout << "Building PK" << std::endl;
     auto constraint_system = get_constraint_system(bytecodePath);
     acir_proofs::AcirComposer acir_composer{ 0, verbose };
+    std::cout << "Creating circuit" << std::endl;
     acir_composer.create_circuit(constraint_system);
     init_bn254_crs(acir_composer.get_dyadic_circuit_size());
+    std::cout << "Circuit created, creating proving key..." << std::endl;
     auto pk = acir_composer.init_proving_key();
+    std::cout << "Proving key created!" << std::endl;
     auto serialized_pk = to_buffer(*pk);
-
+    std::cout << "Key size: " << serialized_pk.size() << std::endl;
     if (outputPath == "-") {
         writeRawBytesToStdout(serialized_pk);
         vinfo("pk written to stdout");

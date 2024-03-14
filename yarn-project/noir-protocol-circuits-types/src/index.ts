@@ -16,7 +16,7 @@ import {
 import { NoirCompiledCircuit } from '@aztec/types/noir';
 
 import { WasmBlackBoxFunctionSolver, createBlackBoxSolver, executeCircuitWithBlackBoxSolver } from '@noir-lang/acvm_js';
-import { Abi, abiDecode, abiEncode } from '@noir-lang/noirc_abi';
+import { Abi, abiDecode, abiEncode, serializeWitness } from '@noir-lang/noirc_abi';
 import { WitnessMap } from '@noir-lang/types';
 
 import PrivateKernelInitJson from './target/private_kernel_init.json' assert { type: 'json' };
@@ -30,6 +30,7 @@ import PublicKernelSetupSimulatedJson from './target/public_kernel_setup_simulat
 import PublicKernelTailSimulatedJson from './target/public_kernel_tail_simulated.json' assert { type: 'json' };
 import PublicKernelTeardownSimulatedJson from './target/public_kernel_teardown_simulated.json' assert { type: 'json' };
 import BaseRollupSimulatedJson from './target/rollup_base_simulated.json' assert { type: 'json' };
+import BaseRollupJson from './target/rollup_base.json' assert { type: 'json' };
 import MergeRollupJson from './target/rollup_merge.json' assert { type: 'json' };
 import RootRollupJson from './target/rollup_root.json' assert { type: 'json' };
 import {
@@ -85,7 +86,9 @@ export const PublicKernelTeardownArtifact = PublicKernelTeardownSimulatedJson as
 
 export const PublicKernelTailArtifact = PublicKernelTailSimulatedJson as NoirCompiledCircuit;
 
-export const BaseRollupArtifact = BaseRollupSimulatedJson as NoirCompiledCircuit;
+export const BaseRollupArtifact = BaseRollupJson as NoirCompiledCircuit;
+
+export const SimulatedBaseRollupArtifact = BaseRollupSimulatedJson as NoirCompiledCircuit;
 
 export const MergeRollupArtifact = MergeRollupJson as NoirCompiledCircuit;
 
@@ -99,6 +102,10 @@ const getSolver = (): Promise<WasmBlackBoxFunctionSolver> => {
   }
   return solver;
 };
+
+export async function serialiseInputWitness(witness: WitnessMap) {
+  return await serializeWitness(witness);
+}
 
 /**
  * Executes the init private kernel.
@@ -157,7 +164,7 @@ export async function executeTail(
  */
 export function convertBaseRollupInputsToWitnessMap(inputs: BaseRollupInputs): WitnessMap {
   const mapped = mapBaseRollupInputsToNoir(inputs);
-  const initialWitnessMap = abiEncode(BaseRollupSimulatedJson.abi as Abi, { inputs: mapped as any });
+  const initialWitnessMap = abiEncode(BaseRollupJson.abi as Abi, { inputs: mapped as any });
   return initialWitnessMap;
 }
 
@@ -233,7 +240,7 @@ export function convertPublicTailInputsToWitnessMap(inputs: PublicKernelTailCirc
  */
 export function convertBaseRollupOutputsFromWitnessMap(outputs: WitnessMap): BaseOrMergeRollupPublicInputs {
   // Decode the witness map into two fields, the return values and the inputs
-  const decodedInputs: DecodedInputs = abiDecode(BaseRollupSimulatedJson.abi as Abi, outputs);
+  const decodedInputs: DecodedInputs = abiDecode(BaseRollupJson.abi as Abi, outputs);
 
   // Cast the inputs as the return type
   const returnType = decodedInputs.return_value as BaseRollupReturnType;
