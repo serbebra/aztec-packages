@@ -94,6 +94,7 @@ export class SequencerClient {
       l1ToL2MessageSource,
       publicProcessorFactory,
       config,
+      config.l1Contracts.gasPortalAddress,
     );
 
     await sequencer.start();
