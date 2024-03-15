@@ -60,7 +60,10 @@ describe('e2e_fees', () => {
 
   beforeAll(async () => {
     process.env.PXE_URL = '';
-    e2eContext = await setup(3);
+    e2eContext = await setup(3, {
+      deployGasToken: true,
+      deployGasPortal: true,
+    });
 
     const { accounts, logger, aztecNode, pxe, deployL1ContractsValues, wallets } = e2eContext;
 

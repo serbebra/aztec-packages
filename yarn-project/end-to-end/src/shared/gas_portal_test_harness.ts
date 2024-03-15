@@ -10,9 +10,9 @@ import {
   deployL1Contract,
   sleep,
 } from '@aztec/aztec.js';
-import { GasPortalAbi, GasPortalBytecode, OutboxAbi, PortalERC20Abi, PortalERC20Bytecode } from '@aztec/l1-artifacts';
+import { GasPortalAbi, OutboxAbi, PortalERC20Abi, PortalERC20Bytecode } from '@aztec/l1-artifacts';
 import { GasTokenContract } from '@aztec/noir-contracts.js';
-import { getCanonicalGasToken } from '@aztec/protocol-contracts/gas-token';
+import { getCanonicalGasToken, getCanonicalGasTokenAddress } from '@aztec/protocol-contracts/gas-token';
 
 import { Account, Chain, HttpTransport, PublicClient, WalletClient, getContract } from 'viem';
 
@@ -62,21 +62,20 @@ export async function deployAndInitializeTokenAndBridgeContracts(
     client: walletClient,
   });
 
-  // deploy the gas portal
-  const gasPortalAddress = await deployL1Contract(walletClient, publicClient, GasPortalAbi, GasPortalBytecode);
+  // the gas portal should have been deployed already
+  const gasPortalAddress = (await wallet.getNodeInfo()).l1ContractAddresses.gasPortalAddress;
+  if (gasPortalAddress.isZero()) {
+    throw new Error('Gas portal not deployed on L1');
+  }
+
   const gasPortal = getContract({
     address: gasPortalAddress.toString(),
     abi: GasPortalAbi,
     client: walletClient,
   });
 
-  // deploy l2 token
-  const gasL2 = await GasTokenContract.deploy(wallet)
-    .send({
-      portalContract: gasPortalAddress,
-      contractAddressSalt: getCanonicalGasToken().instance.salt,
-    })
-    .deployed();
+  // the gas token on L2 should have been deployed as part of bootstrap
+  const gasL2 = await GasTokenContract.at(getCanonicalGasTokenAddress(gasPortalAddress), wallet);
 
   // initialize portal
   await gasPortal.write.initialize(
@@ -104,7 +103,7 @@ export class GasPortalTestingHarnessFactory {
 
     const gasL2 = await GasTokenContract.deploy(wallet)
       .send({
-        contractAddressSalt: getCanonicalGasToken().instance.salt,
+        contractAddressSalt: getCanonicalGasToken(EthAddress.ZERO).instance.salt,
       })
       .deployed();
     return Promise.resolve(new MockGasBridgingTestHarness(gasL2));

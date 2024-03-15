@@ -43,7 +43,11 @@ export async function createPXEService(
   const db = new KVPxeDatabase(await initStoreForRollup(AztecLmdbStore.open(pxeDbPath), l1Contracts.rollupAddress));
 
   const server = new PXEService(keyStore, aztecNode, db, config, logSuffix);
-  await server.addContracts([getCanonicalClassRegisterer(), getCanonicalInstanceDeployer(), getCanonicalGasToken()]);
+  await server.addContracts([
+    getCanonicalClassRegisterer(),
+    getCanonicalInstanceDeployer(),
+    getCanonicalGasToken(l1Contracts.gasPortalAddress),
+  ]);
 
   await server.start();
   return server;

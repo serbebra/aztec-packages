@@ -30,6 +30,8 @@ import { deployInstance, registerContractClass } from '@aztec/aztec.js/deploymen
 import {
   AvailabilityOracleAbi,
   AvailabilityOracleBytecode,
+  GasPortalAbi,
+  GasPortalBytecode,
   InboxAbi,
   InboxBytecode,
   OutboxAbi,
@@ -96,6 +98,7 @@ export const setupL1Contracts = async (
   l1RpcUrl: string,
   account: HDAccount | PrivateKeyAccount,
   logger: DebugLogger,
+  enableGas = false,
 ) => {
   const l1Artifacts: L1ContractArtifactsForDeployment = {
     registry: {
@@ -118,6 +121,12 @@ export const setupL1Contracts = async (
       contractAbi: RollupAbi,
       contractBytecode: RollupBytecode,
     },
+    gasPortal: enableGas
+      ? {
+          contractAbi: GasPortalAbi,
+          contractBytecode: GasPortalBytecode,
+        }
+      : undefined,
   };
   return await deployL1Contracts(l1RpcUrl, account, foundry, logger, l1Artifacts);
 };
@@ -183,7 +192,7 @@ async function setupWithRemoteEnvironment(
   config: AztecNodeConfig,
   logger: DebugLogger,
   numberOfAccounts: number,
-  deployProtocolContracts = false,
+  deployGasToken = false,
 ) {
   // we are setting up against a remote environment, l1 contracts are already deployed
   const aztecNodeUrl = getAztecUrl();
@@ -221,8 +230,10 @@ async function setupWithRemoteEnvironment(
   const cheatCodes = CheatCodes.create(config.rpcUrl, pxeClient!);
   const teardown = () => Promise.resolve();
 
-  if (deployProtocolContracts) {
-    await deployPublicProtocolContracts(wallets[0]);
+  if (deployGasToken) {
+    // this contract might already have been deployed
+    // the following function is idempotent
+    await deployCanonicalGasToken(wallets[0]);
   }
 
   return {
@@ -247,8 +258,11 @@ type SetupOptions = {
   /** Previously deployed contracts on L1 */
   deployL1ContractsValues?: DeployL1Contracts;
 
-  /** Deploy protocol contracts */
-  deployProtocolContracts?: boolean;
+  /** Deploy the gas token contract on L2 */
+  deployGasToken?: boolean;
+
+  /** Deploy gas portal on L1. This is used to bridge assets to the gas token contract */
+  deployGasPortal?: boolean;
 } & Partial<AztecNodeConfig>;
 
 /** Context for an end-to-end test as returned by the `setup` function */
@@ -308,11 +322,11 @@ export async function setup(
 
   if (PXE_URL) {
     // we are setting up against a remote environment, l1 contracts are assumed to already be deployed
-    return await setupWithRemoteEnvironment(hdAccount, config, logger, numberOfAccounts, opts.deployProtocolContracts);
+    return await setupWithRemoteEnvironment(hdAccount, config, logger, numberOfAccounts, opts.deployGasToken);
   }
 
   const deployL1ContractsValues =
-    opts.deployL1ContractsValues ?? (await setupL1Contracts(config.rpcUrl, hdAccount, logger));
+    opts.deployL1ContractsValues ?? (await setupL1Contracts(config.rpcUrl, hdAccount, logger, opts.deployGasPortal));
 
   config.publisherPrivateKey = `0x${publisherPrivKey!.toString('hex')}`;
   config.l1Contracts = deployL1ContractsValues.l1ContractAddresses;
@@ -330,10 +344,10 @@ export async function setup(
 
   const { pxe, accounts, wallets } = await setupPXEService(numberOfAccounts, aztecNode!, pxeOpts, logger);
 
-  if (opts.deployProtocolContracts) {
+  if (opts.deployGasToken) {
     // this should be a neutral wallet, but the SignerlessWallet only accepts a single function call
     // and this needs two: one to register the class and another to deploy the instance
-    await deployPublicProtocolContracts(wallets[0]);
+    await deployCanonicalGasToken(wallets[0]);
   }
 
   const cheatCodes = CheatCodes.create(config.rpcUrl, pxe!);
@@ -503,9 +517,10 @@ export async function expectMapping<K, V>(
 /**
  * Deploy the protocol contracts to a running instance.
  */
-export async function deployPublicProtocolContracts(deployer: Wallet) {
+export async function deployCanonicalGasToken(deployer: Wallet) {
   // "deploy" the Gas token as it contains public functions
-  const canonicalGasToken = getCanonicalGasToken();
+  const gasPortalAddress = (await deployer.getNodeInfo()).l1ContractAddresses.gasPortalAddress;
+  const canonicalGasToken = getCanonicalGasToken(gasPortalAddress);
 
   if (await deployer.isContractClassPubliclyRegistered(canonicalGasToken.contractClass.id)) {
     return;

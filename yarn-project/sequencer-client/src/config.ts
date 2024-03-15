@@ -45,6 +45,7 @@ export function getConfigEnvVars(): SequencerClientConfig {
     REGISTRY_CONTRACT_ADDRESS,
     INBOX_CONTRACT_ADDRESS,
     OUTBOX_CONTRACT_ADDRESS,
+    GAS_PORTAL_CONTRACT_ADDRESS,
     COINBASE,
     FEE_RECIPIENT,
     ACVM_WORKING_DIRECTORY,
@@ -63,6 +64,9 @@ export function getConfigEnvVars(): SequencerClientConfig {
     registryAddress: REGISTRY_CONTRACT_ADDRESS ? EthAddress.fromString(REGISTRY_CONTRACT_ADDRESS) : EthAddress.ZERO,
     inboxAddress: INBOX_CONTRACT_ADDRESS ? EthAddress.fromString(INBOX_CONTRACT_ADDRESS) : EthAddress.ZERO,
     outboxAddress: OUTBOX_CONTRACT_ADDRESS ? EthAddress.fromString(OUTBOX_CONTRACT_ADDRESS) : EthAddress.ZERO,
+    gasPortalAddress: GAS_PORTAL_CONTRACT_ADDRESS
+      ? EthAddress.fromString(GAS_PORTAL_CONTRACT_ADDRESS)
+      : EthAddress.ZERO,
   };
 
   return {
