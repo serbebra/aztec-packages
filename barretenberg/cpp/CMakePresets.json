@@ -32,6 +32,16 @@
       }
     },
     {
+      "name": "clang16-asm-analysis",
+      "displayName": "Build with Clang-16 and output ASM",
+      "description": "Build with globally installed Clang-16 and output assembly for analysis",
+      "inherits": "clang16",
+      "binaryDir": "build-asm-analysis",
+      "environment": {
+        "CMAKE_CXX_FLAGS": "-S"
+      }
+    },
+    {
       "name": "clang16",
       "displayName": "Build with Clang-16",
       "description": "Build with globally installed Clang-16",
@@ -342,6 +352,11 @@
       "name": "homebrew",
       "inherits": "default",
       "configurePreset": "homebrew"
+    },
+    {
+      "name": "clang16-asm-analysis",
+      "inherits": "default",
+      "configurePreset": "clang16-asm-analysis"
     },
     {
       "name": "clang16",
