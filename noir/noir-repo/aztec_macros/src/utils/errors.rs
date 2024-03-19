@@ -11,6 +11,7 @@ pub enum AztecMacroError {
     UnsupportedStorageType { span: Option<Span>, typ: UnresolvedTypeData },
     CouldNotAssignStorageSlots { secondary_message: Option<String> },
     MultipleStorageDefinitions { span: Option<Span> },
+    CouldNotImplementNoteInterface { span: Option<Span>, secondary_message: Option<String> },
     EventError { span: Span, message: String },
     UnsupportedAttributes { span: Span, secondary_message: Option<String> },
 }
@@ -48,12 +49,17 @@ impl From<AztecMacroError> for MacroError {
                 secondary_message: None,
                 span,
             },
+            AztecMacroError::CouldNotImplementNoteInterface { span, secondary_message } => MacroError {
+                primary_message: "Could not implement automatic methods for note, please provide an implementation of the NoteInterface trait".to_string(),
+                secondary_message,
+                span,
+            },
             AztecMacroError::EventError { span, message } => MacroError {
                 primary_message: message,
                 secondary_message: None,
                 span: Some(span),
             },
-AztecMacroError::UnsupportedAttributes { span, secondary_message } => MacroError {
+            AztecMacroError::UnsupportedAttributes { span, secondary_message } => MacroError {
                 primary_message: "Unsupported attributes in contract function".to_string(),
                 secondary_message,
                 span: Some(span),
