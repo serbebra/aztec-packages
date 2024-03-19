@@ -5,5 +5,7 @@ barretenberg_module(
     stdlib_sha256
     stdlib_blake3s
     stdlib_pedersen_hash
+    stdlib_keccak
     plonk
+    ultra_honk
 )
