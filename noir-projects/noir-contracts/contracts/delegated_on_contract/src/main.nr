@@ -8,6 +8,7 @@ contract DelegatedOn {
     use dep::aztec::{context::{PublicContext, Context}, protocol_types::abis::call_context::CallContext};
     use dep::value_note::value_note::{ValueNote, VALUE_NOTE_LEN};
 
+    #[aztec(storage)]
     struct Storage {
         current_value: PublicMutable<Field>,
         a_private_value: PrivateSet<ValueNote>,

@@ -85,14 +85,15 @@ fn transform_module(
 ) -> Result<bool, (AztecMacroError, FileId)> {
     let mut has_transformed_module = false;
 
-    // Check for a user defined storage struct
-    let storage_defined = check_for_storage_definition(module);
-    let storage_implemented = check_for_storage_implementation(module);
+    // Check for a user defined storage stru
 
-    let crate_graph = &context.crate_graph[crate_id];
+    let maybe_storage_struct_name = check_for_storage_definition(module)?;
+    let storage_defined = maybe_storage_struct_name.is_some();
 
-    if storage_defined && !storage_implemented {
-        generate_storage_implementation(module).map_err(|err| (err, crate_graph.root_file_id))?;
+    if let Some(storage_struct_name) = maybe_storage_struct_name {
+        if !check_for_storage_implementation(module, &storage_struct_name) {
+            generate_storage_implementation(module, &storage_struct_name)?;
+        }
     }
 
     for structure in module.types.iter() {

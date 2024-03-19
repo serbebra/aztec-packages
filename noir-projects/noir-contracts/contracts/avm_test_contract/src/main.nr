@@ -28,12 +28,13 @@ contract AvmTest {
     use dep::aztec::state_vars::PublicMutable;
     use dep::aztec::protocol_types::{address::{AztecAddress, EthAddress}, constants::L1_TO_L2_MESSAGE_LENGTH};
     use dep::aztec::protocol_types::abis::function_selector::FunctionSelector;
-    use dep::aztec::protocol_types::traits::{ToField};
+    use dep::aztec::protocol_types::traits::ToField;
     use dep::compressed_string::CompressedString;
 
     // avm lib
     use dep::aztec::avm::hash::{keccak256, poseidon, sha256};
 
+    #[aztec(storage)]
     struct Storage {
         single: PublicMutable<Field>,
         list: PublicMutable<Note>,

@@ -10,7 +10,7 @@ pub enum AztecMacroError {
     UnsupportedFunctionArgumentType { span: Span, typ: UnresolvedTypeData },
     UnsupportedStorageType { span: Option<Span>, typ: UnresolvedTypeData },
     CouldNotAssignStorageSlots { secondary_message: Option<String> },
-    CouldNotImplementNoteSerialization { span: Option<Span>, typ: UnresolvedTypeData },
+    MultipleStorageDefinitions { span: Option<Span> },
     EventError { span: Span, message: String },
     UnsupportedAttributes { span: Span, secondary_message: Option<String> },
 }
@@ -43,8 +43,8 @@ impl From<AztecMacroError> for MacroError {
                 secondary_message,
                 span: None,
             },
-            AztecMacroError::CouldNotImplementNoteSerialization { span, typ } => MacroError {
-                primary_message: format!("Could not implement serialization methods for note `{typ:?}`, please provide a serialize_content and deserialize_content methods"),
+            AztecMacroError::MultipleStorageDefinitions { span } => MacroError {
+                primary_message: "Only one struct can be tagged as #[aztec(storage)]".to_string(),
                 secondary_message: None,
                 span,
             },
