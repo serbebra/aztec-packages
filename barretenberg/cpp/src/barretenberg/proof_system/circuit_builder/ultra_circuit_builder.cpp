@@ -14,6 +14,7 @@ namespace bb {
 
 template <typename Arithmetization> void UltraCircuitBuilder_<Arithmetization>::finalize_circuit()
 {
+    BB_OP_COUNT_TIME_NAME("UltraCircuitBuilder_<Arithmetization>::finalize_circuit");
     /**
      * First of all, add the gates related to ROM arrays and range lists.
      * Note that the total number of rows in an UltraPlonk program can be divided as following:

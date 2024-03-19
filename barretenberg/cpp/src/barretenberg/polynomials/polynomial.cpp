@@ -84,6 +84,7 @@ Polynomial<Fr>::Polynomial(Polynomial<Fr>&& other) noexcept
 // span constructor
 template <typename Fr> Polynomial<Fr>::Polynomial(std::span<const Fr> coefficients)
 {
+    BB_OP_COUNT_TIME_NAME("Polynomial::copy_constructor");
     allocate_backing_memory(coefficients.size());
     memcpy(static_cast<void*>(coefficients_),
            static_cast<void const*>(coefficients.data()),
@@ -107,6 +108,8 @@ Polynomial<Fr>::Polynomial(std::span<const Fr> interpolation_points, std::span<c
 // full copy "expensive" assignment
 template <typename Fr> Polynomial<Fr>& Polynomial<Fr>::operator=(const Polynomial<Fr>& other)
 {
+    // BB_OP_COUNT_TIME_NAME("Polynomial::copy_constructor");
+
     if (this == &other) {
         return *this;
     }

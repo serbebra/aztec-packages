@@ -53,6 +53,7 @@ std::array<typename Flavor::Polynomial, 4> construct_sorted_list_polynomials(typ
                                                                              const size_t dyadic_circuit_size,
                                                                              size_t additional_offset = 0)
 {
+    BB_OP_COUNT_TIME();
     using Polynomial = typename Flavor::Polynomial;
     std::array<Polynomial, 4> sorted_polynomials;
     // Initialise the sorted concatenated list polynomials for the lookup argument

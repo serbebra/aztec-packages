@@ -43,6 +43,8 @@ template <class Flavor>
 void ProverInstance_<Flavor>::construct_databus_polynomials(Circuit& circuit)
     requires IsGoblinFlavor<Flavor>
 {
+    BB_OP_COUNT_TIME();
+
     Polynomial public_calldata{ dyadic_circuit_size };
     Polynomial calldata_read_counts{ dyadic_circuit_size };
     Polynomial databus_id{ dyadic_circuit_size };

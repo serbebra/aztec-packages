@@ -9,6 +9,8 @@ template <class Flavor>
 void ExecutionTrace_<Flavor>::populate(Builder& builder,
                                        const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
 {
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_<Flavor>::populate");
+
     // Construct wire polynomials, selector polynomials, and copy cycles from raw circuit data
     auto trace_data = construct_trace_data(builder, proving_key->circuit_size);
 

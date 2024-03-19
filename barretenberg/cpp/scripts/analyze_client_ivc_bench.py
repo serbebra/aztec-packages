@@ -3,12 +3,18 @@ from pathlib import Path
 
 PREFIX = Path("build-op-count-time")
 IVC_BENCH_JSON = Path("client_ivc_bench.json")
-BENCHMARK = "ClientIVCBench/Full/6"
+BENCHMARK = "ClientIVCBench/Full/32"
 
 # Single out an independent set of functions accounting for most of BENCHMARK's real_time
 to_keep = [
     "construct_circuits(t)",
     "ProverInstance(Circuit&)(t)",
+    "UltraCircuitBuilder_<Arithmetization>::finalize_circuit",
+    "Polynomial::copy_constructor",
+    "construct_sorted_list_polynomials",
+    "construct_databus_polynomials",
+    "ProvingKey_",
+    "ExecutionTrace_<Flavor>::populate",
     "ProtogalaxyProver::fold_instances(t)",
     "Decider::construct_proof(t)",
     "ECCVMComposer::create_prover(t)",
@@ -63,3 +69,17 @@ for key in protogalaxy_round_labels:
     print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {time_ms/total_time_ms:>8.2%}")
 
 
+print('\nBreakdown of ProverInstance(Circuit&)')
+protogalaxy_round_labels = [
+    "UltraCircuitBuilder_<Arithmetization>::finalize_circuit(t)",
+    "Polynomial::copy_constructor(t)",
+    "ProvingKey_(t)",
+    "construct_sorted_list_polynomials(t)",
+    "construct_databus_polynomials(t)",
+    "ExecutionTrace_<Flavor>::populate(t)",
+]
+max_label_length = max(len(label) for label in protogalaxy_round_labels)
+for key in protogalaxy_round_labels:
+    time_ms = bench[key]/1e6
+    total_time_ms = bench["ProverInstance(Circuit&)(t)"]/1e6
+    print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {time_ms/total_time_ms:>8.2%}")
