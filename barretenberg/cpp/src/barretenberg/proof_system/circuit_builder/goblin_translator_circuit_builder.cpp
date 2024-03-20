@@ -9,6 +9,7 @@
  */
 #include "goblin_translator_circuit_builder.hpp"
 #include "barretenberg/ecc/curves/bn254/fr.hpp"
+#include "barretenberg/numeric/bitop/get_msb.hpp"
 #include "barretenberg/numeric/uint256/uint256.hpp"
 #include "barretenberg/plonk/proof_system/constants.hpp"
 #include "barretenberg/proof_system/op_queue/ecc_op_queue.hpp"
@@ -599,11 +600,101 @@ GoblinTranslatorCircuitBuilder::AccumulationInput compute_witness_values_for_one
                                    batching_challenge_v,
                                    evaluation_input_x);
 }
+
+/**
+ * @brief Compute a vector of accumulating power sums
+ * @details given an input vector V of size n and a power value x, this method produces the output vector T where
+ *          T[0] = V[0]
+ *          T[1] = V[0].x + V[1]
+ *          T[2] = V[0].xx + V[1].x + V[2]
+ *          ...
+ *          T[n-1] = V[0].x^{n-1} + V[1].x^{n-2} + ... + V[n-2].x + V[n-1]
+ *
+ * @tparam FF
+ * @param coefficients
+ * @param power
+ * @param num_coefficients
+ * @return std::vector<FF>
+ */
+template <typename FF>
+std::vector<FF> compute_accumulating_power_sum(std::span<FF> coefficients,
+                                               const FF& power,
+                                               const size_t num_coefficients)
+{
+    auto x = power;
+
+    size_t num_rounds = numeric::get_msb(num_coefficients);
+    if (static_cast<size_t>(1ULL) << num_rounds < num_coefficients) {
+        num_rounds += 1;
+    }
+    size_t num_ops_pow2 = static_cast<size_t>(1ULL) << num_rounds;
+
+    size_t tree_size = num_ops_pow2;
+
+    std::vector<std::vector<FF>> term_tree_data(num_rounds - 1);
+    std::vector<std::span<FF>> term_tree(num_rounds);
+
+    term_tree[0] = std::span<FF>(&coefficients[1], coefficients.size() - 1);
+    for (size_t i = 0; i < num_rounds - 1; ++i) {
+        size_t round_size = ((tree_size) >> (i + 1)) - 1;
+        term_tree_data[i].resize(round_size);
+        term_tree[i + 1] = std::span<FF>(&term_tree_data[i][0], round_size);
+    }
+
+    FF power_term = x;
+
+    for (size_t i = 1; i < num_rounds; ++i) {
+        size_t round_size = ((tree_size) >> (i)) - 1;
+        std::span<FF>& previous_terms = term_tree[i - 1];
+        std::span<FF>& current_terms = term_tree[i];
+        // current_terms.resize(round_size);
+        run_loop_in_parallel(round_size, [&](size_t start, size_t end) {
+            for (size_t j = start; j < end; ++j) {
+
+                //  for (size_t j = 0; j < round_size; ++j) {
+                const auto odd = (j * 2 < previous_terms.size()) ? previous_terms[j * 2] : 0;
+                const auto even = (j * 2 < previous_terms.size()) ? previous_terms[j * 2 + 1] : 0;
+                current_terms[j] = odd * power_term + even;
+            }
+        });
+        power_term = power_term.sqr();
+    }
+
+    std::vector<FF> cumulative_sum_terms(num_coefficients);
+
+    cumulative_sum_terms[0] = coefficients[0];
+    std::vector<FF> power_terms(num_rounds);
+    power_terms[num_rounds - 1] = x;
+    for (size_t i = 1; i < num_rounds; ++i) {
+        power_terms[num_rounds - i - 1] = power_terms[num_rounds - i].sqr();
+    }
+
+    for (size_t i = 0; i < num_rounds; ++i) {
+        const auto& addition_terms = term_tree[num_rounds - i - 1];
+        const size_t num_iterations = static_cast<size_t>(1ULL) << i;
+        const size_t step_size = static_cast<size_t>(1ULL) << (num_rounds - i);
+        const size_t offset = step_size >> 1;
+        run_loop_in_parallel(num_iterations, [&](size_t start, size_t end) {
+            for (size_t j = start; j < end; ++j) {
+                // for (size_t j = 0; j < num_iterations; ++j) {
+                const size_t input_index = j * step_size;
+                const size_t output_index = input_index + offset;
+                if (output_index < num_coefficients) {
+                    const FF& add_term = addition_terms[j * 2];
+                    FF& input_term = cumulative_sum_terms[input_index];
+                    cumulative_sum_terms[output_index] = input_term * power_terms[i] + add_term;
+                }
+            }
+        });
+    }
+    return cumulative_sum_terms;
+}
+
 void GoblinTranslatorCircuitBuilder::feed_ecc_op_queue_into_circuit(std::shared_ptr<ECCOpQueue> ecc_op_queue)
 {
     using Fq = bb::fq;
-    std::vector<Fq> accumulator_trace;
-    Fq current_accumulator(0);
+    // std::vector<Fq> accumulator_trace;
+    // Fq current_accumulator(0);
     if (ecc_op_queue->raw_ops.empty()) {
         return;
     }
@@ -611,34 +702,50 @@ void GoblinTranslatorCircuitBuilder::feed_ecc_op_queue_into_circuit(std::shared_
     auto x = evaluation_input_x;
     auto v = batching_challenge_v;
 
-    // We need to precompute the accumulators at each step, because in the actual circuit we compute the values starting
-    // from the later indices. We need to know the previous accumulator to create the gate
+    // size_t num_rounds = numeric::get_msb(ecc_op_queue->raw_ops.size());
+    // if (1ULL << num_rounds < ecc_op_queue->raw_ops.size()) {
+    //     num_rounds += 1;
+    // }
+    //    size_t num_ops_pow2 = 1ULL << num_rounds;
+
+    std::vector<Fq> coefficient_trace(ecc_op_queue->raw_ops.size());
     for (size_t i = 0; i < ecc_op_queue->raw_ops.size(); i++) {
         auto& ecc_op = ecc_op_queue->raw_ops[ecc_op_queue->raw_ops.size() - 1 - i];
-        current_accumulator *= x;
-        current_accumulator +=
+        coefficient_trace[i] =
             (Fq(ecc_op.get_opcode_value()) +
              v * (ecc_op.base_point.x + v * (ecc_op.base_point.y + v * (ecc_op.z1 + v * ecc_op.z2))));
-        accumulator_trace.push_back(current_accumulator);
     }
+    const size_t num_ops = ecc_op_queue->raw_ops.size();
+    std::vector<Fq> cumulative_sum_terms = compute_accumulating_power_sum<Fq>(coefficient_trace, x, num_ops);
 
     // We don't care about the last value since we'll recompute it during witness generation anyway
-    accumulator_trace.pop_back();
+    // accumulator_trace.pop_back();
 
-    for (auto& raw_op : ecc_op_queue->raw_ops) {
-        Fq previous_accumulator = 0;
-        // Pop the last value from accumulator trace and use it as previous accumulator
-        if (!accumulator_trace.empty()) {
-            previous_accumulator = accumulator_trace.back();
-            accumulator_trace.pop_back();
+    std::vector<AccumulationInput> steps(ecc_op_queue->raw_ops.size());
+    run_loop_in_parallel(ecc_op_queue->raw_ops.size(), [&](size_t start, size_t end) {
+        for (size_t i = start; i < end; ++i) {
+            // for (size_t i = 0; i < ecc_op_queue->raw_ops.size(); ++i) {
+            const auto& raw_op = ecc_op_queue->raw_ops[i];
+            // for (auto& raw_op : ecc_op_queue->raw_ops) {
+            Fq previous_accumulator = 0;
+            // Pop the last value from accumulator trace and use it as previous accumulator
+            // if (!accumulator_trace.empty()) {
+            if (i + 2 <= num_ops) {
+                previous_accumulator = cumulative_sum_terms[num_ops - 2 - i];
+                //   previous_accumulator = accumulator_trace.back();
+                //    accumulator_trace.pop_back();
+            }
+            // Compute witness values
+            steps[i] = compute_witness_values_for_one_ecc_op(raw_op, previous_accumulator, v, x);
         }
-        // Compute witness values
-        auto one_accumulation_step = compute_witness_values_for_one_ecc_op(raw_op, previous_accumulator, v, x);
+    });
 
+    for (const auto& step : steps) {
         // And put them into the wires
-        create_accumulation_gate(one_accumulation_step);
+        create_accumulation_gate(step);
     }
 }
+
 bool GoblinTranslatorCircuitBuilder::check_circuit()
 {
     // Compute the limbs of evaluation_input_x and powers of batching_challenge_v (these go into the relation)

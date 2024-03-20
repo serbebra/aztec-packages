@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -eu
 
-TARGET="client_ivc_bench"
-FILTER="ClientIVCBench/Full/6$"
+TARGET="stdlib_keccak_bench"
+FILTER="RawIVCBench/Full/6$"
 BUILD_DIR=build-op-count-time
 
 # Move above script dir.
 cd $(dirname $0)/..
 
 # Measure the benchmarks with ops time counting
-./scripts/benchmark_remote.sh client_ivc_bench\
-                              "./client_ivc_bench --benchmark_filter=$FILTER\
+./scripts/benchmark_wasm_remote.sh stdlib_keccak_bench\
+                              "./stdlib_keccak_bench --benchmark_filter=$FILTER\
                                                   --benchmark_out=$TARGET.json\
                                                   --benchmark_out_format=json"\
                               op-count-time\

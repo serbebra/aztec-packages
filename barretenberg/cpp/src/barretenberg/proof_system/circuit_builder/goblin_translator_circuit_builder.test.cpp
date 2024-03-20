@@ -97,6 +97,19 @@ TEST(GoblinTranslatorCircuitBuilder, SeveralOperationCorrectness)
 
     op_queue->eq();
     op_queue->empty_row();
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    op_queue->add_accumulate(P1);
+    for (size_t i = 0; i < 512; ++i) {
+        op_queue->add_accumulate(P1);
+        op_queue->mul_accumulate(P2, z);
+    }
 
     // Sample the evaluation input x
     Fq x = Fq::random_element();

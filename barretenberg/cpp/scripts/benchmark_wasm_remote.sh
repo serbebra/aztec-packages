@@ -23,6 +23,7 @@ source scripts/_benchmark_remote_lock.sh
 cd build-wasm-threads
 # ensure folder structure
 ssh $BB_SSH_KEY $BB_SSH_INSTANCE "mkdir -p $BB_SSH_CPP_PATH/build-wasm-threads"
+
 # copy build wasm threads
 scp $BB_SSH_KEY ./bin/$BENCHMARK $BB_SSH_INSTANCE:$BB_SSH_CPP_PATH/build-wasm-threads
 # run wasm benchmarking
