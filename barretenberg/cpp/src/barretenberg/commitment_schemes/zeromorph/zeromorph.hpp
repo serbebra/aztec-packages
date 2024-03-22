@@ -5,6 +5,11 @@
 #include "barretenberg/polynomials/polynomial.hpp"
 #include "barretenberg/transcript/transcript.hpp"
 
+/**
+ * @brief PCS for multilinear polynomials. Main reference https://eprint.iacr.org/2023/917
+ *
+ */
+
 namespace proof_system::honk::pcs::zeromorph {
 
 /**
@@ -41,11 +46,11 @@ template <typename Curve> class ZeroMorphProver_ {
 
   public:
     /**
-     * @brief Compute multivariate quotients q_k(X_0, ..., X_{k-1}) for f(X_0, ..., X_{n-1})
-     * @details Starting from the coefficients of f, compute q_k inductively from k = n - 1, to k = 0.
+     * @brief Compute multivariate quotients \f$q_k(X_0, ..., X_{k-1}) for f(X_0, ..., X_{n-1})\f$
+     * @details Starting from the coefficients of \f$f\f$, compute q_k inductively from \f$k = n - 1\f$, to \f$k = 0.\f$
      *          f needs to be updated at each step.
      *
-     *          First, compute q_{n-1} of size N/2 by
+     *          First, compute \f$q_{n-1}\f$ of size N/2 by
      *          q_{n-1}[l] = f[N/2 + l ] - f[l].
      *
      *          Update f by f[l] <- f[l] + u_{n-1} * q_{n-1}[l]; f now has size N/2.
@@ -56,9 +61,9 @@ template <typename Curve> class ZeroMorphProver_ {
      *          Compute q_{n-3} of size N/(2^3) by
      *          q_{n-3}[l] = f[N/2^3 + l] - f[l]. Repeat similarly until you reach q_0.
      *
-     * @param polynomial Multilinear polynomial f(X_0, ..., X_{d-1})
-     * @param u_challenge Multivariate challenge u = (u_0, ..., u_{d-1})
-     * @return std::vector<Polynomial> The quotients q_k
+     * @param polynomial Multilinear polynomial \f$f(X_0, ..., X_{d-1})\f$
+     * @param u_challenge Multivariate challenge \f$u = (u_0, ..., u_{d-1})\f$
+     * @return std::vector<Polynomial> The quotients \f$q_k\f$
      */
     static std::vector<Polynomial> compute_multilinear_quotients(Polynomial polynomial, std::span<const FF> u_challenge)
     {
@@ -86,10 +91,10 @@ template <typename Curve> class ZeroMorphProver_ {
         f_k.resize(size_q);
 
         std::vector<FF> g(polynomial.data().get(), polynomial.data().get() + size_q);
-
-        // Compute q_k in reverse order from k= n-2, i.e. q_{n-2}, ..., q_0
+        //! [Compute quotients]
+        // Compute \q_k in reverse order from \f$k= n-2\f$, i.e. \f$q_{n-2}, \ldots, q_0 \f$
         for (size_t k = 1; k < log_N; ++k) {
-            // Compute f_k
+            // Compute \f$f_k\f$
             for (size_t l = 0; l < size_q; ++l) {
                 f_k[l] = g[l] + u_challenge[log_N - k] * q[l];
             }
@@ -104,19 +109,20 @@ template <typename Curve> class ZeroMorphProver_ {
             quotients[log_N - k - 1] = q.share();
             g = f_k;
         }
-
+        //! [Compute quotients]
         return quotients;
     }
 
     /**
-     * @brief Construct batched, lifted-degree univariate quotient \hat{q} = \sum_k y^k * X^{N - d_k - 1} * q_k
+     * @brief Lift the degrees of quotients and batch them using polynomial \f$\hat{q} = \sum_k y^k \cdot X^{N - d_k -
+     * 1} \cdot q_k\f$
      * @details The purpose of the batched lifted-degree quotient is to reduce the individual degree checks
-     * deg(q_k) <= 2^k - 1 to a single degree check on \hat{q}. This is done by first shifting each of the q_k to the
-     * right (i.e. multiplying by an appropriate power of X) so that each is degree N-1, then batching them all together
-     * using powers of the provided challenge. Note: In practice, we do not actually compute the shifted q_k, we simply
-     * accumulate them into \hat{q} at the appropriate offset.
+     * \f$\deg(q_k) \leq 2^k - 1\f$ to a single degree check on \f$\hat{q}\f$. This is done by first shifting each of
+     * the \f$q_k\f$ to the right (i.e. multiplying by an appropriate power of \f$X\f$) so that each is of degree
+     * \f$N-1\f$, then batching them all together using powers of the provided challenge. Note: In practice, we do not
+     * actually compute the shifted \f$q_k\f$, we simply accumulate them into \f$\hat{q}\f$ at the appropriate offset.
      *
-     * @param quotients Polynomials q_k, interpreted as univariates; deg(q_k) = 2^k - 1
+     * @param quotients Polynomials \f$q_k\f$, interpreted as univariates; \f$\deg(q_k) = 2^k - 1\f$
      * @param N circuit size
      * @return Polynomial
      */
@@ -146,16 +152,16 @@ template <typename Curve> class ZeroMorphProver_ {
     }
 
     /**
-     * @brief Compute partially evaluated degree check polynomial \zeta_x = q - \sum_k y^k * x^{N - d_k - 1} * q_k
-     * @details Compute \zeta_x, where
-     *
-     *                          \zeta_x = q - \sum_k y^k * x^{N - d_k - 1} * q_k
+     * @brief Compute partially evaluated degree check polynomial \f$\zeta_x = q - \sum_k y^k \cdot x^{N - d_k - 1}
+     * \cdot q_k\f$
+     * @details Compute \f$\zeta_x \f$, where
+     *                         \f$\zeta_x = q - \sum_k y^k \cdot x^{N - d_k - 1} \cdot q_k\f$
      *
      * @param batched_quotient
      * @param quotients
      * @param y_challenge
      * @param x_challenge
-     * @return Polynomial Degree check polynomial \zeta_x such that \zeta_x(x) = 0
+     * @return Polynomial Degree check polynomial \f$\zeta_x\f$ such that \f$\zeta_x(x) = 0\f$
      */
     static Polynomial compute_partially_evaluated_degree_check_polynomial(Polynomial& batched_quotient,
                                                                           std::vector<Polynomial>& quotients,
@@ -183,16 +189,19 @@ template <typename Curve> class ZeroMorphProver_ {
     }
 
     /**
-     * @brief Compute partially evaluated zeromorph identity polynomial Z_x
-     * @details Compute Z_x, where
+     * @brief Compute partially evaluated zeromorph identity polynomial \f$Z_x\f$
+     * @details Compute \f$Z_x\f$, where
      *
-     *  Z_x = x * f_batched + g_batched - v * x * \Phi_n(x)
-     *           - x * \sum_k (x^{2^k}\Phi_{n-k-1}(x^{2^{k-1}}) - u_k\Phi_{n-k}(x^{2^k})) * q_k
-     *           + concatentation_term
+     *  \f$Z_x = x \cdot f_{batched} + g_{batched} - v \cdot x \cdot \Phi_n(x)
+     *           - x \cdot \sum_k (x^{2^k}\Phi_{n-k-1}(x^{2^{k-1}}) - u_k\Phi_{n-k}(x^{2^k})) \cdot q_k
+     *           + \text{concatenation_term} \f$
      *
-     * where f_batched = \sum_{i=0}^{m-1}\rho^i*f_i, g_batched = \sum_{i=0}^{l-1}\rho^{m+i}*g_i
+     * where \f$ f_{batched} = \sum_{i=0}^{m-1}\rho^i \cdot f_i \f$, \f$ g_{batched} = \sum_{i=0}^{l-1}\rho^{m+i}*g_i\f$
      *
-     * and concatenation_term = \sum_{i=0}^{num_chunks_per_group}(x^{i * min_N + 1}concatenation_groups_batched_{i})
+     * and
+     \f[
+     *   \text{concatenation_term} = \sum_{i=0}^{\text{num_chunks_per_group}} (x^{i \cdot \text{min}_N + 1} \cdot
+     \text{concatenation_groups_batched}_{i}) \f]
      *
      * @note The concatenation term arises from an implementation detail in the Goblin Translator and is not part of the
      * conventional ZM protocol
@@ -262,17 +271,18 @@ template <typename Curve> class ZeroMorphProver_ {
     }
 
     /**
-     * @brief Compute combined evaluation and degree-check quotient polynomial pi
+     * @brief Compute combined evaluation and degree-check quotient polynomial \f$\pi\f$
      * @details Compute univariate quotient pi, where
-     *
-     *  pi = (q_\zeta + z*q_Z) X^{N_{max}-(N-1)}, with q_\zeta = \zeta_x/(X-x), q_Z = Z_x/(X-x)
-     *
+     *\f[
+     *  \pi = (q_{\zeta} + z*q_Z) X^{N_{max}-(N-1)},
+     \f]
+     * with \f$ q_{\zeta} = \zeta_x/(X-x), \ q_Z = Z_x/(X-x)\f$
      * @param Z_x
      * @param zeta_x
      * @param x_challenge
      * @param z_challenge
      * @param N_max
-     * @return Polynomial
+     * @return Polynomial [?????]
      */
     static Polynomial compute_batched_evaluation_and_degree_check_quotient(Polynomial& zeta_x,
                                                                            Polynomial& Z_x,

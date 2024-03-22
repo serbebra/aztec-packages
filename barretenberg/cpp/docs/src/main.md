@@ -16,3 +16,6 @@ It should be written explicitly that this is no substitute for thorough audits (
 # Honk
 [Honk is documented here](docs/src/honk.md)
 
+# Zeromorph
+[Zeromorph is documented here](docs/src/zeromorph.md)
+
