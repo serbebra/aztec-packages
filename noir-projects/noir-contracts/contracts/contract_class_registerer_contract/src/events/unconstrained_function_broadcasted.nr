@@ -6,7 +6,7 @@ use dep::aztec::protocol_types::{
     ARTIFACT_FUNCTION_TREE_MAX_HEIGHT, MAX_PACKED_BYTECODE_SIZE_PER_UNCONSTRAINED_FUNCTION_IN_FIELDS,
     REGISTERER_UNCONSTRAINED_FUNCTION_BROADCASTED_MAGIC_VALUE
 },
-    traits::{Serialize}
+    traits::Serialize
 };
 
 struct UnconstrainedFunction {
@@ -27,7 +27,7 @@ impl Serialize<MAX_PACKED_BYTECODE_SIZE_PER_UNCONSTRAINED_FUNCTION_IN_FIELDS + 2
     }
 }
 
-// #[event]
+// #[aztec(event)]
 struct ClassUnconstrainedFunctionBroadcasted {
     contract_class_id: ContractClassId,
     artifact_metadata_hash: Field,
