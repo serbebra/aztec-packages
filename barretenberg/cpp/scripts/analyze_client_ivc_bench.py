@@ -3,7 +3,7 @@ from pathlib import Path
 
 PREFIX = Path("build-op-count-time")
 IVC_BENCH_JSON = Path("client_ivc_bench.json")
-BENCHMARK = "ClientIVCBench/Full/32"
+BENCHMARK = "ClientIVCBench/Full/6"
 
 # Single out an independent set of functions accounting for most of BENCHMARK's real_time
 to_keep = [

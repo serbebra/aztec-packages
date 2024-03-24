@@ -377,6 +377,7 @@ void compute_permutation_argument_polynomials(const typename Flavor::CircuitBuil
                                               typename Flavor::ProvingKey* key,
                                               std::vector<CyclicPermutation> copy_cycles)
 {
+    BB_OP_COUNT_TIME();
     constexpr bool generalized = IsUltraPlonkFlavor<Flavor> || IsUltraFlavor<Flavor>;
     auto mapping = compute_permutation_mapping<Flavor, generalized>(circuit, key, copy_cycles);
 

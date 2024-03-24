@@ -12,19 +12,24 @@ void ExecutionTrace_<Flavor>::populate(Builder& builder,
     BB_OP_COUNT_TIME_NAME("ExecutionTrace_<Flavor>::populate");
 
     // Construct wire polynomials, selector polynomials, and copy cycles from raw circuit data
+    // 504ms
     auto trace_data = construct_trace_data(builder, proving_key->circuit_size);
 
+    // 377ms
     add_wires_and_selectors_to_proving_key(trace_data, builder, proving_key);
 
     if constexpr (IsUltraPlonkOrHonk<Flavor>) {
+        // 139ms
         add_memory_records_to_proving_key(trace_data, builder, proving_key);
     }
 
     if constexpr (IsGoblinFlavor<Flavor>) {
+        // 50ms
         add_ecc_op_wires_to_proving_key(builder, proving_key);
     }
 
     // Compute the permutation argument polynomials (sigma/id) and add them to proving key
+    // 280ms
     compute_permutation_argument_polynomials<Flavor>(builder, proving_key.get(), trace_data.copy_cycles);
 }
 
@@ -32,6 +37,7 @@ template <class Flavor>
 void ExecutionTrace_<Flavor>::add_wires_and_selectors_to_proving_key(
     TraceData& trace_data, Builder& builder, const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
 {
+    BB_OP_COUNT_TIME();
     if constexpr (IsHonkFlavor<Flavor>) {
         for (auto [pkey_wire, trace_wire] : zip_view(proving_key->get_wires(), trace_data.wires)) {
             pkey_wire = trace_wire.share();
@@ -56,6 +62,7 @@ void ExecutionTrace_<Flavor>::add_memory_records_to_proving_key(
     TraceData& trace_data, Builder& builder, const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
     requires IsUltraPlonkOrHonk<Flavor>
 {
+    BB_OP_COUNT_TIME();
     ASSERT(proving_key->memory_read_records.empty() && proving_key->memory_write_records.empty());
 
     // Update indices of RAM/ROM reads/writes based on where block containing these gates sits in the trace
@@ -71,6 +78,7 @@ template <class Flavor>
 typename ExecutionTrace_<Flavor>::TraceData ExecutionTrace_<Flavor>::construct_trace_data(Builder& builder,
                                                                                           size_t dyadic_circuit_size)
 {
+    BB_OP_COUNT_TIME();
     TraceData trace_data{ dyadic_circuit_size, builder };
 
     // Complete the public inputs execution trace block from builder.public_inputs
@@ -79,11 +87,13 @@ typename ExecutionTrace_<Flavor>::TraceData ExecutionTrace_<Flavor>::construct_t
     uint32_t offset = Flavor::has_zero_row ? 1 : 0; // Offset at which to place each block in the trace polynomials
     // For each block in the trace, populate wire polys, copy cycles and selector polys
     for (auto& block : builder.blocks.get()) {
+        BB_OP_COUNT_TIME_NAME("copy_constructing_outer_loop");
         auto block_size = static_cast<uint32_t>(block.size());
 
         // Update wire polynomials and copy cycles
         // NB: The order of row/column loops is arbitrary but needs to be row/column to match old copy_cycle code
         for (uint32_t block_row_idx = 0; block_row_idx < block_size; ++block_row_idx) {
+            BB_OP_COUNT_TIME_NAME("copy_constructing_inner_loop");
             for (uint32_t wire_idx = 0; wire_idx < NUM_WIRES; ++wire_idx) {
                 uint32_t var_idx = block.wires[wire_idx][block_row_idx]; // an index into the variables array
                 uint32_t real_var_idx = builder.real_variable_index[var_idx];
@@ -98,6 +108,7 @@ typename ExecutionTrace_<Flavor>::TraceData ExecutionTrace_<Flavor>::construct_t
         // Insert the selector values for this block into the selector polynomials at the correct offset
         // TODO(https://github.com/AztecProtocol/barretenberg/issues/398): implicit arithmetization/flavor consistency
         for (auto [selector_poly, selector] : zip_view(trace_data.selectors, block.selectors)) {
+            BB_OP_COUNT_TIME_NAME("selector_loop");
             for (size_t row_idx = 0; row_idx < block_size; ++row_idx) {
                 size_t trace_row_idx = row_idx + offset;
                 selector_poly[trace_row_idx] = selector[row_idx];
@@ -137,6 +148,8 @@ void ExecutionTrace_<Flavor>::add_ecc_op_wires_to_proving_key(
     requires IsGoblinFlavor<Flavor>
 {
     // Initialize the ecc op wire polynomials to zero on the whole domain
+    BB_OP_COUNT_TIME();
+
     std::array<Polynomial, NUM_WIRES> op_wire_polynomials;
     for (auto& poly : op_wire_polynomials) {
         poly = Polynomial{ proving_key->circuit_size };
