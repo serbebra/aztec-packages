@@ -3,18 +3,22 @@ import { ENR, SignableENR } from '@chainsafe/enr';
 import { PeerId } from '@libp2p/interface';
 import { multiaddr } from '@multiformats/multiaddr';
 
+import { LibP2PNode } from './libp2p_service.js';
+
 export class DiscV5Service {
   private discv5: Discv5;
   private enr: SignableENR;
   private discoveryInterval: NodeJS.Timeout | null = null;
-  constructor(peerId: PeerId, hostname: string, port: number, bootnodeEnr?: string) {
+  constructor(private libp2pNode: LibP2PNode, peerId: PeerId, hostname: string, port: number, bootnodeEnr?: string) {
     // create ENR from PeerId
     this.enr = SignableENR.createFromPeerId(peerId);
 
-    const multiAddrUdp = multiaddr(`/ip4/${hostname}/udp/${port}`);
+    const multiAddrUdp = multiaddr(`/ip4/${hostname}/udp/${port}/p2p/${peerId.toString()}`);
+    const multiAddrTcp = multiaddr(`/ip4/${hostname}/tcp/${port}/p2p/${peerId.toString()}`);
 
     // set location multiaddr in ENR record
     this.enr.setLocationMultiaddr(multiAddrUdp);
+    this.enr.setLocationMultiaddr(multiAddrTcp);
 
     this.discv5 = Discv5.create({
       enr: this.enr,
@@ -25,10 +29,13 @@ export class DiscV5Service {
       },
     });
 
+    console.log('ENR NodeId: ', this.enr.nodeId);
+
     (this.discv5 as Discv5EventEmitter).on('discovered', this.onDiscovered);
     (this.discv5 as Discv5EventEmitter).on('enrAdded', async (enr: ENR) => {
-      const multiAddr = await enr.getFullMultiaddr('udp');
-      console.log('ENR added', enr.encodeTxt(), multiAddr?.toString());
+      const multiAddrTcp = await enr.getFullMultiaddr('tcp');
+      const multiAddrUdp = await enr.getFullMultiaddr('udp');
+      console.log('ENR added', multiAddrTcp?.toString(), multiAddrUdp?.toString());
     });
 
     (this.discv5 as Discv5EventEmitter).on('peer', (peerId: PeerId) => {
@@ -37,6 +44,7 @@ export class DiscV5Service {
 
     // Add bootnode ENR if provided
     if (bootnodeEnr) {
+      console.log('adding enr: ', bootnodeEnr);
       this.discv5.addEnr(bootnodeEnr);
     }
   }
@@ -44,11 +52,17 @@ export class DiscV5Service {
   public async start(): Promise<void> {
     await this.discv5.start();
     this.discoveryInterval = setInterval(async () => {
-      await this.discv5.findRandomNode();
-      console.log(
-        'kad table: ',
-        this.discv5.kadValues().map(enr => enr.encodeTxt()),
-      );
+      const enrs = await this.discv5.findRandomNode();
+      // console.log('res', res);
+      if (enrs?.length) {
+        console.log(
+          'Found random nodes: ',
+          enrs.map(n => n.nodeId.toString()),
+        );
+        // Filter TCP multiaddrs
+        const peers = (await Promise.all(enrs.map(enr => enr.getFullMultiaddr('tcp')))).filter(m => m);
+        await this.libp2pNode.connectToPeersIfUnknown(peers.map(p => p!.toString()));
+      }
     }, 2000);
   }
 

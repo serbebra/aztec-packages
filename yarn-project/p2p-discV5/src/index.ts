@@ -1,6 +1,6 @@
 // import { ENR } from '@chainsafe/enr';
 import { DiscV5Service } from './discv5.js';
-// import { LibP2PNode } from './libp2p_service.js';
+import { LibP2PNode } from './libp2p_service.js';
 import { createLibP2PPeerId } from './util.js';
 
 const {
@@ -17,11 +17,11 @@ async function main() {
 
   console.log('peerId: ', peerId.toString());
 
-  // const node = await LibP2PNode.new(peerId);
-  const discV5 = new DiscV5Service(peerId, LISTEN_IP, +LISTEN_PORT, BOOTSTRAP_NODE);
+  const node = await LibP2PNode.new(peerId);
+  const discV5 = new DiscV5Service(node, peerId, LISTEN_IP, +LISTEN_PORT, BOOTSTRAP_NODE);
 
-  // node.start();
-  // console.log('Node started');
+  await node.start();
+  console.log('LibP2P Node started');
 
   await discV5.start();
   console.log('DiscV5 started');

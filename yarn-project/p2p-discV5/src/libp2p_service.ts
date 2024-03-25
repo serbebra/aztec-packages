@@ -1,10 +1,16 @@
+import { noise } from '@chainsafe/libp2p-noise';
 import { yamux } from '@chainsafe/libp2p-yamux';
 import { identify } from '@libp2p/identify';
-import { PeerId } from '@libp2p/interface';
+import type { IncomingStreamData, PeerId, Stream } from '@libp2p/interface';
 import type { ServiceMap } from '@libp2p/interface-libp2p';
 import { mplex } from '@libp2p/mplex';
+import { peerIdFromString } from '@libp2p/peer-id';
 import { tcp } from '@libp2p/tcp';
+import { multiaddr } from '@multiformats/multiaddr';
+import { pipe } from 'it-pipe';
 import { Libp2p, Libp2pOptions, ServiceFactoryMap, createLibp2p } from 'libp2p';
+
+// This utility is conceptual and needs to align with actual imports
 
 const {
   LISTEN_IP = '0.0.0.0',
@@ -15,9 +21,9 @@ const {
 } = process.env;
 
 export class LibP2PNode {
-  constructor(private node: Libp2p, private peerId: PeerId) {}
+  constructor(private node: Libp2p, private peerId: PeerId, private protocolId = '') {}
 
-  public start(): void {
+  public async start(): Promise<void> {
     if (this.node.status === 'started') {
       throw new Error('Node already started');
     }
@@ -38,26 +44,32 @@ export class LibP2PNode {
       const peerId = e.detail;
       console.log(`Disconnected from peer: ${peerId.toString()}`);
     });
+
+    await this.node.handle(this.protocolId, async (incoming: IncomingStreamData) => {
+      const { stream } = incoming;
+      let msg = Buffer.alloc(0);
+      try {
+        await pipe(stream, async function (source) {
+          for await (const chunk of source) {
+            const payload = chunk.subarray();
+            msg = Buffer.concat([msg, Buffer.from(payload)]);
+          }
+        });
+        await stream.close();
+      } catch {
+        console.error('Failed to handle incoming stream');
+      }
+      if (!msg.length) {
+        console.log(`Empty message received from peer ${incoming.connection.remotePeer}`);
+      }
+      console.log(`RECEIVED MSG from peer ${incoming.connection.remotePeer}: ${msg.toString('hex')}`);
+    });
+
+    await this.node.start();
   }
 
   public static async new(peerId: PeerId) {
-    // const peerId = await createLibP2PPeerId(PRIVATE_KEY);
-
-    // const enr = SignableENR.createFromPeerId(peerId);
-
-    // const bindAddrUdp = `/ip4/${LISTEN_IP}/udp/${LISTEN_PORT}`;
-    // const multiAddrUdp = multiaddr(bindAddrUdp);
-    const bindAddrTcp = `/ip4/${LISTEN_IP}/tcp/${LISTEN_PORT}`;
-
-    // enr.setLocationMultiaddr(multiAddrUdp);
-
-    // const setupDiscV5 = (options: IDiscv5DiscoveryOptions): (() => PeerDiscovery) => {
-    //   return () => new Discv5Discovery(options);
-    // };
-
-    // const bootstrapMultiAddr = multiaddr('')
-
-    // const bootNodes = BOOTSTRAP_NODES.split(',');
+    const bindAddrTcp = `/ip4/${LISTEN_IP}/tcp/${LISTEN_PORT}/p2p/${peerId.toString()}`;
 
     const opts: Libp2pOptions<ServiceMap> = {
       start: false,
@@ -65,11 +77,9 @@ export class LibP2PNode {
       addresses: {
         listen: [bindAddrTcp],
       },
-      // peerDiscovery: [
-      //   setupDiscV5({ peerId, enr, bindAddrs: { ip4: multiAddrUdp.toString() }, bootEnrs: [], enabled: true }),
-      // ],
       transports: [tcp()],
       streamMuxers: [yamux(), mplex()],
+      connectionEncryption: [noise()],
     };
 
     const services: ServiceFactoryMap = {
@@ -88,7 +98,42 @@ export class LibP2PNode {
     return this.peerId!;
   }
 
-  private handleNewConnection(peerId: PeerId) {
-    console.log(`Handling new connection from peer: ${peerId}`);
+  public async connectToPeersIfUnknown(addrs: string[]) {
+    for (const addr of addrs) {
+      const peerMultiAddr = multiaddr(addr);
+      const peerIdStr = peerMultiAddr.getPeerId();
+
+      if (!peerIdStr) {
+        throw new Error("Peer ID not found in discovered node's multiaddr");
+      }
+
+      const peerId = peerIdFromString(peerIdStr);
+
+      // check if peer is already known
+      const hasPeer = await this.node.peerStore.has(peerId);
+
+      if (!hasPeer) {
+        console.log('dialling peer: ', peerMultiAddr.toString(), peerId);
+        await this.node.dialProtocol(peerMultiAddr, this.protocolId);
+      }
+    }
   }
+
+  private async handleNewConnection(peerId: PeerId) {
+    console.log(`Sending some data to peer: ${peerId}`);
+    const stream = await this.node.dialProtocol(peerId, this.protocolId);
+    const dataToSend: Uint8Array = new Uint8Array([0x33]); // Example data
+
+    await sendDataOverStream(stream, dataToSend);
+    await stream.close();
+  }
+}
+
+async function sendDataOverStream(stream: Stream, data: Uint8Array): Promise<void> {
+  await pipe(toAsyncIterable(data), stream.sink);
+}
+
+// Convert data to an async iterable using an async generator function
+async function* toAsyncIterable(data: Uint8Array): AsyncIterable<Uint8Array> {
+  yield data;
 }
