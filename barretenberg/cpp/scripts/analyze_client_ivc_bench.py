@@ -72,14 +72,18 @@ for key in protogalaxy_round_labels:
 print('\nBreakdown of ProverInstance(Circuit&)')
 protogalaxy_round_labels = [
     "UltraCircuitBuilder_<Arithmetization>::finalize_circuit(t)",
-    "Polynomial::copy_constructor(t)",
-    "ProvingKey_(t)",
-    "construct_sorted_list_polynomials(t)",
-    "construct_databus_polynomials(t)",
+    "UltraProvingKey(t)",
     "ExecutionTrace_<Flavor>::populate(t)",
+    "construct_databus_polynomials(t)",
+    "construct_table_polynomials(t)",
+    "construct_sorted_list_polynomials(t)",
 ]
 max_label_length = max(len(label) for label in protogalaxy_round_labels)
+sum_of_percentages = 0;
 for key in protogalaxy_round_labels:
     time_ms = bench[key]/1e6
     total_time_ms = bench["ProverInstance(Circuit&)(t)"]/1e6
-    print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {time_ms/total_time_ms:>8.2%}")
+    percentage = time_ms/float(total_time_ms)
+    sum_of_percentages += percentage
+    print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {percentage:>8.2%}")
+print(f"Sum of percentages: {sum_of_percentages:.2%}")

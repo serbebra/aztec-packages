@@ -55,7 +55,10 @@ template <class Flavor> class ProverInstance_ {
 
         dyadic_circuit_size = compute_dyadic_size(circuit);
 
-        proving_key = std::make_shared<ProvingKey>(dyadic_circuit_size, circuit.public_inputs.size());
+        {
+            BB_OP_COUNT_TIME_NAME("UltraProvingKey");
+            proving_key = std::make_shared<ProvingKey>(dyadic_circuit_size, circuit.public_inputs.size());
+        }
 
         // Construct and add to proving key the wire, selector and copy constraint polynomials
         Trace::populate(circuit, proving_key);

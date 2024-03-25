@@ -69,6 +69,7 @@ void ProverInstance_<Flavor>::construct_databus_polynomials(Circuit& circuit)
 template <class Flavor>
 void ProverInstance_<Flavor>::construct_table_polynomials(Circuit& circuit, size_t dyadic_circuit_size)
 {
+    BB_OP_COUNT_TIME();
     auto table_polynomials = construct_lookup_table_polynomials<Flavor>(circuit, dyadic_circuit_size);
     proving_key->table_1 = table_polynomials[0].share();
     proving_key->table_2 = table_polynomials[1].share();
