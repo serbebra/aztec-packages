@@ -9,7 +9,7 @@ template <class Flavor>
 void ExecutionTrace_<Flavor>::populate(Builder& builder,
                                        const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
 {
-    BB_OP_COUNT_TIME_NAME("ExecutionTrace_<Flavor>::populate");
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_::populate");
 
     // Construct wire polynomials, selector polynomials, and copy cycles from raw circuit data
     // 504ms
@@ -30,14 +30,17 @@ void ExecutionTrace_<Flavor>::populate(Builder& builder,
 
     // Compute the permutation argument polynomials (sigma/id) and add them to proving key
     // 280ms
-    compute_permutation_argument_polynomials<Flavor>(builder, proving_key.get(), trace_data.copy_cycles);
+    {
+        BB_OP_COUNT_TIME_NAME("ExecutionTrace_::compute_permutation_argument_polynomials");
+        compute_permutation_argument_polynomials<Flavor>(builder, proving_key.get(), trace_data.copy_cycles);
+    }
 }
 
 template <class Flavor>
 void ExecutionTrace_<Flavor>::add_wires_and_selectors_to_proving_key(
     TraceData& trace_data, Builder& builder, const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
 {
-    BB_OP_COUNT_TIME();
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_::add_wires_and_selectors_to_proving_key");
     if constexpr (IsHonkFlavor<Flavor>) {
         for (auto [pkey_wire, trace_wire] : zip_view(proving_key->get_wires(), trace_data.wires)) {
             pkey_wire = trace_wire.share();
@@ -62,7 +65,7 @@ void ExecutionTrace_<Flavor>::add_memory_records_to_proving_key(
     TraceData& trace_data, Builder& builder, const std::shared_ptr<typename Flavor::ProvingKey>& proving_key)
     requires IsUltraPlonkOrHonk<Flavor>
 {
-    BB_OP_COUNT_TIME();
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_::add_memory_records_to_proving_key");
     ASSERT(proving_key->memory_read_records.empty() && proving_key->memory_write_records.empty());
 
     // Update indices of RAM/ROM reads/writes based on where block containing these gates sits in the trace
@@ -78,7 +81,7 @@ template <class Flavor>
 typename ExecutionTrace_<Flavor>::TraceData ExecutionTrace_<Flavor>::construct_trace_data(Builder& builder,
                                                                                           size_t dyadic_circuit_size)
 {
-    BB_OP_COUNT_TIME();
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_::construct_trace_data");
     TraceData trace_data{ dyadic_circuit_size, builder };
 
     // Complete the public inputs execution trace block from builder.public_inputs
@@ -148,7 +151,7 @@ void ExecutionTrace_<Flavor>::add_ecc_op_wires_to_proving_key(
     requires IsGoblinFlavor<Flavor>
 {
     // Initialize the ecc op wire polynomials to zero on the whole domain
-    BB_OP_COUNT_TIME();
+    BB_OP_COUNT_TIME_NAME("ExecutionTrace_::add_ecc_op_wires_to_proving_key");
 
     std::array<Polynomial, NUM_WIRES> op_wire_polynomials;
     for (auto& poly : op_wire_polynomials) {

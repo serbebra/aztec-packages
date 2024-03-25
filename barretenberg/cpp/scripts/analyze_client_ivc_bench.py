@@ -14,7 +14,7 @@ to_keep = [
     "construct_sorted_list_polynomials",
     "construct_databus_polynomials",
     "ProvingKey_",
-    "ExecutionTrace_<Flavor>::populate",
+    "ExecutionTrace_::populate",
     "ProtogalaxyProver::fold_instances(t)",
     "Decider::construct_proof(t)",
     "ECCVMComposer::create_prover(t)",
@@ -57,9 +57,9 @@ for key in ['commit(t)', 'compute_combiner(t)', 'compute_perturbator(t)', 'compu
 
 print('\nBreakdown of ProtogalaxyProver::fold_instances:')
 protogalaxy_round_labels = [
-    "ProtoGalaxyProver_::preparation_round(t)", 
-    "ProtoGalaxyProver_::perturbator_round(t)", 
-    "ProtoGalaxyProver_::combiner_quotient_round(t)", 
+    "ProtoGalaxyProver_::preparation_round(t)",
+    "ProtoGalaxyProver_::perturbator_round(t)",
+    "ProtoGalaxyProver_::combiner_quotient_round(t)",
     "ProtoGalaxyProver_::accumulator_update_round(t)"
 ]
 max_label_length = max(len(label) for label in protogalaxy_round_labels)
@@ -73,16 +73,33 @@ print('\nBreakdown of ProverInstance(Circuit&)')
 protogalaxy_round_labels = [
     "UltraCircuitBuilder_<Arithmetization>::finalize_circuit(t)",
     "UltraProvingKey(t)",
-    "ExecutionTrace_<Flavor>::populate(t)",
+    "ExecutionTrace_::populate(t)",
     "construct_databus_polynomials(t)",
     "construct_table_polynomials(t)",
     "construct_sorted_list_polynomials(t)",
 ]
 max_label_length = max(len(label) for label in protogalaxy_round_labels)
-sum_of_percentages = 0;
+sum_of_percentages = 0
 for key in protogalaxy_round_labels:
     time_ms = bench[key]/1e6
     total_time_ms = bench["ProverInstance(Circuit&)(t)"]/1e6
+    percentage = time_ms/float(total_time_ms)
+    sum_of_percentages += percentage
+    print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {percentage:>8.2%}")
+print(f"Sum of percentages: {sum_of_percentages:.2%}")
+
+
+print('\nBreakdown of ExecutionTrace_::populate(t)')
+populate_round_labels = ["ExecutionTrace_::add_ecc_op_wires_to_proving_key(t)",
+                         "ExecutionTrace_::add_memory_records_to_proving_key(t)",
+                         "ExecutionTrace_::compute_permutation_argument_polynomials(t)",
+                         "ExecutionTrace_::construct_trace_data(t)",
+                         "ExecutionTrace_::add_wires_and_selectors_to_proving_key(t)"]
+max_label_length = max(len(label) for label in populate_round_labels)
+sum_of_percentages = 0
+for key in populate_round_labels:
+    time_ms = bench[key]/1e6
+    total_time_ms = bench["ExecutionTrace_::populate(t)"]/1e6
     percentage = time_ms/float(total_time_ms)
     sum_of_percentages += percentage
     print(f"{key:<{max_label_length}}{time_ms:>8.0f}  {percentage:>8.2%}")
