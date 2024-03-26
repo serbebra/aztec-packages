@@ -90,11 +90,13 @@ print(f"Sum of percentages: {sum_of_percentages:.2%}")
 
 
 print('\nBreakdown of ExecutionTrace_::populate(t)')
-populate_round_labels = ["ExecutionTrace_::add_ecc_op_wires_to_proving_key(t)",
-                         "ExecutionTrace_::add_memory_records_to_proving_key(t)",
-                         "ExecutionTrace_::compute_permutation_argument_polynomials(t)",
-                         "ExecutionTrace_::construct_trace_data(t)",
-                         "ExecutionTrace_::add_wires_and_selectors_to_proving_key(t)"]
+populate_round_labels = [
+    "ExecutionTrace_::construct_trace_data(t)",
+    "ExecutionTrace_::add_wires_and_selectors_to_proving_key(t)",
+    "ExecutionTrace_::add_memory_records_to_proving_key(t)",
+    "ExecutionTrace_::add_ecc_op_wires_to_proving_key(t)",
+    "ExecutionTrace_::compute_permutation_argument_polynomials(t)",
+]
 max_label_length = max(len(label) for label in populate_round_labels)
 sum_of_percentages = 0
 for key in populate_round_labels:

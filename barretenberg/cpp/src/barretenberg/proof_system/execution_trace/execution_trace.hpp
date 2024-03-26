@@ -26,6 +26,7 @@ template <class Flavor> class ExecutionTrace_ {
 
         TraceData(size_t dyadic_circuit_size, Builder& builder)
         {
+            BB_OP_COUNT_TIME_NAME("TraceData");
             // Initializate the wire and selector polynomials
             for (auto& wire : wires) {
                 wire = Polynomial(dyadic_circuit_size);
