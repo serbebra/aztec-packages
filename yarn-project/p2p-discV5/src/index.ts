@@ -1,6 +1,9 @@
 // import { ENR } from '@chainsafe/enr';
+import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
+
 import { DiscV5Service } from './discv5.js';
 import { LibP2PNode } from './libp2p_service.js';
+import { AztecPeerDb } from './peer_store.js';
 import { createLibP2PPeerId } from './util.js';
 
 const {
@@ -10,14 +13,16 @@ const {
   // ANNOUNCE_PORT = '40100',
   // ANNOUNCE_HOSTAME = '/ip4/10.1.0.85',
   BOOTSTRAP_NODE,
+  DATA_DIR,
 } = process.env;
 
 async function main() {
+  const peerDb = new AztecPeerDb(AztecLmdbStore.open(DATA_DIR));
   const peerId = await createLibP2PPeerId(PRIVATE_KEY);
 
   console.log('peerId: ', peerId.toString());
 
-  const node = await LibP2PNode.new(peerId);
+  const node = await LibP2PNode.new(peerId, peerDb);
   const discV5 = new DiscV5Service(node, peerId, LISTEN_IP, +LISTEN_PORT, BOOTSTRAP_NODE);
 
   await node.start();

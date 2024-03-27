@@ -1,3 +1,4 @@
+import { ENR } from '@chainsafe/enr';
 import { noise } from '@chainsafe/libp2p-noise';
 import { yamux } from '@chainsafe/libp2p-yamux';
 import { identify } from '@libp2p/identify';
@@ -10,6 +11,8 @@ import { multiaddr } from '@multiformats/multiaddr';
 import { pipe } from 'it-pipe';
 import { Libp2p, Libp2pOptions, ServiceFactoryMap, createLibp2p } from 'libp2p';
 
+import { AztecPeerStore } from './peer_store.js';
+
 // This utility is conceptual and needs to align with actual imports
 
 const {
@@ -21,7 +24,12 @@ const {
 } = process.env;
 
 export class LibP2PNode {
-  constructor(private node: Libp2p, private peerId: PeerId, private protocolId = '') {}
+  constructor(
+    private node: Libp2p,
+    private peerId: PeerId,
+    private peerStore: AztecPeerStore,
+    private protocolId = '/aztec/1.0.0',
+  ) {}
 
   public async start(): Promise<void> {
     if (this.node.status === 'started') {
@@ -34,15 +42,14 @@ export class LibP2PNode {
       console.log(`Discovered peer: ${e.detail.id.toString()}`);
     });
 
-    this.node.addEventListener('peer:connect', e => {
+    this.node.addEventListener('peer:connect', async e => {
       const peerId = e.detail;
-      console.log(`Connected to peer: ${peerId.toString()}`);
-      this.handleNewConnection(peerId);
+      await this.handleNewConnection(peerId);
     });
 
-    this.node.addEventListener('peer:disconnect', e => {
+    this.node.addEventListener('peer:disconnect', async e => {
       const peerId = e.detail;
-      console.log(`Disconnected from peer: ${peerId.toString()}`);
+      await this.handlePeerDisconnect(peerId);
     });
 
     await this.node.handle(this.protocolId, async (incoming: IncomingStreamData) => {
@@ -66,9 +73,22 @@ export class LibP2PNode {
     });
 
     await this.node.start();
+
+    // Check store for existing peers
+    const peers = this.peerStore.getAllPeers();
+    const peersToConnect = [];
+    for (const enr of peers) {
+      const peerIdStr = peerIdFromString((await enr.peerId()).toString());
+      if (!peerIdStr) {
+        console.error('Peer ID not found for enr. Skipping.');
+        continue;
+      }
+      peersToConnect.push(enr);
+    }
+    await this.connectToPeersIfUnknown(peersToConnect);
   }
 
-  public static async new(peerId: PeerId) {
+  public static async new(peerId: PeerId, peerStore: AztecPeerStore) {
     const bindAddrTcp = `/ip4/${LISTEN_IP}/tcp/${LISTEN_PORT}/p2p/${peerId.toString()}`;
 
     const opts: Libp2pOptions<ServiceMap> = {
@@ -88,7 +108,7 @@ export class LibP2PNode {
 
     const libp2p = await createLibp2p({ ...opts, services });
 
-    return new LibP2PNode(libp2p, peerId);
+    return new LibP2PNode(libp2p, peerId, peerStore);
   }
 
   public getPerId() {
@@ -98,8 +118,9 @@ export class LibP2PNode {
     return this.peerId!;
   }
 
-  public async connectToPeersIfUnknown(addrs: string[]) {
-    for (const addr of addrs) {
+  public async connectToPeersIfUnknown(enrs: ENR[]) {
+    for (const enr of enrs) {
+      const addr = await enr.getFullMultiaddr('tcp');
       const peerMultiAddr = multiaddr(addr);
       const peerIdStr = peerMultiAddr.getPeerId();
 
@@ -114,18 +135,35 @@ export class LibP2PNode {
 
       if (!hasPeer) {
         console.log('dialling peer: ', peerMultiAddr.toString(), peerId);
-        await this.node.dialProtocol(peerMultiAddr, this.protocolId);
+        try {
+          const stream = await this.node.dialProtocol(peerMultiAddr, this.protocolId);
+
+          // dial successful, add to DB
+          if (!this.peerStore.getPeer(peerId.toString())) {
+            await this.peerStore.addPeer(peerId.toString(), enr);
+          }
+
+          await stream.close();
+        } catch (error) {
+          console.error(`Failed to dial peer: ${peerMultiAddr.toString()}`, error);
+        }
       }
     }
   }
 
   private async handleNewConnection(peerId: PeerId) {
-    console.log(`Sending some data to peer: ${peerId}`);
+    console.log(`Connected to peer: ${peerId.toString()}. Sending some data.`);
     const stream = await this.node.dialProtocol(peerId, this.protocolId);
     const dataToSend: Uint8Array = new Uint8Array([0x33]); // Example data
 
     await sendDataOverStream(stream, dataToSend);
     await stream.close();
+  }
+
+  private async handlePeerDisconnect(peerId: PeerId) {
+    console.log(`Disconnected from peer: ${peerId.toString()}`);
+    // TODO: consider better judgement for removing peers, e.g. try reconnecting
+    await this.peerStore.removePeer(peerId.toString());
   }
 }
 

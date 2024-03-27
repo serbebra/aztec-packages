@@ -53,15 +53,24 @@ export class DiscV5Service {
     await this.discv5.start();
     this.discoveryInterval = setInterval(async () => {
       const enrs = await this.discv5.findRandomNode();
-      // console.log('res', res);
       if (enrs?.length) {
         console.log(
           'Found random nodes: ',
           enrs.map(n => n.nodeId.toString()),
         );
-        // Filter TCP multiaddrs
-        const peers = (await Promise.all(enrs.map(enr => enr.getFullMultiaddr('tcp')))).filter(m => m);
-        await this.libp2pNode.connectToPeersIfUnknown(peers.map(p => p!.toString()));
+
+        // Filter peers with TCP multiaddrs
+        const peerEnrs = (
+          await Promise.all(
+            enrs.map(async enr => {
+              const multiAddrTcp = await enr.getFullMultiaddr('tcp');
+              return multiAddrTcp ? enr : null;
+            }),
+          )
+        ).filter((enr): enr is ENR => !!enr);
+
+        // Connect to peers in libp2p
+        await this.libp2pNode.connectToPeersIfUnknown(peerEnrs);
       }
     }, 2000);
   }

@@ -693,6 +693,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@aztec/p2p-discV5@workspace:p2p-discV5"
   dependencies:
+    "@aztec/kv-store": "workspace:^"
     "@chainsafe/discv5": ^9.0.0
     "@chainsafe/enr": ^3.0.0
     "@chainsafe/libp2p-noise": ^15.0.0
