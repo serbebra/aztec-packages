@@ -1,10 +1,9 @@
 import { SiblingPath } from '@aztec/circuit-types';
+import { randomBigInt, randomBytes } from '@aztec/foundation/crypto';
 import { createDebugLogger } from '@aztec/foundation/log';
 import { AztecKVStore } from '@aztec/kv-store';
 import { openTmpStore } from '@aztec/kv-store/utils';
 import { Hasher } from '@aztec/types/interfaces';
-
-import { randomBytes } from 'crypto';
 
 import { INITIAL_LEAF, newTree } from '../index.js';
 import { UpdateOnlyTree } from '../interfaces/update_only_tree.js';
@@ -16,12 +15,28 @@ import { SparseTree } from './sparse_tree.js';
 
 const log = createDebugLogger('aztec:sparse_tree_test');
 
-const createDb = async (db: AztecKVStore, hasher: Hasher, name: string, depth: number): Promise<UpdateOnlyTree> => {
-  return await newTree(SparseTree, db, hasher, name, depth);
+const createDb = async (
+  db: AztecKVStore,
+  hasher: Hasher,
+  name: string,
+  depth: number,
+): Promise<UpdateOnlyTree<Buffer>> => {
+  return await newTree(
+    SparseTree,
+    db,
+    hasher,
+    name,
+    {
+      fromBuffer: (buffer: Buffer): Buffer => buffer,
+    },
+    depth,
+  );
 };
 
-const createFromName = async (db: AztecKVStore, hasher: Hasher, name: string): Promise<UpdateOnlyTree> => {
-  return await loadTree(SparseTree, db, hasher, name);
+const createFromName = async (db: AztecKVStore, hasher: Hasher, name: string): Promise<UpdateOnlyTree<Buffer>> => {
+  return await loadTree(SparseTree, db, hasher, name, {
+    fromBuffer: (buffer: Buffer): Buffer => buffer,
+  });
 };
 
 const TEST_TREE_DEPTH = 3;
@@ -52,7 +67,7 @@ describe('SparseTreeSpecific', () => {
     const db = openTmpStore();
     const tree = await createDb(db, pedersen, 'test', depth);
 
-    const randomIndex = BigInt(Math.floor(Math.random() * maxIndex));
+    const randomIndex = randomBigInt(BigInt(maxIndex));
     expect(tree.getNumLeaves(false)).toEqual(0n);
 
     // Insert a leaf
@@ -71,7 +86,7 @@ describe('SparseTreeSpecific', () => {
     const db = openTmpStore();
     const tree = await createDb(db, pedersen, 'test', depth);
 
-    const randomIndex = BigInt(Math.floor(Math.random() * maxIndex));
+    const randomIndex = randomBigInt(BigInt(maxIndex));
     expect(tree.getNumLeaves(false)).toEqual(0n);
 
     // Insert a leaf
@@ -161,7 +176,7 @@ describe('SparseTreeSpecific', () => {
     const tree = await createDb(db, pedersen, 'test', depth);
 
     const leaves = Array.from({ length: 1000 }).map(() => randomBytes(32));
-    const indices = Array.from({ length: 1000 }).map(() => BigInt(Math.floor(Math.random() * maxIndex)));
+    const indices = Array.from({ length: 1000 }).map(() => randomBigInt(BigInt(maxIndex)));
 
     const start = Date.now();
     await Promise.all(leaves.map((leaf, i) => tree.updateLeaf(leaf, indices[i])));

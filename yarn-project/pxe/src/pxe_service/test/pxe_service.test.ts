@@ -31,7 +31,8 @@ function createPXEService(): Promise<PXE> {
     registryAddress: EthAddress.random(),
     inboxAddress: EthAddress.random(),
     outboxAddress: EthAddress.random(),
-    contractDeploymentEmitterAddress: EthAddress.random(),
+    gasTokenAddress: EthAddress.random(),
+    gasPortalAddress: EthAddress.random(),
   };
   node.getL1ContractAddresses.mockResolvedValue(mockedContracts);
 
@@ -61,6 +62,6 @@ describe('PXEService', () => {
     node.getTxEffect.mockResolvedValue(settledTx);
 
     const pxe = new PXEService(keyStore, node, db, config);
-    await expect(pxe.sendTx(duplicateTx)).rejects.toThrowError(/A settled tx with equal hash/);
+    await expect(pxe.sendTx(duplicateTx)).rejects.toThrow(/A settled tx with equal hash/);
   });
 });

@@ -23,6 +23,7 @@ use crate::errors::CliError;
 
 /// Executes a circuit to calculate its return value
 #[derive(Debug, Clone, Args)]
+#[clap(visible_alias = "e")]
 pub(crate) struct ExecuteCommand {
     /// Write the execution witness to named file
     witness_name: Option<String>,
@@ -135,8 +136,9 @@ pub(crate) fn execute_program(
 
     let initial_witness = compiled_program.abi.encode(inputs_map, None)?;
 
+    // TODO(https://github.com/noir-lang/noir/issues/4428)
     let solved_witness_err = nargo::ops::execute_circuit(
-        &compiled_program.circuit,
+        &compiled_program.program.functions[0],
         initial_witness,
         &blackbox_solver,
         &mut DefaultForeignCallExecutor::new(true, foreign_call_resolver_url),

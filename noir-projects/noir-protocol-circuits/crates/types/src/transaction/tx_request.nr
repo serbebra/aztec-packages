@@ -62,8 +62,7 @@ mod tests {
     use crate::{
         abis::{function_selector::FunctionSelector, function_data::FunctionData},
         address::{AztecAddress, EthAddress}, contract_class_id::ContractClassId,
-        contrakt::contract_deployment_data::ContractDeploymentData, grumpkin_point::GrumpkinPoint,
-        transaction::{tx_request::TxRequest, tx_context::TxContext}
+        grumpkin_point::GrumpkinPoint, transaction::{tx_request::TxRequest, tx_context::TxContext}
     };
 
     #[test]
@@ -80,23 +79,11 @@ mod tests {
         let tx_request = TxRequest {
             origin: AztecAddress::from_field(1),
             args_hash: 3,
-            tx_context: TxContext {
-                is_fee_payment_tx: false,
-                is_rebate_payment_tx: false,
-                is_contract_deployment_tx: true,
-                contract_deployment_data: ContractDeploymentData {
-                    public_key: GrumpkinPoint { x: 1, y: 2 },
-                    initialization_hash: 1,
-                    contract_class_id: ContractClassId::from_field(2),
-                    contract_address_salt: 3,
-                    portal_contract_address: EthAddress::from_field(1)
-                },
-                chain_id: 0,
-                version: 0
-            },
-            function_data: FunctionData { selector: FunctionSelector::from_u32(2), is_internal: false, is_private: true, is_constructor: true }
+            tx_context: TxContext { is_fee_payment_tx: false, is_rebate_payment_tx: false, chain_id: 0, version: 0 },
+            function_data: FunctionData { selector: FunctionSelector::from_u32(2), is_private: true, is_transpiled: false }
         };
         // Value from tx_request.test.ts "compute hash" test
-        assert(tx_request.hash() == 0x05e3f67a5e787faf63c85c28169a9d616b594c9799d9785b4f167d9cd7a71e9e);
+        let test_data_tx_request_hash = 0x08e435f993536fd7a9d6faabfc03a18c4314a54d3d90d15a15275fcfe77bc5a3;
+        assert(tx_request.hash() == test_data_tx_request_hash);
     }
 }

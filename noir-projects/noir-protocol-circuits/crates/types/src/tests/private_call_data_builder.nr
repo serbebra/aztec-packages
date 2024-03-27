@@ -1,8 +1,8 @@
 use crate::{
     abis::{
     call_request::{CallerContext, CallRequest}, private_call_stack_item::PrivateCallStackItem,
-    function_data::FunctionData,
-    membership_witness::{ContractLeafMembershipWitness, FunctionLeafMembershipWitness, NoteHashReadRequestMembershipWitness},
+    function_data::FunctionData, max_block_number::MaxBlockNumber,
+    membership_witness::{FunctionLeafMembershipWitness, NoteHashReadRequestMembershipWitness},
     private_circuit_public_inputs::{PrivateCircuitPublicInputs},
     private_kernel::private_call_data::PrivateCallData
 },
@@ -16,7 +16,7 @@ use crate::{
 };
 use crate::constants::{
     MAX_PRIVATE_CALL_STACK_LENGTH_PER_CALL, MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL,
-    MAX_NOTE_HASH_READ_REQUESTS_PER_CALL, NUM_FIELDS_PER_SHA256
+    MAX_NOTE_HASH_READ_REQUESTS_PER_CALL
 };
 
 struct PrivateCallDataBuilder {
@@ -41,15 +41,11 @@ struct PrivateCallDataBuilder {
 }
 
 impl PrivateCallDataBuilder {
-    pub fn new(is_constructor: bool) -> Self {
-        let public_inputs = PrivateCircuitPublicInputsBuilder::new(is_constructor);
+    pub fn new() -> Self {
+        let public_inputs = PrivateCircuitPublicInputsBuilder::new();
 
         let contract_data = fixtures::contracts::default_contract;
-        let contract_function = if is_constructor {
-            fixtures::contract_functions::default_constructor
-        } else {
-            fixtures::contract_functions::default_private_function
-        };
+        let contract_function = fixtures::contract_functions::default_private_function;
         let function_data = contract_function.data;
 
         PrivateCallDataBuilder {
@@ -85,21 +81,8 @@ impl PrivateCallDataBuilder {
         *self
     }
 
-    pub fn is_internal_call(&mut self) -> Self {
-        self.function_data.is_internal = true;
-        self.public_inputs.call_context.msg_sender = self.contract_address;
-        let contract_function = fixtures::contract_functions::default_internal_private_function;
-        self.function_data = contract_function.data;
-        self.function_leaf_membership_witness = contract_function.membership_witness;
-        self.acir_hash = contract_function.acir_hash;
-        *self
-    }
-
     pub fn build_tx_request(self) -> TxRequest {
-        let tx_context = build_tx_context(
-            self.public_inputs.call_context.is_contract_deployment,
-            self.public_inputs.args_hash
-        );
+        let tx_context = build_tx_context();
         TxRequest {
             origin: self.contract_address,
             args_hash: self.public_inputs.args_hash,
@@ -156,6 +139,10 @@ impl PrivateCallDataBuilder {
         (hashes, call_requests)
     }
 
+    pub fn request_max_block_number(&mut self, max_block_number: u32) {
+        self.public_inputs.max_block_number = MaxBlockNumber::new(max_block_number);
+    }
+
     pub fn append_note_hash_read_requests(&mut self, num_read_requests: u64) {
         let (read_requests, read_request_membership_witnesses) = fixtures::note_hash_read_requests::generate_note_hash_read_requests(num_read_requests);
         self.public_inputs.note_hash_read_requests.extend_from_bounded_vec(read_requests);
@@ -168,12 +155,12 @@ impl PrivateCallDataBuilder {
         self.note_hash_read_request_membership_witnesses.extend_from_bounded_vec(read_request_membership_witnesses);
     }
 
-    pub fn set_encrypted_logs(&mut self, hash: [Field; NUM_FIELDS_PER_SHA256], preimages_length: Field) {
+    pub fn set_encrypted_logs(&mut self, hash: Field, preimages_length: Field) {
         self.public_inputs.encrypted_logs_hash = hash;
         self.public_inputs.encrypted_log_preimages_length = preimages_length;
     }
 
-    pub fn set_unencrypted_logs(&mut self, hash: [Field; NUM_FIELDS_PER_SHA256], preimages_length: Field) {
+    pub fn set_unencrypted_logs(&mut self, hash: Field, preimages_length: Field) {
         self.public_inputs.unencrypted_logs_hash = hash;
         self.public_inputs.unencrypted_log_preimages_length = preimages_length;
     }

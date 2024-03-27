@@ -41,9 +41,7 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
     static void construct_circuit(Builder& builder)
     {
         if constexpr (IsGoblinFlavor<Flavor>) {
-            GoblinMockCircuits::construct_arithmetic_circuit(builder);
-            GoblinMockCircuits::construct_goblin_ecc_op_circuit(builder);
-
+            GoblinMockCircuits::construct_simple_circuit(builder);
         } else {
             FF a = FF::random_element();
             FF b = FF::random_element();
@@ -109,8 +107,8 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
 
     /**
      * @brief For a valid circuit, ensures that computing the value of the full UH/UGH relation at each row in its
-     * execution trace (with the contribution of the linearly dependent one added tot he first row, in case of Goblin)
-     * will be 0.
+     * execution trace (with the contribution of the linearly dependent one added tot he first row, in case of
+     * Goblin) will be 0.
      *
      */
     static void test_full_honk_evaluations_valid_circuit()
@@ -119,16 +117,21 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
         construct_circuit(builder);
 
         auto instance = std::make_shared<ProverInstance>(builder);
-        instance->initialize_prover_polynomials();
 
-        auto eta = FF::random_element();
-        auto beta = FF::random_element();
-        auto gamma = FF::random_element();
-        instance->compute_sorted_accumulator_polynomials(eta);
+        instance->relation_parameters.eta = FF::random_element();
+        instance->relation_parameters.eta_two = FF::random_element();
+        instance->relation_parameters.eta_three = FF::random_element();
+        instance->relation_parameters.beta = FF::random_element();
+        instance->relation_parameters.gamma = FF::random_element();
+
+        instance->proving_key->compute_sorted_accumulator_polynomials(instance->relation_parameters.eta,
+                                                                      instance->relation_parameters.eta_two,
+                                                                      instance->relation_parameters.eta_three);
         if constexpr (IsGoblinFlavor<Flavor>) {
-            instance->compute_logderivative_inverse(beta, gamma);
+            instance->proving_key->compute_logderivative_inverse(instance->relation_parameters);
         }
-        instance->compute_grand_product_polynomials(beta, gamma);
+        instance->proving_key->compute_grand_product_polynomials(instance->relation_parameters);
+        instance->prover_polynomials = ProverPolynomials(instance->proving_key);
 
         for (auto& alpha : instance->alphas) {
             alpha = FF::random_element();
@@ -143,8 +146,8 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
     }
 
     /**
-     * @brief Check the coefficients of the perturbator computed from dummy \vec{β}, \vec{δ} and f_i(ω) will be the same
-     * as if computed manually.
+     * @brief Check the coefficients of the perturbator computed from dummy \vec{β}, \vec{δ} and f_i(ω) will be the
+     * same as if computed manually.
      *
      */
     static void test_pertubator_coefficients()
@@ -213,20 +216,19 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
     }
 
     /**
-     * @brief Manually compute the expected evaluations of the combiner quotient, given evaluations of the combiner and
-     * check them against the evaluations returned by the function.
+     * @brief Manually compute the expected evaluations of the combiner quotient, given evaluations of the combiner
+     * and check them against the evaluations returned by the function.
      *
      */
     static void test_combiner_quotient()
     {
         auto compressed_perturbator = FF(2); // F(\alpha) in the paper
-        auto combiner =
-            bb::Univariate<FF, 13>(std::array<FF, 13>{ 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32 });
+        auto combiner = bb::Univariate<FF, 12>(std::array<FF, 12>{ 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 });
         auto combiner_quotient = ProtoGalaxyProver::compute_combiner_quotient(compressed_perturbator, combiner);
 
         // K(i) = (G(i) - ( L_0(i) * F(\alpha)) / Z(i), i = {2,.., 13} for ProverInstances::NUM = 2
         // K(i) = (G(i) - (1 - i) * F(\alpha)) / i * (i - 1)
-        auto expected_evals = bb::Univariate<FF, 13, 2>(std::array<FF, 11>{
+        auto expected_evals = bb::Univariate<FF, 12, 2>(std::array<FF, 10>{
             (FF(22) - (FF(1) - FF(2)) * compressed_perturbator) / (FF(2) * FF(2 - 1)),
             (FF(23) - (FF(1) - FF(3)) * compressed_perturbator) / (FF(3) * FF(3 - 1)),
             (FF(24) - (FF(1) - FF(4)) * compressed_perturbator) / (FF(4) * FF(4 - 1)),
@@ -237,7 +239,6 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
             (FF(29) - (FF(1) - FF(9)) * compressed_perturbator) / (FF(9) * FF(9 - 1)),
             (FF(30) - (FF(1) - FF(10)) * compressed_perturbator) / (FF(10) * FF(10 - 1)),
             (FF(31) - (FF(1) - FF(11)) * compressed_perturbator) / (FF(11) * FF(11 - 1)),
-            (FF(32) - (FF(1) - FF(12)) * compressed_perturbator) / (FF(12) * FF(12 - 1)),
         });
 
         for (size_t idx = 2; idx < 7; idx++) {
@@ -246,8 +247,8 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
     }
 
     /**
-     * @brief For two dummy instances with their relation parameter η set, check that combining them in a univariate,
-     * barycentrially extended to the desired number of evaluations, is performed correctly.
+     * @brief For two dummy instances with their relation parameter η set, check that combining them in a
+     * univariate, barycentrially extended to the desired number of evaluations, is performed correctly.
      *
      */
     static void test_combine_relation_parameters()
@@ -264,7 +265,7 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
         ProverInstances instances{ { instance1, instance2 } };
         ProtoGalaxyProver::combine_relation_parameters(instances);
 
-        bb::Univariate<FF, 12> expected_eta{ { 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23 } };
+        bb::Univariate<FF, 11> expected_eta{ { 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21 } };
         EXPECT_EQ(instances.relation_parameters.eta, expected_eta);
     }
 
@@ -286,7 +287,7 @@ template <typename Flavor> class ProtoGalaxyTests : public testing::Test {
         ProverInstances instances{ { instance1, instance2 } };
         ProtoGalaxyProver::combine_alpha(instances);
 
-        bb::Univariate<FF, 13> expected_alpha{ { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26 } };
+        bb::Univariate<FF, 12> expected_alpha{ { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 } };
         for (const auto& alpha : instances.alphas) {
             EXPECT_EQ(alpha, expected_alpha);
         }

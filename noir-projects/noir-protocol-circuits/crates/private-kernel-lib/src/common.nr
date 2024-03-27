@@ -1,16 +1,15 @@
 use dep::std;
 use dep::types::{
     abis::{
-    call_request::CallRequest, accumulated_data::CombinedAccumulatedData, function_data::FunctionData,
+    call_request::CallRequest, accumulated_data::CombinedAccumulatedData,
     kernel_circuit_public_inputs::PrivateKernelCircuitPublicInputsBuilder,
-    membership_witness::NoteHashReadRequestMembershipWitness, new_contract_data::NewContractData,
+    max_block_number::MaxBlockNumber, membership_witness::NoteHashReadRequestMembershipWitness,
     private_circuit_public_inputs::PrivateCircuitPublicInputs,
-    private_kernel::private_call_data::PrivateCallData,
-    kernel_data::{PrivateKernelInnerData, PrivateKernelTailData},
+    private_kernel::private_call_data::PrivateCallData, kernel_data::PrivateKernelInnerData,
     side_effect::{SideEffect, SideEffectLinkedToNoteHash}
 },
     address::{AztecAddress, EthAddress, PartialAddress, compute_initialization_hash},
-    contract_class_id::ContractClassId, contrakt::contract_deployment_data::ContractDeploymentData,
+    contract_class_id::ContractClassId,
     constants::{
     MAX_NEW_NULLIFIERS_PER_CALL, MAX_NEW_L2_TO_L1_MSGS_PER_CALL, MAX_NEW_NOTE_HASHES_PER_CALL,
     MAX_PRIVATE_CALL_STACK_LENGTH_PER_CALL, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
@@ -18,12 +17,10 @@ use dep::types::{
 },
     grumpkin_private_key::GrumpkinPrivateKey,
     hash::{
-    compute_constructor_hash, compute_l2_to_l1_hash, compute_logs_hash,
-    compute_new_contract_address_hash, contract_tree_root_from_siblings,
-    function_tree_root_from_siblings, pedersen_hash, private_functions_root_from_siblings,
-    root_from_sibling_path, silo_note_hash, silo_nullifier,
-    stdlib_recursion_verification_key_compress_native_vk
+    compute_l2_to_l1_hash, compute_logs_hash, pedersen_hash, private_functions_root_from_siblings,
+    silo_note_hash, silo_nullifier, stdlib_recursion_verification_key_compress_native_vk
 },
+    merkle_tree::check_membership,
     utils::{arrays::{array_length, array_to_bounded_vec, validate_array}},
     traits::{is_empty, is_empty_array}
 };
@@ -73,8 +70,14 @@ pub fn validate_note_hash_read_requests(
         // but we use the leaf index as a placeholder to detect a 'pending note read'.
 
         if (read_request != 0) & (witness.is_transient == false) {
-            let root_for_read_request = root_from_sibling_path(read_request, witness.leaf_index, witness.sibling_path);
-            assert(root_for_read_request == historical_note_hash_tree_root, "note hash tree root mismatch");
+            assert(
+                check_membership(
+                    read_request,
+                    witness.leaf_index,
+                    witness.sibling_path,
+                    historical_note_hash_tree_root
+                ), "note hash tree root mismatch"
+            );
             // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1354): do we need to enforce
             // that a non-transient read_request was derived from the proper/current contract address?
         }
@@ -88,13 +91,15 @@ pub fn initialize_end_values(
     public_inputs.constants = previous_kernel.public_inputs.constants;
     public_inputs.min_revertible_side_effect_counter = previous_kernel.public_inputs.min_revertible_side_effect_counter;
 
+    let start = previous_kernel.public_inputs.validation_requests;
+    public_inputs.validation_requests.max_block_number = start.for_rollup.max_block_number;
+    public_inputs.validation_requests.note_hash_read_requests = array_to_bounded_vec(start.note_hash_read_requests);
+    public_inputs.validation_requests.nullifier_read_requests = array_to_bounded_vec(start.nullifier_read_requests);
+    public_inputs.validation_requests.nullifier_key_validation_requests = array_to_bounded_vec(start.nullifier_key_validation_requests);
+
     // Ensure the arrays are the same as previously, before we start pushing more data onto them in other
     // functions within this circuit:
     let start = previous_kernel.public_inputs.end;
-
-    public_inputs.end.note_hash_read_requests = array_to_bounded_vec(start.note_hash_read_requests);
-    public_inputs.end.nullifier_read_requests = array_to_bounded_vec(start.nullifier_read_requests);
-    public_inputs.end.nullifier_key_validation_requests = array_to_bounded_vec(start.nullifier_key_validation_requests);
 
     public_inputs.end.new_note_hashes = array_to_bounded_vec(start.new_note_hashes);
     public_inputs.end.new_nullifiers = array_to_bounded_vec(start.new_nullifiers);
@@ -108,8 +113,6 @@ pub fn initialize_end_values(
 
     public_inputs.end.encrypted_log_preimages_length = start.encrypted_log_preimages_length;
     public_inputs.end.unencrypted_log_preimages_length = start.unencrypted_log_preimages_length;
-
-    public_inputs.end.new_contracts = array_to_bounded_vec(start.new_contracts);
 }
 
 fn perform_static_call_checks(private_call: PrivateCallData) {
@@ -178,6 +181,9 @@ pub fn update_end_values(
 
     let storage_contract_address = private_call_public_inputs.call_context.storage_contract_address;
 
+    // Update the max block number if the private call requested a lower one.
+    public_inputs.validation_requests.max_block_number = MaxBlockNumber::min(public_inputs.validation_requests.max_block_number, private_call_public_inputs.max_block_number);
+
     // Transient read requests and witnesses are accumulated in public_inputs.end
     // We silo the read requests (domain separation per contract address)
     let read_requests = private_call_public_inputs.note_hash_read_requests;
@@ -192,14 +198,14 @@ pub fn update_end_values(
             )
         }
     }
-    public_inputs.end.note_hash_read_requests.extend_from_bounded_vec(siloed_read_requests);
+    public_inputs.validation_requests.note_hash_read_requests.extend_from_bounded_vec(siloed_read_requests);
 
     // Nullifier read request.
     let nullifier_read_requests = private_call_public_inputs.nullifier_read_requests;
     for i in 0..MAX_NULLIFIER_READ_REQUESTS_PER_CALL {
         let request = nullifier_read_requests[i];
         if !is_empty(request) {
-            public_inputs.end.nullifier_read_requests.push(request.to_context(storage_contract_address));
+            public_inputs.validation_requests.nullifier_read_requests.push(request.to_context(storage_contract_address));
         }
     }
 
@@ -208,7 +214,7 @@ pub fn update_end_values(
     for i in 0..MAX_NULLIFIER_KEY_VALIDATION_REQUESTS_PER_CALL {
         let request = nullifier_key_validation_requests[i];
         if !is_empty(request) {
-            public_inputs.end.nullifier_key_validation_requests.push(request.to_context(storage_contract_address));
+            public_inputs.validation_requests.nullifier_key_validation_requests.push(request.to_context(storage_contract_address));
         }
     }
 
@@ -300,95 +306,43 @@ pub fn update_end_values(
     public_inputs.end.unencrypted_log_preimages_length = public_inputs.end.unencrypted_log_preimages_length + private_call_public_inputs.unencrypted_log_preimages_length;
 }
 
-pub fn contract_logic(
-    private_call: PrivateCallData,
-    public_inputs: &mut PrivateKernelCircuitPublicInputsBuilder,
-    contract_dep_data: ContractDeploymentData,
-    function_data: FunctionData
-) {
-    let private_call_public_inputs = private_call.call_stack_item.public_inputs;
-    let portal_contract_address = private_call.portal_contract_address;
+pub fn contract_logic(private_call: PrivateCallData) {
     let contract_address = private_call.call_stack_item.contract_address;
 
     // TODO(https://github.com/AztecProtocol/aztec-packages/issues/3062): Why is this using a hash function from the stdlib::recursion namespace
     let private_call_vk_hash = stdlib_recursion_verification_key_compress_native_vk(private_call.vk);
 
-    let is_contract_deployment = public_inputs.constants.tx_context.is_contract_deployment_tx;
+    assert(!contract_address.is_zero(), "contract address cannot be zero");
+    // std::println(f"contract_address={contract_address}");
+    // std::println(f"private_call_vk_hash={private_call_vk_hash}");
 
-    // input storage contract address must be 0 if its a constructor call and non-zero otherwise
-    if is_contract_deployment {
-        let computed_initialization_hash = compute_initialization_hash(
-            function_data.selector.to_field(),
-            private_call_public_inputs.args_hash
-        );
+    // Recompute the contract class id
+    let computed_private_functions_root = private_functions_root_from_siblings(
+        private_call.call_stack_item.function_data.selector,
+        private_call_vk_hash,
+        private_call.function_leaf_membership_witness.leaf_index,
+        private_call.function_leaf_membership_witness.sibling_path
+    );
+    // std::println(f"computed_private_functions_root={computed_private_functions_root}");
 
-        assert(
-            computed_initialization_hash == contract_dep_data.initialization_hash, "initialization hash does not match computed one"
-        );
+    let computed_contract_class_id = ContractClassId::compute(
+        private_call.contract_class_artifact_hash,
+        computed_private_functions_root,
+        private_call.contract_class_public_bytecode_commitment
+    );
+    // std::println(f"computed_contract_class_id={computed_contract_class_id}");
 
-        let new_contract_address = AztecAddress::compute_from_public_key(
-            contract_dep_data.public_key,
-            contract_dep_data.contract_class_id,
-            contract_dep_data.contract_address_salt,
-            contract_dep_data.initialization_hash,
-            contract_dep_data.portal_contract_address
-        );
+    // Recompute contract address using the preimage which includes the class_id
+    let computed_partial_address = PartialAddress::compute_from_salted_initialization_hash(
+        computed_contract_class_id,
+        private_call.salted_initialization_hash
+    );
+    // std::println(f"computed_partial_address={computed_partial_address}");
 
-        let new_contract_data = NewContractData {
-            contract_address: new_contract_address,
-            portal_contract_address,
-            contract_class_id: contract_dep_data.contract_class_id
-        };
-        public_inputs.end.new_contracts.push(new_contract_data);
+    let computed_address = AztecAddress::compute(private_call.public_keys_hash, computed_partial_address);
+    // std::println(f"computed_address={computed_address}");
 
-        // TODO(https://github.com/AztecProtocol/aztec-packages/issues/3062) VKs are mocked out for now
-        // assert(contract_dep_data.constructor_vk_hash == private_call_vk_hash, "constructor_vk_hash doesn't match private_call_vk_hash");
-
-        assert(
-            contract_address.eq(new_contract_address), "contract address supplied does not match derived address"
-        );
-
-        let new_contract_address_nullifier = compute_new_contract_address_hash(new_contract_address);
-
-        public_inputs.end.new_nullifiers.push(
-            SideEffectLinkedToNoteHash { value: new_contract_address_nullifier, note_hash: 0, counter: 1 }
-        );
-    } else {
-        // non-contract deployments must specify contract address being interacted with
-        assert(!contract_address.is_zero(), "contract address cannot be zero");
-        // std::println(f"contract_address={contract_address}");
-        // std::println(f"private_call_vk_hash={private_call_vk_hash}");
-
-        // Recompute the contract class id
-        let computed_private_functions_root = private_functions_root_from_siblings(
-            private_call.call_stack_item.function_data.selector,
-            private_call_vk_hash,
-            private_call.function_leaf_membership_witness.leaf_index,
-            private_call.function_leaf_membership_witness.sibling_path
-        );
-        // std::println(f"computed_private_functions_root={computed_private_functions_root}");
-
-        let computed_contract_class_id = ContractClassId::compute(
-            private_call.contract_class_artifact_hash,
-            computed_private_functions_root,
-            private_call.contract_class_public_bytecode_commitment
-        );
-        // std::println(f"computed_contract_class_id={computed_contract_class_id}");
-
-        // Recompute contract address using the preimage which includes the class_id
-        let computed_partial_address = PartialAddress::compute_from_salted_initialization_hash(
-            computed_contract_class_id,
-            private_call.salted_initialization_hash
-        );
-        // std::println(f"computed_partial_address={computed_partial_address}");
-
-        let computed_address = AztecAddress::compute(private_call.public_keys_hash, computed_partial_address);
-        // std::println(f"computed_address={computed_address}");
-
-        assert(
-            computed_address.eq(contract_address), "computed contract address does not match expected one"
-        );
-    }
+    assert(computed_address.eq(contract_address), "computed contract address does not match expected one");
 }
 
 pub fn validate_previous_kernel_values(end: CombinedAccumulatedData) {
@@ -402,13 +356,6 @@ pub fn validate_call_against_request(private_call: PrivateCallData, request: Cal
     );
 
     let call_context = call_stack_item.public_inputs.call_context;
-
-    // Ensures that if the function is internal, only the contract itself can call it.
-    if call_stack_item.function_data.is_internal {
-        assert(
-            call_context.msg_sender.eq(call_context.storage_contract_address), "call is internal but msg_sender is not self"
-        );
-    }
 
     if call_context.is_delegate_call {
         let caller_context = request.caller_context;

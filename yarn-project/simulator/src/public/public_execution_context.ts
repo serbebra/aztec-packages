@@ -1,9 +1,10 @@
-import { FunctionL2Logs, NullifierMembershipWitness, UnencryptedL2Log } from '@aztec/circuit-types';
+import { NullifierMembershipWitness, UnencryptedFunctionL2Logs, UnencryptedL2Log } from '@aztec/circuit-types';
 import { CallContext, FunctionData, FunctionSelector, GlobalVariables, Header } from '@aztec/circuits.js';
 import { AztecAddress } from '@aztec/foundation/aztec-address';
 import { EthAddress } from '@aztec/foundation/eth-address';
 import { Fr } from '@aztec/foundation/fields';
 import { createDebugLogger } from '@aztec/foundation/log';
+import { ContractInstance } from '@aztec/types/contracts';
 
 import { TypedOracle, toACVMWitness } from '../acvm/index.js';
 import { PackedArgsCache, SideEffectCounter } from '../common/index.js';
@@ -49,7 +50,13 @@ export class PublicExecutionContext extends TypedOracle {
    */
   public getInitialWitness(witnessStartIndex = 0) {
     const { callContext, args } = this.execution;
-    const fields = [...callContext.toFields(), ...this.header.toFields(), ...this.globalVariables.toFields(), ...args];
+    const fields = [
+      ...callContext.toFields(),
+      ...this.header.toFields(),
+      ...this.globalVariables.toFields(),
+      new Fr(this.sideEffectCounter.current()),
+      ...args,
+    ];
 
     return toACVMWitness(witnessStartIndex, fields);
   }
@@ -65,7 +72,7 @@ export class PublicExecutionContext extends TypedOracle {
    * Return the encrypted logs emitted during this execution.
    */
   public getUnencryptedLogs() {
-    return new FunctionL2Logs(this.unencryptedLogs.map(log => log.toBuffer()));
+    return new UnencryptedFunctionL2Logs(this.unencryptedLogs);
   }
 
   /**
@@ -85,12 +92,15 @@ export class PublicExecutionContext extends TypedOracle {
   }
 
   /**
-   * Fetches the a message from the db, given its key.
-   * @param entryKey - A buffer representing the entry key.
-   * @returns The l1 to l2 message data
+   * Fetches a message from the db, given its key.
+   * @param contractAddress - Address of a contract by which the message was emitted.
+   * @param messageHash - Hash of the message.
+   * @param secret - Secret used to compute a nullifier.
+   * @dev Contract address and secret are only used to compute the nullifier to get non-nullified messages
+   * @returns The l1 to l2 membership witness (index of message in the tree and sibling path).
    */
-  public async getL1ToL2MembershipWitness(entryKey: Fr) {
-    return await this.commitmentsDb.getL1ToL2MembershipWitness(entryKey);
+  public async getL1ToL2MembershipWitness(contractAddress: AztecAddress, messageHash: Fr, secret: Fr) {
+    return await this.commitmentsDb.getL1ToL2MembershipWitness(contractAddress, messageHash, secret);
   }
 
   /**
@@ -160,6 +170,7 @@ export class PublicExecutionContext extends TypedOracle {
     targetContractAddress: AztecAddress,
     functionSelector: FunctionSelector,
     argsHash: Fr,
+    sideEffectCounter: number,
     isStaticCall: boolean,
     isDelegateCall: boolean,
   ) {
@@ -169,27 +180,22 @@ export class PublicExecutionContext extends TypedOracle {
     this.log(`Public function call: addr=${targetContractAddress} selector=${functionSelector} args=${args.join(',')}`);
 
     const portalAddress = (await this.contractsDb.getPortalContractAddress(targetContractAddress)) ?? EthAddress.ZERO;
-    const isInternal = await this.contractsDb.getIsInternal(targetContractAddress, functionSelector);
-    if (isInternal === undefined) {
-      throw new Error(`ERR: Method not found - ${targetContractAddress.toString()}:${functionSelector.toString()}`);
-    }
 
     const acir = await this.contractsDb.getBytecode(targetContractAddress, functionSelector);
     if (!acir) {
       throw new Error(`Bytecode not found for ${targetContractAddress}:${functionSelector}`);
     }
 
-    const functionData = new FunctionData(functionSelector, isInternal, false, false);
+    const functionData = new FunctionData(functionSelector, false);
 
     const callContext = CallContext.from({
       msgSender: isDelegateCall ? this.execution.callContext.msgSender : this.execution.contractAddress,
       storageContractAddress: isDelegateCall ? this.execution.contractAddress : targetContractAddress,
       portalContractAddress: portalAddress,
       functionSelector,
-      isContractDeployment: false,
       isDelegateCall,
       isStaticCall,
-      startSideEffectCounter: 0, // TODO use counters in public execution
+      sideEffectCounter,
     });
 
     const nestedExecution: PublicExecution = {
@@ -237,5 +243,18 @@ export class PublicExecutionContext extends TypedOracle {
       throw new Error(`Public execution oracle can only access nullifier membership witnesses for the current block`);
     }
     return await this.commitmentsDb.getNullifierMembershipWitnessAtLatestBlock(nullifier);
+  }
+
+  public async getContractInstance(address: AztecAddress): Promise<ContractInstance> {
+    // Note to AVM implementor: The wrapper of the oracle call get_contract_instance in aztec-nr
+    // automatically checks that the returned instance is correct, by hashing it together back
+    // into the address. However, in the AVM, we also need to prove the negative, otherwise a malicious
+    // sequencer could just lie about not having the instance available in its local db. We can do this
+    // by using the prove_contract_non_deployment_at method if the contract is not found in the db.
+    const instance = await this.contractsDb.getContractInstance(address);
+    if (!instance) {
+      throw new Error(`Contract instance at ${address} not found`);
+    }
+    return instance;
   }
 }

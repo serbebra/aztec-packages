@@ -3,13 +3,13 @@
 #include "barretenberg/common/thread.hpp"
 #include "barretenberg/ecc/curves/bn254/fr.hpp"
 #include "barretenberg/flavor/flavor.hpp"
-#include "barretenberg/flavor/goblin_ultra.hpp"
-#include "barretenberg/flavor/ultra.hpp"
 #include "barretenberg/polynomials/pow.hpp"
 #include "barretenberg/polynomials/univariate.hpp"
 #include "barretenberg/protogalaxy/folding_result.hpp"
 #include "barretenberg/relations/relation_parameters.hpp"
 #include "barretenberg/relations/utils.hpp"
+#include "barretenberg/stdlib_circuit_builders/goblin_ultra_flavor.hpp"
+#include "barretenberg/stdlib_circuit_builders/ultra_flavor.hpp"
 #include "barretenberg/sumcheck/instance/instances.hpp"
 
 namespace bb {
@@ -34,6 +34,7 @@ template <class ProverInstances_> class ProtoGalaxyProver_ {
     using Instance = typename ProverInstances::Instance;
     using Utils = bb::RelationUtils<Flavor>;
     using RowEvaluations = typename Flavor::AllValues;
+    using ProvingKey = typename Flavor::ProvingKey;
     using ProverPolynomials = typename Flavor::ProverPolynomials;
     using Relations = typename Flavor::Relations;
     using RelationSeparator = typename Flavor::RelationSeparator;
@@ -149,31 +150,43 @@ template <class ProverInstances_> class ProtoGalaxyProver_ {
         auto instance_size = instance_polynomials.get_polynomial_size();
         std::vector<FF> full_honk_evaluations(instance_size);
         std::vector<FF> linearly_dependent_contributions(instance_size);
-        parallel_for(instance_size, [&](size_t row) {
-            auto row_evaluations = instance_polynomials.get_row(row);
-            RelationEvaluations relation_evaluations;
-            Utils::zero_elements(relation_evaluations);
+#ifndef NO_MULTITHREADING
+        std::mutex evaluation_mutex;
+#endif
+        auto linearly_dependent_contribution_accumulator = FF(0);
+        run_loop_in_parallel(instance_size, [&](size_t start_row, size_t end_row) {
+            auto thread_accumulator = FF(0);
+            for (size_t row = start_row; row < end_row; row++) {
+                auto row_evaluations = instance_polynomials.get_row(row);
+                RelationEvaluations relation_evaluations;
+                Utils::zero_elements(relation_evaluations);
 
-            // Note that the evaluations are accumulated with the gate separation challenge
-            // being 1 at this stage, as this specific randomness is added later through the
-            // power polynomial univariate specific to ProtoGalaxy
-            Utils::template accumulate_relation_evaluations<>(
-                row_evaluations, relation_evaluations, relation_parameters, FF(1));
+                // Note that the evaluations are accumulated with the gate separation challenge
+                // being 1 at this stage, as this specific randomness is added later through the
+                // power polynomial univariate specific to ProtoGalaxy
+                Utils::template accumulate_relation_evaluations<>(
+                    row_evaluations, relation_evaluations, relation_parameters, FF(1));
 
-            auto output = FF(0);
-            auto running_challenge = FF(1);
+                auto output = FF(0);
+                auto running_challenge = FF(1);
 
-            // Sum relation evaluations, batched by their corresponding relation separator challenge, to
-            // get the value of the full honk relation at a specific row
-            linearly_dependent_contributions[row] = 0;
-            Utils::scale_and_batch_elements(
-                relation_evaluations, alpha, running_challenge, output, linearly_dependent_contributions[row]);
-            full_honk_evaluations[row] = output;
+                // Sum relation evaluations, batched by their corresponding relation separator challenge, to
+                // get the value of the full honk relation at a specific row
+                auto linearly_dependent_contribution = FF(0);
+                Utils::scale_and_batch_elements(
+                    relation_evaluations, alpha, running_challenge, output, linearly_dependent_contribution);
+                thread_accumulator += linearly_dependent_contribution;
+
+                full_honk_evaluations[row] = output;
+            }
+            {
+#ifndef NO_MULTITHREADING
+                std::unique_lock<std::mutex> evaluation_lock(evaluation_mutex);
+#endif
+                linearly_dependent_contribution_accumulator += thread_accumulator;
+            }
         });
-
-        for (FF& linearly_dependent_contribution : linearly_dependent_contributions) {
-            full_honk_evaluations[0] += linearly_dependent_contribution;
-        }
+        full_honk_evaluations[0] += linearly_dependent_contribution_accumulator;
         return full_honk_evaluations;
     }
 

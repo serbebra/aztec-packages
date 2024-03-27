@@ -1,12 +1,11 @@
 mod contract_functions;
-mod contract_tree;
 mod contracts;
 mod note_hash_tree;
 mod note_hash_read_requests;
 
 use crate::{
     abis::{append_only_tree_snapshot::AppendOnlyTreeSnapshot, global_variables::GlobalVariables},
-    address::{AztecAddress, EthAddress}, constants::NUM_FIELDS_PER_SHA256,
+    address::{AztecAddress, EthAddress},
     grumpkin_point::GrumpkinPoint, content_commitment::ContentCommitment, header::Header,
     partial_state_reference::PartialStateReference, state_reference::StateReference, tests::fixtures
 };
@@ -46,10 +45,6 @@ global HEADER = Header {
                 next_available_leaf_index: 0, // TODO: should this be populated?
             },
             nullifier_tree: empty_append_only_tree(),
-            contract_tree: AppendOnlyTreeSnapshot {
-                root: fixtures::contract_tree::ROOT,
-                next_available_leaf_index: 0, // TODO: should this be populated?
-            },
             public_data_tree: empty_append_only_tree()
         }
     },

@@ -3,11 +3,9 @@ import { GlobalVariables, Header, Proof, PublicKernelCircuitPublicInputs } from 
 import { PublicExecutor, PublicStateDB } from '@aztec/simulator';
 import { MerkleTreeOperations } from '@aztec/world-state';
 
-import { PublicProver } from '../prover/index.js';
 import { PublicKernelCircuitSimulator } from '../simulator/index.js';
 import { ContractsDataSourcePublicDB } from '../simulator/public_executor.js';
 import { AbstractPhaseManager, PublicKernelPhase } from './abstract_phase_manager.js';
-import { FailedTx } from './processed_tx.js';
 
 /**
  * The phase manager responsible for performing the fee preparation phase.
@@ -17,14 +15,13 @@ export class SetupPhaseManager extends AbstractPhaseManager {
     protected db: MerkleTreeOperations,
     protected publicExecutor: PublicExecutor,
     protected publicKernel: PublicKernelCircuitSimulator,
-    protected publicProver: PublicProver,
     protected globalVariables: GlobalVariables,
     protected historicalHeader: Header,
     protected publicContractsDB: ContractsDataSourcePublicDB,
     protected publicStateDB: PublicStateDB,
     public phase: PublicKernelPhase = PublicKernelPhase.SETUP,
   ) {
-    super(db, publicExecutor, publicKernel, publicProver, globalVariables, historicalHeader, phase);
+    super(db, publicExecutor, publicKernel, globalVariables, historicalHeader, phase);
   }
 
   override async handle(
@@ -34,21 +31,15 @@ export class SetupPhaseManager extends AbstractPhaseManager {
   ) {
     this.log(`Processing tx ${tx.getTxHash()}`);
     const [publicKernelOutput, publicKernelProof, newUnencryptedFunctionLogs, revertReason] =
-      await this.processEnqueuedPublicCalls(tx, previousPublicKernelOutput, previousPublicKernelProof);
+      await this.processEnqueuedPublicCalls(tx, previousPublicKernelOutput, previousPublicKernelProof).catch(
+        // the abstract phase manager throws if simulation gives error in a non-revertible phase
+        async err => {
+          await this.publicStateDB.rollbackToCommit();
+          throw err;
+        },
+      );
     tx.unencryptedLogs.addFunctionLogs(newUnencryptedFunctionLogs);
-
-    // commit the state updates from this transaction
-    await this.publicStateDB.commit();
-
+    await this.publicStateDB.checkpoint();
     return { publicKernelOutput, publicKernelProof, revertReason };
-  }
-
-  async rollback(tx: Tx, err: unknown): Promise<FailedTx> {
-    this.log.warn(`Error processing tx ${tx.getTxHash()}: ${err}`);
-    await this.publicStateDB.rollback();
-    return {
-      tx,
-      error: err instanceof Error ? err : new Error('Unknown error'),
-    };
   }
 }

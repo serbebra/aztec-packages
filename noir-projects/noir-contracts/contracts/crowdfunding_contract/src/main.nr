@@ -3,12 +3,8 @@ contract Crowdfunding {
 
     use dep::aztec::{
         log::emit_unencrypted_log_from_private,
-        protocol_types::{
-            abis::function_selector::FunctionSelector,
-            address::AztecAddress,
-            traits::Serialize
-        },
-        state_vars::{PrivateSet, PublicImmutable, SharedImmutable},
+        protocol_types::{abis::function_selector::FunctionSelector, address::AztecAddress, traits::Serialize},
+        state_vars::{PrivateSet, PublicImmutable, SharedImmutable}
     };
     use dep::value_note::value_note::ValueNote;
     use interfaces::Token;
@@ -31,27 +27,14 @@ contract Crowdfunding {
         // Crowdfunding campaign operator
         operator: SharedImmutable<AztecAddress>,
         // End of the crowdfunding campaign after which no more donations are accepted
-        // TODO(#4990): Make deadline a u64 once the neccessary traits are implemented
-        deadline: PublicImmutable<Field>,
+        deadline: PublicImmutable<u64>,
         // Notes emitted to donors when they donate (later on used to claim rewards in the Claim contract)
         claim_notes: PrivateSet<ValueNote>,
     }
 
-    #[aztec(private)]
-    fn constructor(donation_token: AztecAddress, operator: AztecAddress, deadline: u64) {
-        let selector = FunctionSelector::from_signature("_initialize((Field),(Field),Field)");
-        context.call_public_function(
-            context.this_address(),
-            selector,
-            [donation_token.to_field(), operator.to_field(), deadline as Field]
-        );
-    }
-
     #[aztec(public)]
-    #[aztec(internal)]
-    #[aztec(noinitcheck)]
-    // TODO(#4990): Make deadline a u64 once the neccessary traits are implemented
-    fn _initialize(donation_token: AztecAddress, operator: AztecAddress, deadline: Field) {
+    #[aztec(initializer)]
+    fn constructor(donation_token: AztecAddress, operator: AztecAddress, deadline: u64) {
         storage.donation_token.initialize(donation_token);
         storage.operator.initialize(operator);
         storage.deadline.initialize(deadline);
@@ -60,9 +43,8 @@ contract Crowdfunding {
     #[aztec(public)]
     #[aztec(internal)]
     fn _check_deadline() {
-        // TODO(#4990): Remove the cast here once u64 is used directly
-        let deadline = storage.deadline.read() as u64;
-        assert(context.timestamp() as u64 < deadline, "Deadline has passed");
+        let deadline = storage.deadline.read();
+        assert(context.timestamp() < deadline, "Deadline has passed");
     }
 
     #[aztec(private)]
@@ -99,7 +81,13 @@ contract Crowdfunding {
 
         // 2) Transfer the donation tokens from this contract to the operator
         let donation_token = Token::at(storage.donation_token.read_private());
-        donation_token.transfer(&mut context, context.this_address(), operator_address, amount as Field, 0);
+        donation_token.transfer(
+            &mut context,
+            context.this_address(),
+            operator_address,
+            amount as Field,
+            0
+        );
 
         // 3) Emit an unencrypted event so that anyone can audit how much the operator has withdrawn
         let event = WithdrawalProcessed { amount, who: operator_address };

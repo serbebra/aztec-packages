@@ -11,7 +11,8 @@
     "./types": "./dest/types/index.js",
     "./constants": "./dest/constants.gen.js",
     "./contract": "./dest/contract/index.js",
-    "./merkle": "./dest/merkle/index.js"
+    "./merkle": "./dest/merkle/index.js",
+    "./simulation": "./dest/simulator/index.js"
   },
   "typedocOptions": {
     "entryPoints": [
@@ -21,7 +22,8 @@
     "tsconfig": "./tsconfig.json"
   },
   "scripts": {
-    "build": "yarn clean && tsc -b",
+    "build": "yarn clean && yarn generate && tsc -b",
+    "generate": "./scripts/copy-contracts.sh",
     "build:dev": "tsc -b --watch",
     "clean": "rm -rf ./dest .tsbuildinfo",
     "formatting": "run -T prettier --check ./src && run -T eslint ./src",

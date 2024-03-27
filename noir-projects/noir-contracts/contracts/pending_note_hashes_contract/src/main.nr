@@ -18,9 +18,6 @@ contract PendingNoteHashes {
     // TODO(dbanks12): consolidate code into internal helper functions
     // (once Noir's support for this is more robust)
 
-    #[aztec(private)]
-    fn constructor() {}
-
     // Confirm can access pending note hashes by creating / inserting a note and then
     // getting / reading that note all in the same contract function
     // Realistic way to describe this test is "Mint note A, then burn note A in the same transaction"
@@ -113,8 +110,7 @@ contract PendingNoteHashes {
         amount: Field,
         owner: AztecAddress,
         insert_fn_selector: FunctionSelector,
-        get_then_nullify_fn_selector: FunctionSelector,
-        get_note_zero_fn_selector: FunctionSelector
+        get_then_nullify_fn_selector: FunctionSelector
     ) {
         // nested call to create/insert note
         let _callStackItem1 = context.call_private_function(
@@ -127,12 +123,6 @@ contract PendingNoteHashes {
             inputs.call_context.storage_contract_address,
             get_then_nullify_fn_selector,
             [amount, owner.to_field()]
-        );
-        // nested call to confirm that balance is zero
-        let _callStackItem3 = context.call_private_function(
-            inputs.call_context.storage_contract_address,
-            get_note_zero_fn_selector,
-            [owner.to_field()]
         );
     }
 
@@ -212,8 +202,7 @@ contract PendingNoteHashes {
         amount: Field,
         owner: AztecAddress,
         insert_fn_selector: FunctionSelector,
-        get_then_nullify_fn_selector: FunctionSelector,
-        get_note_zero_fn_selector: FunctionSelector
+        get_then_nullify_fn_selector: FunctionSelector
     ) {
         // args for nested calls
         let args = [amount, owner.to_field()];
@@ -234,12 +223,6 @@ contract PendingNoteHashes {
             inputs.call_context.storage_contract_address,
             get_then_nullify_fn_selector,
             args
-        );
-
-        let _callStackItem4 = context.call_private_function(
-            inputs.call_context.storage_contract_address,
-            get_note_zero_fn_selector,
-            [owner.to_field()]
         );
     }
     // Confirm cannot get/read a pending note hash in a nested call

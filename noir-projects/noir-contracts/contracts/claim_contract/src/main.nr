@@ -3,11 +3,8 @@ contract Claim {
 
     use dep::aztec::{
         history::note_inclusion::prove_note_inclusion,
-        protocol_types::{
-            abis::function_selector::FunctionSelector,
-            address::AztecAddress,
-        },
-        state_vars::SharedImmutable,
+        protocol_types::{abis::function_selector::FunctionSelector, address::AztecAddress},
+        state_vars::SharedImmutable
     };
     use dep::value_note::value_note::ValueNote;
     use interfaces::Token;
@@ -19,29 +16,21 @@ contract Claim {
       reward_token: SharedImmutable<AztecAddress>,
     }
 
-    #[aztec(private)]
-    fn constructor(target_contract: AztecAddress, reward_token: AztecAddress) {
-        let selector = FunctionSelector::from_signature("_initialize((Field),(Field))");
-        context.call_public_function(
-            context.this_address(),
-            selector,
-            [target_contract.to_field(), reward_token.to_field()]
-        );
-    }
-
     #[aztec(public)]
-    #[aztec(internal)]
-    #[aztec(noinitcheck)]
-    fn _initialize(target_contract: AztecAddress, reward_token: AztecAddress) {
+    #[aztec(initializer)]
+    fn constructor(target_contract: AztecAddress, reward_token: AztecAddress) {
         storage.target_contract.initialize(target_contract);
         storage.reward_token.initialize(reward_token);
     }
 
     #[aztec(private)]
-    fn claim(proof_note: ValueNote) {
-        // 1) Check that the note corresponds to the target contract
+    fn claim(proof_note: ValueNote, recipient: AztecAddress) {
+        // 1) Check that the note corresponds to the target contract and belongs to the sender
         let target_address = storage.target_contract.read_private();
-        assert(target_address == proof_note.header.contract_address, "Note does not correspond to the target contract");
+        assert(
+            target_address == proof_note.header.contract_address, "Note does not correspond to the target contract"
+        );
+        assert_eq(proof_note.owner, context.msg_sender(), "Note does not belong to the sender");
 
         // 2) Prove that the note hash exists in the note hash tree
         prove_note_inclusion(proof_note, context);
@@ -54,6 +43,6 @@ contract Claim {
 
         // 4) Finally we mint the reward token to the sender of the transaction
         let reward_token = Token::at(storage.reward_token.read_private());
-        reward_token.mint_public(&mut context, context.msg_sender(), proof_note.value);
+        reward_token.mint_public(&mut context, recipient, proof_note.value);
     }
 }

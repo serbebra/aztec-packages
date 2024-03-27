@@ -2,8 +2,9 @@ use acvm::acir::brillig::Opcode as BrilligOpcode;
 use acvm::acir::circuit::brillig::Brillig;
 
 use acvm::brillig_vm::brillig::{
-    BinaryFieldOp, BinaryIntOp, BlackBoxOp, HeapArray, MemoryAddress, Value, ValueOrArray,
+    BinaryFieldOp, BinaryIntOp, BlackBoxOp, HeapArray, MemoryAddress, ValueOrArray,
 };
+use acvm::FieldElement;
 
 use crate::instructions::{
     AvmInstruction, AvmOperand, AvmTypeTag, ALL_DIRECT, FIRST_OPERAND_INDIRECT,
@@ -35,13 +36,20 @@ pub fn brillig_to_avm(brillig: &Brillig) -> Vec<u8> {
                     BinaryFieldOp::Add => AvmOpcode::ADD,
                     BinaryFieldOp::Sub => AvmOpcode::SUB,
                     BinaryFieldOp::Mul => AvmOpcode::MUL,
-                    BinaryFieldOp::Div => AvmOpcode::DIV,
+                    BinaryFieldOp::Div => AvmOpcode::FDIV,
+                    BinaryFieldOp::IntegerDiv => AvmOpcode::DIV,
                     BinaryFieldOp::Equals => AvmOpcode::EQ,
+                    BinaryFieldOp::LessThan => AvmOpcode::LT,
+                    BinaryFieldOp::LessThanEquals => AvmOpcode::LTE,
                 };
                 avm_instrs.push(AvmInstruction {
                     opcode: avm_opcode,
                     indirect: Some(ALL_DIRECT),
-                    tag: Some(AvmTypeTag::FIELD),
+                    tag: if avm_opcode == AvmOpcode::FDIV {
+                        None
+                    } else {
+                        Some(AvmTypeTag::FIELD)
+                    },
                     operands: vec![
                         AvmOperand::U32 {
                             value: lhs.to_usize() as u32,
@@ -62,11 +70,12 @@ pub fn brillig_to_avm(brillig: &Brillig) -> Vec<u8> {
                 lhs,
                 rhs,
             } => {
+                assert!(is_integral_bit_size(*bit_size), "BinaryIntOp bit size should be integral: {:?}", brillig_instr);
                 let avm_opcode = match op {
                     BinaryIntOp::Add => AvmOpcode::ADD,
                     BinaryIntOp::Sub => AvmOpcode::SUB,
                     BinaryIntOp::Mul => AvmOpcode::MUL,
-                    BinaryIntOp::UnsignedDiv => AvmOpcode::DIV,
+                    BinaryIntOp::Div => AvmOpcode::DIV,
                     BinaryIntOp::Equals => AvmOpcode::EQ,
                     BinaryIntOp::LessThan => AvmOpcode::LT,
                     BinaryIntOp::LessThanEquals => AvmOpcode::LTE,
@@ -76,8 +85,7 @@ pub fn brillig_to_avm(brillig: &Brillig) -> Vec<u8> {
                     BinaryIntOp::Shl => AvmOpcode::SHL,
                     BinaryIntOp::Shr => AvmOpcode::SHR,
                     _ => panic!(
-                        "Transpiler doesn't know how to process BinaryIntOp {:?}",
-                        brillig_instr
+                        "Transpiler doesn't know how to process {:?}", brillig_instr
                     ),
                 };
                 avm_instrs.push(AvmInstruction {
@@ -149,6 +157,24 @@ pub fn brillig_to_avm(brillig: &Brillig) -> Vec<u8> {
                 source,
             } => {
                 avm_instrs.push(generate_mov_instruction(Some(ALL_DIRECT), source.to_usize() as u32, destination.to_usize() as u32));
+            }
+            BrilligOpcode::ConditionalMov {
+                source_a,
+                source_b,
+                condition,
+                destination,
+            } => {
+                avm_instrs.push(AvmInstruction {
+                    opcode: AvmOpcode::CMOV,
+                    indirect: Some(ALL_DIRECT),
+                    operands: vec![
+                        AvmOperand::U32 { value: source_a.to_usize() as u32 },
+                        AvmOperand::U32 { value: source_b.to_usize() as u32 },
+                        AvmOperand::U32 { value: condition.to_usize() as u32 },
+                        AvmOperand::U32 { value: destination.to_usize() as u32 },
+                    ],
+                    ..Default::default()
+                });
             }
             BrilligOpcode::Load {
                 destination,
@@ -238,9 +264,13 @@ fn handle_foreign_call(
     inputs: &Vec<ValueOrArray>,
 ) {
     match function {
+        "avmOpcodeCall" => handle_external_call(avm_instrs, destinations, inputs, AvmOpcode::CALL),
+        "avmOpcodeStaticCall" => {
+            handle_external_call(avm_instrs, destinations, inputs, AvmOpcode::STATICCALL)
+        }
         "amvOpcodeEmitUnencryptedLog" => {
             handle_emit_unencrypted_log(avm_instrs, destinations, inputs)
-        },
+        }
         "avmOpcodeNoteHashExists" => handle_note_hash_exists(avm_instrs, destinations, inputs),
         "avmOpcodeEmitNoteHash" | "avmOpcodeEmitNullifier" => handle_emit_note_hash_or_nullifier(
             function == "avmOpcodeEmitNullifier",
@@ -256,7 +286,7 @@ fn handle_foreign_call(
         }
         "avmOpcodePoseidon" => {
             handle_single_field_hash_instruction(avm_instrs, function, destinations, inputs)
-        },
+        }
         "storageRead" => handle_storage_read(avm_instrs, destinations, inputs),
         "storageWrite" => handle_storage_write(avm_instrs, destinations, inputs),
         // Getters.
@@ -269,6 +299,82 @@ fn handle_foreign_call(
             function
         ),
     }
+}
+
+/// Handle an AVM CALL
+/// (an external 'call' brillig foreign call was encountered)
+/// Adds the new instruction to the avm instructions list.
+fn handle_external_call(
+    avm_instrs: &mut Vec<AvmInstruction>,
+    destinations: &Vec<ValueOrArray>,
+    inputs: &Vec<ValueOrArray>,
+    opcode: AvmOpcode,
+) {
+    if destinations.len() != 2 || inputs.len() != 4 {
+        panic!(
+            "Transpiler expects ForeignCall (Static)Call to have 2 destinations and 4 inputs, got {} and {}.
+            Make sure your call instructions's input/return arrays have static length (`[Field; <size>]`)!",
+            destinations.len(),
+            inputs.len()
+        );
+    }
+    let gas_offset_maybe = inputs[0];
+    let gas_offset = match gas_offset_maybe {
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => {
+            assert!(size == 3, "Call instruction's gas input should be a HeapArray of size 3 (`[l1Gas, l2Gas, daGas]`)");
+            pointer.0 as u32
+        }
+        ValueOrArray::HeapVector(_) => panic!("Call instruction's gas input must be a HeapArray, not a HeapVector. Make sure you are explicitly defining its size as 3 (`[l1Gas, l2Gas, daGas]`)!"),
+        _ => panic!("Call instruction's gas input should be a HeapArray"),
+    };
+    let address_offset = match &inputs[1] {
+        ValueOrArray::MemoryAddress(offset) => offset.to_usize() as u32,
+        _ => panic!("Call instruction's target address input should be a basic MemoryAddress",),
+    };
+    let args_offset_maybe = inputs[2];
+    let (args_offset, args_size) = match args_offset_maybe {
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0 as u32, size as u32),
+        ValueOrArray::HeapVector(_) => panic!("Call instruction's args must be a HeapArray, not a HeapVector. Make sure you are explicitly defining its size (`[arg0, arg1, ... argN]`)!"),
+        _ => panic!("Call instruction's args input should be a HeapArray input"),
+    };
+    let temporary_function_selector_offset = match &inputs[3] {
+        ValueOrArray::MemoryAddress(offset) => offset.to_usize() as u32,
+        _ => panic!(
+            "Call instruction's temporary function selector input should be a basic MemoryAddress",
+        ),
+    };
+
+    let ret_offset_maybe = destinations[0];
+    let (ret_offset, ret_size) = match ret_offset_maybe {
+        ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0 as u32, size as u32),
+        ValueOrArray::HeapVector(_) => panic!("Call instruction's return data must be a HeapArray, not a HeapVector. Make sure you are explicitly defining its size (`let returnData: [Field; <size>] = ...`)!"),
+        _ => panic!("Call instruction's returnData destination should be a HeapArray input"),
+    };
+    let success_offset = match &destinations[1] {
+        ValueOrArray::MemoryAddress(offset) => offset.to_usize() as u32,
+        _ => panic!("Call instruction's success destination should be a basic MemoryAddress",),
+    };
+    avm_instrs.push(AvmInstruction {
+        opcode: opcode,
+        indirect: Some(0b01101), // (left to right) selector direct, ret offset INDIRECT, args offset INDIRECT, address offset direct, gas offset INDIRECT
+        operands: vec![
+            AvmOperand::U32 { value: gas_offset },
+            AvmOperand::U32 {
+                value: address_offset,
+            },
+            AvmOperand::U32 { value: args_offset },
+            AvmOperand::U32 { value: args_size },
+            AvmOperand::U32 { value: ret_offset },
+            AvmOperand::U32 { value: ret_size },
+            AvmOperand::U32 {
+                value: success_offset,
+            },
+            AvmOperand::U32 {
+                value: temporary_function_selector_offset,
+            },
+        ],
+        ..Default::default()
+    });
 }
 
 /// Handle an AVM NOTEHASHEXISTS instruction
@@ -327,7 +433,10 @@ fn handle_emit_unencrypted_log(
         [ValueOrArray::MemoryAddress(offset), ValueOrArray::HeapArray(array)] => {
             (offset.to_usize() as u32, array)
         }
-        _ => panic!("Unexpected inputs for ForeignCall::EMITUNENCRYPTEDLOG: {:?}", inputs),
+        _ => panic!(
+            "Unexpected inputs for ForeignCall::EMITUNENCRYPTEDLOG: {:?}",
+            inputs
+        ),
     };
     avm_instrs.push(AvmInstruction {
         opcode: AvmOpcode::EMITUNENCRYPTEDLOG,
@@ -534,8 +643,8 @@ fn handle_2_field_hash_instruction(
     inputs: &[ValueOrArray],
 ) {
     // handle field returns differently
-    let hash_offset_maybe = inputs[0];
-    let (hash_offset, hash_size) = match hash_offset_maybe {
+    let message_offset_maybe = inputs[0];
+    let (message_offset, message_size) = match message_offset_maybe {
         ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0, size),
         _ => panic!("Keccak | Sha256 address inputs destination should be a single value"),
     };
@@ -561,16 +670,16 @@ fn handle_2_field_hash_instruction(
 
     avm_instrs.push(AvmInstruction {
         opcode,
-        indirect: Some(3), // 11 - addressing mode, indirect for input and output
+        indirect: Some(ZEROTH_OPERAND_INDIRECT | FIRST_OPERAND_INDIRECT),
         operands: vec![
             AvmOperand::U32 {
                 value: dest_offset as u32,
             },
             AvmOperand::U32 {
-                value: hash_offset as u32,
+                value: message_offset as u32,
             },
             AvmOperand::U32 {
-                value: hash_size as u32,
+                value: message_size as u32,
             },
         ],
         ..Default::default()
@@ -593,8 +702,8 @@ fn handle_single_field_hash_instruction(
     inputs: &[ValueOrArray],
 ) {
     // handle field returns differently
-    let hash_offset_maybe = inputs[0];
-    let (hash_offset, hash_size) = match hash_offset_maybe {
+    let message_offset_maybe = inputs[0];
+    let (message_offset, message_size) = match message_offset_maybe {
         ValueOrArray::HeapArray(HeapArray { pointer, size }) => (pointer.0, size),
         _ => panic!("Poseidon address inputs destination should be a single value"),
     };
@@ -616,16 +725,16 @@ fn handle_single_field_hash_instruction(
 
     avm_instrs.push(AvmInstruction {
         opcode,
-        indirect: Some(1),
+        indirect: Some(FIRST_OPERAND_INDIRECT),
         operands: vec![
             AvmOperand::U32 {
                 value: dest_offset as u32,
             },
             AvmOperand::U32 {
-                value: hash_offset as u32,
+                value: message_offset as u32,
             },
             AvmOperand::U32 {
-                value: hash_size as u32,
+                value: message_size as u32,
             },
         ],
         ..Default::default()
@@ -690,7 +799,7 @@ fn handle_getter_instruction(
 fn handle_const(
     avm_instrs: &mut Vec<AvmInstruction>,
     destination: &MemoryAddress,
-    value: &Value,
+    value: &FieldElement,
     bit_size: &u32,
 ) {
     let tag = tag_from_bit_size(*bit_size);
@@ -699,14 +808,10 @@ fn handle_const(
     if !matches!(tag, AvmTypeTag::FIELD) {
         avm_instrs.push(generate_set_instruction(tag, dest, value.to_u128()));
     } else {
-        // Handling fields is a bit more complex since we cannot fit a field in a single instruction.
-        // We need to split the field into 128-bit chunks and set them individually.
-        let field = value.to_field();
+        // We can't fit a field in an instruction. This should've been handled in Brillig.
+        let field = value;
         if !field.fits_in_u128() {
-            // If the field doesn't fit in 128 bits, we need scratch space. That's not trivial.
-            // Will this ever happen? ACIR supports up to 126 bit fields.
-            // However, it might be needed _inside_ the unconstrained function.
-            panic!("SET: Field value doesn't fit in 128 bits, that's not supported yet!");
+            panic!("SET: Field value doesn't fit in 128 bits, that's not supported!");
         }
         avm_instrs.extend([
             generate_set_instruction(AvmTypeTag::UINT128, dest, field.to_u128()),
@@ -778,23 +883,23 @@ fn handle_black_box_function(avm_instrs: &mut Vec<AvmInstruction>, operation: &B
             domain_separator: _,
             output,
         } => {
-            let hash_offset = inputs.pointer.0;
-            let hash_size = inputs.size.0;
+            let message_offset = inputs.pointer.0;
+            let message_size_offset = inputs.size.0;
 
             let dest_offset = output.0;
 
             avm_instrs.push(AvmInstruction {
                 opcode: AvmOpcode::PEDERSEN,
-                indirect: Some(1),
+                indirect: Some(FIRST_OPERAND_INDIRECT),
                 operands: vec![
                     AvmOperand::U32 {
                         value: dest_offset as u32,
                     },
                     AvmOperand::U32 {
-                        value: hash_offset as u32,
+                        value: message_offset as u32,
                     },
                     AvmOperand::U32 {
-                        value: hash_size as u32,
+                        value: message_size_offset as u32,
                     },
                 ],
                 ..Default::default()
@@ -911,6 +1016,13 @@ fn map_brillig_pcs_to_avm_pcs(initial_offset: usize, brillig: &Brillig) -> Vec<u
         pc_map[i + 1] = pc_map[i] + num_avm_instrs_for_this_brillig_instr;
     }
     pc_map
+}
+
+fn is_integral_bit_size(bit_size: u32) -> bool {
+    match bit_size {
+        1 | 8 | 16 | 32 | 64 | 128 => true,
+        _ => false,
+    }
 }
 
 fn tag_from_bit_size(bit_size: u32) -> AvmTypeTag {

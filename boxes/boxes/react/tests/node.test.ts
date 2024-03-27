@@ -7,25 +7,21 @@ const logger = createDebugLogger('aztec:http-pxe-client');
 describe('BoxReact Contract Tests', () => {
   let wallet: AccountWallet;
   let contract: Contract;
-  const { artifact } = BoxReactContract;
   const numberToSet = Fr.random();
 
   beforeAll(async () => {
     wallet = await deployerEnv.getWallet();
-    const pxe = deployerEnv.pxe;
-    const deployer = new ContractDeployer(artifact, wallet);
     const salt = Fr.random();
-    const { address: contractAddress } = await deployer.deploy(Fr.random(), wallet.getCompleteAddress().address).send({ contractAddressSalt: salt }).deployed();
-    contract = await BoxReactContract.at(contractAddress!, wallet);
+    contract = await BoxReactContract.deploy(wallet, Fr.random(), wallet.getCompleteAddress().address)
+      .send({ contractAddressSalt: salt })
+      .deployed();
 
-    logger(`L2 contract deployed at ${contractAddress}`);
+    logger(`L2 contract deployed at ${contract.address}`);
   }, 60000);
 
   test('Can set a number', async () => {
     logger(`${await wallet.getRegisteredAccounts()}`);
-    const callTxReceipt = await contract.methods.setNumber(numberToSet, wallet.getCompleteAddress()).send().wait();
-
-    expect(callTxReceipt.status).toBe(TxStatus.MINED);
+    await contract.methods.setNumber(numberToSet, wallet.getCompleteAddress()).send().wait();
   }, 40000);
 
   test('Can read a number', async () => {

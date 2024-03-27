@@ -57,7 +57,6 @@ impl PrivateKernelInitCircuitPrivateInputs {
 
         let function_data = call_stack_item.function_data;
         assert(function_data.is_private, "Private kernel circuit can only execute a private function");
-        assert(function_data.is_internal == false, "Cannot call an internal function directly");
 
         let call_context = call_stack_item.public_inputs.call_context;
         assert(call_context.is_delegate_call == false, "Users cannot make a delegatecall");
@@ -100,12 +99,7 @@ impl PrivateKernelInitCircuitPrivateInputs {
         self.update_end_values(&mut public_inputs);
         common::update_end_values(self.private_call, &mut public_inputs);
 
-        common::contract_logic(
-            self.private_call,
-            &mut public_inputs,
-            self.tx_request.tx_context.contract_deployment_data,
-            self.tx_request.function_data
-        );
+        common::contract_logic(self.private_call);
 
         // TODO(David): What previous kernel proof are we talking about, since this is private-kernel-init
         let (is_previous_state_valid, updated_aggregation_object) = verify_previous_kernel_state(public_inputs.aggregation_object, self.private_call.proof);
@@ -129,7 +123,7 @@ mod tests {
         address::{AztecAddress, EthAddress, compute_initialization_hash},
         constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL, grumpkin_point::GrumpkinPoint,
         grumpkin_private_key::GrumpkinPrivateKey,
-        hash::{compute_constructor_hash, compute_logs_hash, stdlib_recursion_verification_key_compress_native_vk},
+        hash::{compute_logs_hash, stdlib_recursion_verification_key_compress_native_vk},
         messaging::l2_to_l1_message::L2ToL1Message,
         tests::private_call_data_builder::PrivateCallDataBuilder, transaction::tx_request::TxRequest,
         utils::arrays::array_length
@@ -142,15 +136,7 @@ mod tests {
 
     impl PrivateKernelInitInputsBuilder {
         pub fn new() -> Self {
-            PrivateKernelInitInputsBuilder::new_with_config(false)
-        }
-
-        pub fn new_constructor() -> Self {
-            PrivateKernelInitInputsBuilder::new_with_config(true)
-        }
-
-        fn new_with_config(is_constructor: bool) -> Self {
-            let private_call = PrivateCallDataBuilder::new(is_constructor);
+            let private_call = PrivateCallDataBuilder::new();
             let tx_request = private_call.build_tx_request();
 
             PrivateKernelInitInputsBuilder { tx_request, private_call }
@@ -167,48 +153,19 @@ mod tests {
         }
     }
 
-    pub fn validate_deployed_contract_address(tx_request: TxRequest, public_inputs: PrivateKernelInnerCircuitPublicInputs) {
-        assert_eq(public_inputs.end.new_contracts.len(), 1);
-        let cdd = tx_request.tx_context.contract_deployment_data;
-
-        let computed_initialization_hash = compute_initialization_hash(
-            tx_request.function_data.selector.to_field(),
-            tx_request.args_hash
-        );
-        assert(
-            computed_initialization_hash == cdd.initialization_hash, "initialization hash does not match computed one"
-        );
-        let contract_address = AztecAddress::compute_from_public_key(
-            cdd.public_key,
-            cdd.contract_class_id,
-            cdd.contract_address_salt,
-            cdd.initialization_hash,
-            cdd.portal_contract_address
-        );
-        assert(public_inputs.end.new_contracts[0].contract_address.eq(contract_address));
-    }
-
-    pub fn validate_no_new_deployed_contract(public_inputs: PrivateKernelInnerCircuitPublicInputs) {
-        for new_contract in public_inputs.end.new_contracts {
-            assert(new_contract.is_empty());
-        }
-    }
-
     #[test]
     fn deposit() {
         let mut builder = PrivateKernelInitInputsBuilder::new();
 
         // Logs for the private call.
-        let encrypted_logs_hash = [16, 69];
+        let encrypted_logs_hash = 16;
         let encrypted_log_preimages_length = 100;
-        let unencrypted_logs_hash = [26, 47];
+        let unencrypted_logs_hash = 26;
         let unencrypted_log_preimages_length = 50;
         builder.private_call.set_encrypted_logs(encrypted_logs_hash, encrypted_log_preimages_length);
         builder.private_call.set_unencrypted_logs(unencrypted_logs_hash, unencrypted_log_preimages_length);
 
         let public_inputs = builder.execute();
-
-        validate_no_new_deployed_contract(public_inputs);
 
         // Check the first nullifier is hash of the signed tx request
         let tx_hash = builder.tx_request.hash();
@@ -219,34 +176,16 @@ mod tests {
         assert_eq(public_inputs.end.unencrypted_log_preimages_length, unencrypted_log_preimages_length);
 
         // Logs hashes should be a sha256 hash of a 0 value (the previous log hash) and the `(un)encrypted_logs_hash` from private input
-        let expected_encrypted_logs_hash = compute_logs_hash([0, 0], encrypted_logs_hash);
+        let expected_encrypted_logs_hash = compute_logs_hash(0, encrypted_logs_hash);
         assert_eq(public_inputs.end.encrypted_logs_hash, expected_encrypted_logs_hash);
 
-        let expected_unencrypted_logs_hash = compute_logs_hash([0, 0], unencrypted_logs_hash);
+        let expected_unencrypted_logs_hash = compute_logs_hash(0, unencrypted_logs_hash);
         assert_eq(public_inputs.end.unencrypted_logs_hash, expected_unencrypted_logs_hash);
-    }
-
-    #[test]
-    fn basic_contract_deployment() {
-        let builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        let public_inputs = builder.execute();
-
-        validate_deployed_contract_address(builder.tx_request, public_inputs);
-
-        // Since there are no logs, log preimages length should be 0 and both logs hashes should be a sha256 hash of 2 zero
-        // values
-        assert_eq(public_inputs.end.encrypted_log_preimages_length, 0);
-        assert_eq(public_inputs.end.unencrypted_log_preimages_length, 0);
-
-        let expected_logs_hash = compute_logs_hash([0, 0], [0, 0]);
-        assert_eq(public_inputs.end.encrypted_logs_hash, expected_logs_hash);
-        assert_eq(public_inputs.end.unencrypted_logs_hash, expected_logs_hash);
     }
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_return_values() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.return_values.extend_from_array([0, 9123]);
 
@@ -255,7 +194,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_note_hash_read_requests() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.note_hash_read_requests.extend_from_array(
             [
@@ -269,7 +208,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_commitments() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.new_note_hashes.extend_from_array(
             [
@@ -283,7 +222,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_nullifiers() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.new_nullifiers.extend_from_array(
             [
@@ -297,7 +236,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_private_call_stack() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.private_call_stack_hashes.extend_from_array([0, 9123]);
 
@@ -306,7 +245,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_public_call_stack() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.public_call_stack_hashes.extend_from_array([0, 9123]);
 
@@ -315,7 +254,7 @@ mod tests {
 
     #[test(should_fail_with = "invalid array")]
     fn input_validation_malformed_arrays_new_l2_to_l1_msgs() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         builder.private_call.public_inputs.new_l2_to_l1_msgs.extend_from_array(
             [
@@ -327,51 +266,9 @@ mod tests {
         builder.failed();
     }
 
-    #[test(should_fail_with="contract address supplied does not match derived address")]
-    fn contract_deployment_incorrect_contract_address_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        let random_address = AztecAddress::from_field(27);
-        builder.private_call.public_inputs.call_context.storage_contract_address = random_address;
-        builder.tx_request.origin = random_address;
-        builder.private_call.contract_address = random_address;
-
-        builder.failed();
-    }
-
-    #[test(should_fail_with="origin address does not match call stack items contract address")]
-    fn contract_deployment_contract_address_mismatch_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        let random_address = AztecAddress::from_field(27);
-        builder.private_call.public_inputs.call_context.storage_contract_address = random_address;
-        builder.private_call.contract_address = random_address;
-
-        builder.failed();
-    }
-
-    #[test(should_fail_with="tx_request function_data must match call_stack_item function_data")]
-    fn contract_deployment_function_data_mismatch_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        builder.tx_request.function_data.selector.inner = 27;
-
-        builder.failed();
-    }
-
-    #[test(should_fail_with="noir function args passed to tx_request must match args in the call_stack_item")]
-    fn contract_deployment_args_hash_mismatch_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        // Modify the args hash in tx request.
-        builder.tx_request.args_hash = 29;
-
-        builder.failed();
-    }
-
     #[test(should_fail_with="Private kernel circuit can only execute a private function")]
     fn private_function_is_private_false_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         // Set is_private in function data to false.
         builder.private_call.function_data.is_private = false;
@@ -379,18 +276,9 @@ mod tests {
         builder.failed();
     }
 
-    #[test(should_fail_with="Cannot call an internal function directly")]
-    fn private_function_is_internal_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
-
-        builder.private_call.function_data.is_internal = true;
-
-        builder.failed();
-    }
-
     #[test(should_fail_with="Users cannot make a static call")]
     fn private_function_static_call_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         // Set is_static_call to true.
         builder.private_call.public_inputs.call_context.is_static_call = true;
@@ -400,7 +288,7 @@ mod tests {
 
     #[test(should_fail_with="Users cannot make a delegatecall")]
     fn private_function_delegate_call_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         // Set is_delegate_call to true.
         builder.private_call.public_inputs.call_context.is_delegate_call = true;
@@ -410,7 +298,7 @@ mod tests {
 
     #[test(should_fail_with="Storage contract address must be that of the called contract")]
     fn private_function_incorrect_storage_contract_address_fails() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         // Set the storage_contract_address to a random scalar.
         builder.private_call.public_inputs.call_context.storage_contract_address = AztecAddress::from_field(356);
@@ -503,17 +391,33 @@ mod tests {
     }
 
     #[test]
+    fn default_max_block_number() {
+        let mut builder = PrivateKernelInitInputsBuilder::new();
+        let public_inputs = builder.execute();
+
+        assert(public_inputs.validation_requests.for_rollup.max_block_number.is_none());
+    }
+
+    #[test]
+    fn propagate_max_block_number_request() {
+        let mut builder = PrivateKernelInitInputsBuilder::new();
+        builder.private_call.request_max_block_number(42);
+        let public_inputs = builder.execute();
+
+        assert_eq(public_inputs.validation_requests.for_rollup.max_block_number.unwrap(), 42);
+    }
+
+    #[test]
     fn native_no_note_hash_read_requests_works() {
         let mut builder = PrivateKernelInitInputsBuilder::new();
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -524,12 +428,11 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -540,12 +443,11 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -556,12 +458,11 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -572,12 +473,11 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 1);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 1);
     }
 
     #[test]
@@ -589,12 +489,11 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 1);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 1);
     }
 
     #[test]
@@ -605,19 +504,18 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        validate_no_new_deployed_contract(public_inputs);
         // Check the first nullifier is hash of the signed tx request
         assert_eq(public_inputs.end.new_nullifiers[0].value, builder.tx_request.hash());
 
         // non-transient read requests are NOT forwarded
         assert_eq(
-            array_length(public_inputs.end.note_hash_read_requests), MAX_NOTE_HASH_READ_REQUESTS_PER_CALL
+            array_length(public_inputs.validation_requests.note_hash_read_requests), MAX_NOTE_HASH_READ_REQUESTS_PER_CALL
         );
     }
 
     #[test]
     fn propagate_nullifier_read_requests() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
         let storage_contract_address = builder.private_call.public_inputs.call_context.storage_contract_address;
 
         let request_0 = ReadRequest { value: 123, counter: 4567 };
@@ -627,7 +525,7 @@ mod tests {
 
         let public_inputs = builder.execute();
 
-        let end_nullifier_read_requests = public_inputs.end.nullifier_read_requests;
+        let end_nullifier_read_requests = public_inputs.validation_requests.nullifier_read_requests;
         assert_eq(array_length(end_nullifier_read_requests), 2);
 
         let request_context = end_nullifier_read_requests[0];
@@ -643,16 +541,16 @@ mod tests {
 
     #[test]
     fn propagate_nullifier_key_validation_requests() {
-        let mut builder = PrivateKernelInitInputsBuilder::new_constructor();
+        let mut builder = PrivateKernelInitInputsBuilder::new();
 
         let request = NullifierKeyValidationRequest { public_key: GrumpkinPoint { x: 1, y: 2 }, secret_key: GrumpkinPrivateKey { high: 3, low: 4 } };
         builder.private_call.public_inputs.nullifier_key_validation_requests.push(request);
 
         let public_inputs = builder.execute();
 
-        assert_eq(array_length(public_inputs.end.nullifier_key_validation_requests), 1);
+        assert_eq(array_length(public_inputs.validation_requests.nullifier_key_validation_requests), 1);
 
-        let request_context = public_inputs.end.nullifier_key_validation_requests[0];
+        let request_context = public_inputs.validation_requests.nullifier_key_validation_requests[0];
         assert_eq(request_context.public_key, request.public_key);
         assert_eq(request_context.secret_key, request.secret_key);
         assert_eq(

@@ -1,5 +1,94 @@
 # Changelog
 
+## [0.32.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.31.0...aztec-package-v0.32.0) (2024-03-27)
+
+
+### Features
+
+* Sequencer checks list of allowed FPCs ([#5310](https://github.com/AztecProtocol/aztec-packages/issues/5310)) ([adf20dc](https://github.com/AztecProtocol/aztec-packages/commit/adf20dc4974707255daffdaf3526dc48dc035873)), closes [#5000](https://github.com/AztecProtocol/aztec-packages/issues/5000)
+
+## [0.31.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.30.1...aztec-package-v0.31.0) (2024-03-26)
+
+
+### Features
+
+* Add batched signerless contract calls ([#5313](https://github.com/AztecProtocol/aztec-packages/issues/5313)) ([be60eb3](https://github.com/AztecProtocol/aztec-packages/commit/be60eb3afbf65cb9c2dec2e912e398caffb2ebd0))
+* Dynamic proving ([#5346](https://github.com/AztecProtocol/aztec-packages/issues/5346)) ([6a7ccca](https://github.com/AztecProtocol/aztec-packages/commit/6a7ccca5dfa4a3354555f8b04b014da6ef72549a))
+* Less earthly runners + e2e GA runners, bb bench ([#5356](https://github.com/AztecProtocol/aztec-packages/issues/5356)) ([2136a66](https://github.com/AztecProtocol/aztec-packages/commit/2136a66cc1fa2249b3ef47b787cfa1de9576dc38))
+
+## [0.30.1](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.30.0...aztec-package-v0.30.1) (2024-03-20)
+
+
+### Miscellaneous
+
+* **aztec-package:** Synchronize aztec-packages versions
+
+## [0.30.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.29.0...aztec-package-v0.30.0) (2024-03-19)
+
+
+### Miscellaneous
+
+* Add gas portal to l1 contract addresses ([#5265](https://github.com/AztecProtocol/aztec-packages/issues/5265)) ([640c89a](https://github.com/AztecProtocol/aztec-packages/commit/640c89a04d7b780795d40e239be3b3db73a16923)), closes [#5022](https://github.com/AztecProtocol/aztec-packages/issues/5022)
+
+## [0.29.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.28.1...aztec-package-v0.29.0) (2024-03-18)
+
+
+### Features
+
+* Initial Earthly CI ([#5069](https://github.com/AztecProtocol/aztec-packages/issues/5069)) ([8e75fe5](https://github.com/AztecProtocol/aztec-packages/commit/8e75fe5c47250e860a4eae4dbf0973c503221720))
+
+## [0.28.1](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.28.0...aztec-package-v0.28.1) (2024-03-14)
+
+
+### Miscellaneous
+
+* **aztec-package:** Synchronize aztec-packages versions
+
+## [0.28.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.27.2...aztec-package-v0.28.0) (2024-03-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* Support contracts with no constructor ([#5175](https://github.com/AztecProtocol/aztec-packages/issues/5175))
+
+### Features
+
+* Support contracts with no constructor ([#5175](https://github.com/AztecProtocol/aztec-packages/issues/5175)) ([df7fa32](https://github.com/AztecProtocol/aztec-packages/commit/df7fa32f34e790231e091c38a4a6e84be5407763))
+
+## [0.27.2](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.27.1...aztec-package-v0.27.2) (2024-03-13)
+
+
+### Miscellaneous
+
+* **aztec-package:** Synchronize aztec-packages versions
+
+## [0.27.1](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.27.0...aztec-package-v0.27.1) (2024-03-12)
+
+
+### Miscellaneous
+
+* **aztec-package:** Synchronize aztec-packages versions
+
+## [0.27.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.26.6...aztec-package-v0.27.0) (2024-03-12)
+
+
+### Features
+
+* Add api for inclusion proof of outgoing message in block [#4562](https://github.com/AztecProtocol/aztec-packages/issues/4562) ([#4899](https://github.com/AztecProtocol/aztec-packages/issues/4899)) ([26d2643](https://github.com/AztecProtocol/aztec-packages/commit/26d26437022567e2d54052f21b1c937259f26c94))
+
+
+### Miscellaneous
+
+* Pin foundry ([#5151](https://github.com/AztecProtocol/aztec-packages/issues/5151)) ([69bd7dd](https://github.com/AztecProtocol/aztec-packages/commit/69bd7dd45af6b197b23c25dc883a1a5485955203))
+* Remove old contract deployment flow ([#4970](https://github.com/AztecProtocol/aztec-packages/issues/4970)) ([6d15947](https://github.com/AztecProtocol/aztec-packages/commit/6d1594736e96cd744ea691a239fcd3a46bdade60))
+
+## [0.26.6](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.26.5...aztec-package-v0.26.6) (2024-03-08)
+
+
+### Miscellaneous
+
+* **aztec-package:** Synchronize aztec-packages versions
+
 ## [0.26.5](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.26.4...aztec-package-v0.26.5) (2024-03-07)
 
 

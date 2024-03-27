@@ -20,15 +20,6 @@ impl PrivateKernelInnerCircuitPrivateInputs {
         common::validate_call_against_request(self.private_call, call_request);
     }
 
-    fn validate_contract_tree_root(self) {
-        let purported_contract_tree_root = self.private_call.call_stack_item.public_inputs.historical_header.state.partial.contract_tree.root;
-        let previous_kernel_contract_tree_root = self.previous_kernel.public_inputs.constants.historical_header.state.partial.contract_tree.root;
-
-        assert(
-            purported_contract_tree_root == previous_kernel_contract_tree_root, "purported_contract_tree_root does not match previous_kernel_contract_tree_root"
-        );
-    }
-
     fn validate_inputs(self) {
         let this_call_stack_item = self.private_call.call_stack_item;
         let function_data = this_call_stack_item.function_data;
@@ -63,17 +54,7 @@ impl PrivateKernelInnerCircuitPrivateInputs {
         //TODO(David): feels like update_end_values should happen later
         common::update_end_values(self.private_call, &mut public_inputs);
 
-        // ensure that historical/purported contract tree root matches the one in previous kernel
-        self.validate_contract_tree_root();
-
-        let this_call_stack_item = self.private_call.call_stack_item;
-
-        common::contract_logic(
-            self.private_call,
-            &mut public_inputs,
-            this_call_stack_item.public_inputs.contract_deployment_data,
-            this_call_stack_item.function_data
-        );
+        common::contract_logic(self.private_call);
 
         let (is_previous_state_valid, updated_aggregation_object) = verify_previous_kernel_state(public_inputs.aggregation_object, self.private_call.proof);
         assert(is_previous_state_valid);
@@ -90,7 +71,7 @@ mod tests {
     use dep::types::{
         abis::{
         kernel_circuit_public_inputs::PrivateKernelInnerCircuitPublicInputs,
-        side_effect::{SideEffect, SideEffectLinkedToNoteHash}
+        max_block_number::MaxBlockNumber, side_effect::{SideEffect, SideEffectLinkedToNoteHash}
     },
         address::{AztecAddress, EthAddress}, hash::compute_logs_hash,
         messaging::l2_to_l1_message::L2ToL1Message, utils::{arrays::array_length},
@@ -105,7 +86,7 @@ mod tests {
     impl PrivateKernelInnerInputsBuilder {
         pub fn new() -> Self {
             let previous_kernel = PreviousKernelDataBuilder::new(false);
-            let private_call = PrivateCallDataBuilder::new(false);
+            let private_call = PrivateCallDataBuilder::new();
 
             PrivateKernelInnerInputsBuilder { previous_kernel, private_call }
         }
@@ -117,12 +98,6 @@ mod tests {
 
         pub fn is_static_call(&mut self) -> Self {
             let _ = self.private_call.is_static_call();
-            *self
-        }
-
-        pub fn is_internal_call(&mut self) -> Self {
-            let _ = self.private_call.is_internal_call();
-            self.previous_kernel.contract_address = self.private_call.contract_address;
             *self
         }
 
@@ -155,17 +130,6 @@ mod tests {
         // Set (storage) contract_address to 0
         builder.private_call.contract_address = AztecAddress::zero();
         builder.private_call.public_inputs.call_context.storage_contract_address = AztecAddress::zero();
-
-        builder.failed();
-    }
-
-    #[test(should_fail_with = "purported_contract_tree_root does not match previous_kernel_contract_tree_root")]
-    fn private_function_incorrect_contract_tree_root_fails() {
-        let mut builder = PrivateKernelInnerInputsBuilder::new();
-
-        // Set historical contract tree root to a wrong value (the correct value + 1).
-        let contract_tree_root = builder.previous_kernel.historical_header.state.partial.contract_tree.root;
-        builder.previous_kernel.historical_header.state.partial.contract_tree.root = contract_tree_root + 1;
 
         builder.failed();
     }
@@ -295,24 +259,6 @@ mod tests {
         let mut builder = PrivateKernelInnerInputsBuilder::new().is_delegate_call();
 
         builder.private_call.contract_address = builder.private_call.public_inputs.call_context.storage_contract_address;
-
-        builder.failed();
-    }
-
-    #[test]
-    fn internal_call_succeeds() {
-        let mut builder = PrivateKernelInnerInputsBuilder::new().is_internal_call();
-        builder.succeeded();
-    }
-
-    #[test(should_fail_with = "call is internal but msg_sender is not self")]
-    fn private_function_incorrect_is_internal() {
-        let mut builder = PrivateKernelInnerInputsBuilder::new().is_internal_call();
-
-        // Tweak the (storage) contract_address to be different to msg_sender.
-        let msg_sender = builder.private_call.public_inputs.call_context.msg_sender.to_field();
-        builder.private_call.contract_address = AztecAddress::from_field(msg_sender + 1);
-        builder.private_call.public_inputs.call_context.storage_contract_address = AztecAddress::from_field(msg_sender + 1);
 
         builder.failed();
     }
@@ -605,6 +551,36 @@ mod tests {
     }
 
     #[test]
+    fn propagate_previous_kernel_max_block_number() {
+        let mut builder = PrivateKernelInnerInputsBuilder::new();
+        builder.previous_kernel.validation_requests.max_block_number = MaxBlockNumber::new(13);
+        let public_inputs = builder.execute();
+
+        assert_eq(public_inputs.validation_requests.for_rollup.max_block_number.unwrap(), 13);
+    }
+
+    #[test]
+    fn propagate_max_block_number_request() {
+        let mut builder = PrivateKernelInnerInputsBuilder::new();
+        builder.private_call.request_max_block_number(42);
+        let public_inputs = builder.execute();
+
+        assert_eq(public_inputs.validation_requests.for_rollup.max_block_number.unwrap(), 42);
+    }
+
+    #[test]
+    fn ignore_larger_max_block_number() {
+        let mut builder = PrivateKernelInnerInputsBuilder::new();
+        builder.previous_kernel.validation_requests.max_block_number = MaxBlockNumber::new(13);
+        // A private call requesting a larger max_block_number should not change the current one as that constraint is
+        // already satisfied.
+        builder.private_call.request_max_block_number(42);
+        let public_inputs = builder.execute();
+
+        assert_eq(public_inputs.validation_requests.for_rollup.max_block_number.unwrap(), 13);
+    }
+
+    #[test]
     fn native_no_note_hash_read_requests_works() {
         let mut builder = PrivateKernelInnerInputsBuilder::new();
 
@@ -613,7 +589,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -625,7 +601,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -637,7 +613,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -649,7 +625,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 0);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 0);
     }
 
     #[test]
@@ -661,7 +637,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 1);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 1);
     }
 
     #[test]
@@ -675,7 +651,7 @@ mod tests {
         let public_inputs = builder.execute();
 
         // non-transient read requests are NOT forwarded
-        assert_eq(array_length(public_inputs.end.note_hash_read_requests), 1);
+        assert_eq(array_length(public_inputs.validation_requests.note_hash_read_requests), 1);
     }
 
     #[test]
@@ -688,7 +664,7 @@ mod tests {
 
         // non-transient read requests are NOT forwarded
         assert_eq(
-            array_length(public_inputs.end.note_hash_read_requests), MAX_NOTE_HASH_READ_REQUESTS_PER_CALL
+            array_length(public_inputs.validation_requests.note_hash_read_requests), MAX_NOTE_HASH_READ_REQUESTS_PER_CALL
         );
     }
 
@@ -697,17 +673,17 @@ mod tests {
         let mut builder = PrivateKernelInnerInputsBuilder::new();
 
         // Logs for the current call stack.
-        let encrypted_logs_hash = [16, 69];
+        let encrypted_logs_hash = 16;
         let encrypted_log_preimages_length = 100;
-        let unencrypted_logs_hash = [26, 47];
+        let unencrypted_logs_hash = 26;
         let unencrypted_log_preimages_length = 50;
         builder.private_call.set_encrypted_logs(encrypted_logs_hash, encrypted_log_preimages_length);
         builder.private_call.set_unencrypted_logs(unencrypted_logs_hash, unencrypted_log_preimages_length);
 
         // Logs for the previous call stack.
-        let prev_encrypted_logs_hash = [80, 429];
+        let prev_encrypted_logs_hash = 80;
         let prev_encrypted_log_preimages_length = 13;
-        let prev_unencrypted_logs_hash = [956, 112];
+        let prev_unencrypted_logs_hash = 956;
         let prev_unencrypted_log_preimages_length = 24;
         builder.previous_kernel.set_encrypted_logs(prev_encrypted_logs_hash, prev_encrypted_log_preimages_length);
         builder.previous_kernel.set_unencrypted_logs(

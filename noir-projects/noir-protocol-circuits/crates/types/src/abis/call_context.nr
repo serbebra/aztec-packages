@@ -1,7 +1,7 @@
 use crate::{
     abis::function_selector::FunctionSelector, address::{EthAddress, AztecAddress},
     constants::{CALL_CONTEXT_LENGTH, GENERATOR_INDEX__CALL_CONTEXT}, hash::pedersen_hash,
-    traits::{Deserialize, Hash, Serialize}
+    traits::{Deserialize, Hash, Serialize}, abis::side_effect::Ordered
 };
 
 // docs:start:call-context
@@ -14,37 +14,24 @@ struct CallContext {
 
     is_delegate_call : bool,
     is_static_call : bool,
-    is_contract_deployment : bool,
 
-    start_side_effect_counter : u32,
+    side_effect_counter : u32,
 }
 // docs:end:call-context
 
 impl CallContext {
     fn assert_is_zero(self) {
-        // TODO(https://github.com/AztecProtocol/aztec-packages/issues/3595)
-        assert(self.msg_sender.to_field() == 0);
-        assert(self.storage_contract_address.to_field() == 0);
-        assert(self.portal_contract_address.to_field() == 0);
-        assert(self.function_selector.to_field() == 0);
-        assert(self.is_delegate_call == false);
-        assert(self.is_static_call == false);
-        assert(self.is_contract_deployment == false);
-        assert(self.start_side_effect_counter == 0);
+        let serialized: [Field; CALL_CONTEXT_LENGTH] = self.serialize();
+
+        for i in 0..CALL_CONTEXT_LENGTH {
+            assert(serialized[i] == 0);
+        }
     }
 }
 
 impl Eq for CallContext {
-    fn eq(self, call_context: CallContext) -> bool {
-        // TODO(https://github.com/AztecProtocol/aztec-packages/issues/3595)
-        call_context.msg_sender.eq(self.msg_sender)
-            & call_context.storage_contract_address.eq(self.storage_contract_address)
-            & call_context.portal_contract_address.eq(self.portal_contract_address)
-            & call_context.function_selector.eq(self.function_selector)
-            & (call_context.is_delegate_call == self.is_delegate_call)
-            & (call_context.is_static_call == self.is_static_call)
-            & (call_context.is_contract_deployment == self.is_contract_deployment)
-            & (call_context.start_side_effect_counter == self.start_side_effect_counter)
+    fn eq(self, other: CallContext) -> bool {
+        self.serialize() == other.serialize()
     }
 }
 
@@ -63,8 +50,7 @@ impl Serialize<CALL_CONTEXT_LENGTH> for CallContext {
             self.function_selector.to_field(),
             self.is_delegate_call as Field,
             self.is_static_call as Field,
-            self.is_contract_deployment as Field,
-            self.start_side_effect_counter as Field,
+            self.side_effect_counter as Field,
         ]
     }
 }
@@ -78,18 +64,62 @@ impl Deserialize<CALL_CONTEXT_LENGTH> for CallContext {
             function_selector: FunctionSelector::from_field(serialized[3]),
             is_delegate_call: serialized[4] as bool,
             is_static_call: serialized[5] as bool,
-            is_contract_deployment: serialized[6] as bool,
-            start_side_effect_counter: serialized[7] as u32,
+            side_effect_counter: serialized[6] as u32,
         }
     }
 }
 
 #[test]
-fn serialization_of_empty() {
+fn serialize_deserialize_of_empty() {
     let context: CallContext = dep::std::unsafe::zeroed();
     let serialized = context.serialize();
     let deserialized = CallContext::deserialize(serialized);
     assert(context.eq(deserialized));
+}
+
+#[test]
+fn assert_is_zero() {
+    let context: CallContext = dep::std::unsafe::zeroed();
+    context.assert_is_zero();
+}
+
+#[test(should_fail)]
+fn not_zero_assert_is_zero() {
+    let mut context: CallContext = dep::std::unsafe::zeroed();
+    context.is_delegate_call = true;
+    context.assert_is_zero();
+}
+
+#[test]
+fn test_eq() {
+    let mut context1: CallContext = dep::std::unsafe::zeroed();
+    let mut context2: CallContext = dep::std::unsafe::zeroed();
+
+    context1.is_delegate_call = true;
+    context2.is_delegate_call = true;
+
+    let address: AztecAddress = AztecAddress::from_field(69420);
+    context1.msg_sender = address;
+    context2.msg_sender = address;
+
+    assert(context1.eq(context2));
+}
+
+#[test(should_fail)]
+fn not_eq_test_eq() {
+    let mut context1: CallContext = dep::std::unsafe::zeroed();
+    let mut context2: CallContext = dep::std::unsafe::zeroed();
+
+    context1.is_delegate_call = true;
+    context2.is_delegate_call = false;
+
+    let address1: AztecAddress = AztecAddress::from_field(69420);
+    let address2: AztecAddress = AztecAddress::from_field(42069);
+
+    context1.msg_sender = address1;
+    context2.msg_sender = address2;
+
+    assert(context1.eq(context2));
 }
 
 #[test]

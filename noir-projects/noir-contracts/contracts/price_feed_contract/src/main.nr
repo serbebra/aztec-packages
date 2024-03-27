@@ -10,9 +10,6 @@ contract PriceFeed {
         assets: Map<Field, PublicMutable<Asset>>,
     }
 
-    #[aztec(private)]
-    fn constructor() {}
-
     #[aztec(public)]
     fn set_price(asset_id: Field, price: Field) {
         let asset = storage.assets.at(asset_id);
@@ -24,7 +21,7 @@ contract PriceFeed {
         storage.assets.at(asset_id).read()
     }
 
-    unconstrained fn fetch_price(assetId: Field) -> pub Asset {
-        storage.assets.at(assetId).read()
+    unconstrained fn fetch_price(asset_id: Field) -> pub Asset {
+        storage.assets.at(asset_id).read()
     }
 }

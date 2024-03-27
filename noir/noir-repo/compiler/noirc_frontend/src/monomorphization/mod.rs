@@ -28,8 +28,8 @@ use crate::{
     },
     node_interner::{self, DefinitionKind, NodeInterner, StmtId, TraitImplKind, TraitMethodId},
     token::FunctionAttribute,
-    ContractFunctionType, FunctionKind, IntegerBitSize, Signedness, Type, TypeBinding,
-    TypeBindings, TypeVariable, TypeVariableKind, UnaryOp, Visibility,
+    FunctionKind, IntegerBitSize, Signedness, Type, TypeBinding, TypeBindings, TypeVariable,
+    TypeVariableKind, UnaryOp, Visibility,
 };
 
 use self::ast::{Definition, FuncId, Function, LocalId, Program};
@@ -165,7 +165,8 @@ pub fn monomorphize_debug(
     let FuncMeta { return_distinctness, return_visibility, kind, .. } =
         monomorphizer.interner.function_meta(&main);
 
-    let (debug_variables, debug_types) = monomorphizer.debug_type_tracker.extract_vars_and_types();
+    let (debug_variables, debug_functions, debug_types) =
+        monomorphizer.debug_type_tracker.extract_vars_and_types();
     let program = Program::new(
         functions,
         function_sig,
@@ -174,6 +175,7 @@ pub fn monomorphize_debug(
         *return_visibility,
         *kind == FunctionKind::Recursive,
         debug_variables,
+        debug_functions,
         debug_types,
     );
     Ok(program)
@@ -310,8 +312,7 @@ impl<'interner> Monomorphizer<'interner> {
             Type::TraitAsType(..) => &body_return_type,
             _ => meta.return_type(),
         });
-        let unconstrained = modifiers.is_unconstrained
-            || matches!(modifiers.contract_function_type, Some(ContractFunctionType::Open));
+        let unconstrained = modifiers.is_unconstrained;
 
         let parameters = self.parameters(&meta.parameters);
         let body = self.expr(body_expr_id)?;
@@ -417,13 +418,19 @@ impl<'interner> Monomorphizer<'interner> {
                 }
             }
             HirExpression::Literal(HirLiteral::Array(array)) => match array {
-                HirArrayLiteral::Standard(array) => self.standard_array(expr, array)?,
+                HirArrayLiteral::Standard(array) => self.standard_array(expr, array, false)?,
                 HirArrayLiteral::Repeated { repeated_element, length } => {
-                    self.repeated_array(expr, repeated_element, length)?
+                    self.repeated_array(expr, repeated_element, length, false)?
+                }
+            },
+            HirExpression::Literal(HirLiteral::Slice(array)) => match array {
+                HirArrayLiteral::Standard(array) => self.standard_array(expr, array, true)?,
+                HirArrayLiteral::Repeated { repeated_element, length } => {
+                    self.repeated_array(expr, repeated_element, length, true)?
                 }
             },
             HirExpression::Literal(HirLiteral::Unit) => ast::Expression::Block(vec![]),
-            HirExpression::Block(block) => self.block(block.0)?,
+            HirExpression::Block(block) => self.block(block.statements)?,
 
             HirExpression::Prefix(prefix) => {
                 let location = self.interner.expr_location(&expr);
@@ -509,6 +516,7 @@ impl<'interner> Monomorphizer<'interner> {
                 unreachable!("Encountered HirExpression::MethodCall during monomorphization {hir_method_call:?}")
             }
             HirExpression::Error => unreachable!("Encountered Error node during monomorphization"),
+            HirExpression::Quote(_) => unreachable!("quote expression remaining in runtime code"),
         };
 
         Ok(expr)
@@ -518,10 +526,15 @@ impl<'interner> Monomorphizer<'interner> {
         &mut self,
         array: node_interner::ExprId,
         array_elements: Vec<node_interner::ExprId>,
+        is_slice: bool,
     ) -> Result<ast::Expression, MonomorphizationError> {
         let typ = self.convert_type(&self.interner.id_type(array));
         let contents = try_vecmap(array_elements, |id| self.expr(id))?;
-        Ok(ast::Expression::Literal(ast::Literal::Array(ast::ArrayLiteral { contents, typ })))
+        if is_slice {
+            Ok(ast::Expression::Literal(ast::Literal::Slice(ast::ArrayLiteral { contents, typ })))
+        } else {
+            Ok(ast::Expression::Literal(ast::Literal::Array(ast::ArrayLiteral { contents, typ })))
+        }
     }
 
     fn repeated_array(
@@ -529,6 +542,7 @@ impl<'interner> Monomorphizer<'interner> {
         array: node_interner::ExprId,
         repeated_element: node_interner::ExprId,
         length: HirType,
+        is_slice: bool,
     ) -> Result<ast::Expression, MonomorphizationError> {
         let typ = self.convert_type(&self.interner.id_type(array));
 
@@ -538,7 +552,11 @@ impl<'interner> Monomorphizer<'interner> {
         })?;
 
         let contents = try_vecmap(0..length, |_| self.expr(repeated_element))?;
-        Ok(ast::Expression::Literal(ast::Literal::Array(ast::ArrayLiteral { contents, typ })))
+        if is_slice {
+            Ok(ast::Expression::Literal(ast::Literal::Slice(ast::ArrayLiteral { contents, typ })))
+        } else {
+            Ok(ast::Expression::Literal(ast::Literal::Array(ast::ArrayLiteral { contents, typ })))
+        }
     }
 
     fn index(
@@ -593,6 +611,8 @@ impl<'interner> Monomorphizer<'interner> {
             HirStatement::Semi(expr) => {
                 self.expr(expr).map(|expr| ast::Expression::Semi(Box::new(expr)))
             }
+            HirStatement::Break => Ok(ast::Expression::Break),
+            HirStatement::Continue => Ok(ast::Expression::Continue),
             HirStatement::Error => unreachable!(),
         }
     }
@@ -851,12 +871,13 @@ impl<'interner> Monomorphizer<'interner> {
             HirType::Unit => ast::Type::Unit,
             HirType::Array(length, element) => {
                 let element = Box::new(self.convert_type(element.as_ref()));
-
-                if let Some(length) = length.evaluate_to_u64() {
-                    ast::Type::Array(length, element)
-                } else {
-                    ast::Type::Slice(element)
-                }
+                // TODO: convert to MonomorphizationError
+                let length = length.evaluate_to_u64().unwrap_or(0);
+                ast::Type::Array(length, element)
+            }
+            HirType::Slice(element) => {
+                let element = Box::new(self.convert_type(element.as_ref()));
+                ast::Type::Slice(element)
             }
             HirType::TraitAsType(..) => {
                 unreachable!("All TraitAsType should be replaced before calling convert_type");
@@ -931,12 +952,10 @@ impl<'interner> Monomorphizer<'interner> {
                 ast::Type::MutableReference(Box::new(element))
             }
 
-            HirType::Forall(_, _)
-            | HirType::Constant(_)
-            | HirType::NotConstant
-            | HirType::Error => {
+            HirType::Forall(_, _) | HirType::Constant(_) | HirType::Error => {
                 unreachable!("Unexpected type {} found", typ)
             }
+            HirType::Code => unreachable!("Tried to translate Code type into runtime code"),
         }
     }
 
@@ -1149,11 +1168,7 @@ impl<'interner> Monomorphizer<'interner> {
     fn append_printable_type_info_inner(typ: &Type, arguments: &mut Vec<ast::Expression>) {
         // Disallow printing slices and mutable references for consistency,
         // since they cannot be passed from ACIR into Brillig
-        if let HirType::Array(size, _) = typ {
-            if let HirType::NotConstant = **size {
-                unreachable!("println and format strings do not support slices. Convert the slice to an array before passing it to println");
-            }
-        } else if matches!(typ, HirType::MutableReference(_)) {
+        if matches!(typ, HirType::MutableReference(_)) {
             unreachable!("println and format strings do not support mutable references.");
         }
 
@@ -1221,6 +1236,7 @@ impl<'interner> Monomorphizer<'interner> {
         location: Location,
     ) -> ast::Expression {
         use ast::*;
+
         let int_type = Type::Integer(crate::Signedness::Unsigned, arr_elem_bits);
 
         let bytes_as_expr = vecmap(bytes, |byte| {
@@ -1689,23 +1705,15 @@ impl<'interner> Monomorphizer<'interner> {
 }
 
 fn unwrap_tuple_type(typ: &HirType) -> Vec<HirType> {
-    match typ {
+    match typ.follow_bindings() {
         HirType::Tuple(fields) => fields.clone(),
-        HirType::TypeVariable(binding, TypeVariableKind::Normal) => match &*binding.borrow() {
-            TypeBinding::Bound(binding) => unwrap_tuple_type(binding),
-            TypeBinding::Unbound(_) => unreachable!(),
-        },
         other => unreachable!("unwrap_tuple_type: expected tuple, found {:?}", other),
     }
 }
 
 fn unwrap_struct_type(typ: &HirType) -> Vec<(String, HirType)> {
-    match typ {
-        HirType::Struct(def, args) => def.borrow().get_fields(args),
-        HirType::TypeVariable(binding, TypeVariableKind::Normal) => match &*binding.borrow() {
-            TypeBinding::Bound(binding) => unwrap_struct_type(binding),
-            TypeBinding::Unbound(_) => unreachable!(),
-        },
+    match typ.follow_bindings() {
+        HirType::Struct(def, args) => def.borrow().get_fields(&args),
         other => unreachable!("unwrap_struct_type: expected struct, found {:?}", other),
     }
 }

@@ -16,7 +16,7 @@ This might practically happen through a series of "squisher" circuits that will 
 :::
 
 ## Overview
-<!-- TODO(@spalladino): `contract_tree` in `PartialStateReference` and `ContractData` below -->
+
 ```mermaid
 classDiagram
 direction TB
@@ -24,7 +24,6 @@ direction TB
 class PartialStateReference {
     note_hash_tree: Snapshot
     nullifier_tree: Snapshot
-    contract_tree: Snapshot
     public_data_tree: Snapshot
 }
 
@@ -61,12 +60,6 @@ Header *-- ContentCommitment: content_commitment
 Header *-- StateReference : state
 Header *-- GlobalVariables : global_variables
 
-class ContractData {
-    leaf: Fr
-    address: Address
-    portal: EthAddress
-}
-
 class Logs {
     private: EncryptedLogs
     public: UnencryptedLogs
@@ -81,11 +74,9 @@ class TxEffect {
     note_hashes: List~Fr~
     nullifiers: List~Fr~
     l2_to_l1_msgs: List~Fr~
-    contracts: List~ContractData~
     public_writes: List~PublicDataWrite~
     logs: Logs
 }
-TxEffect *-- "m" ContractData: contracts
 TxEffect *-- "m" PublicDataWrite: public_writes
 TxEffect *-- Logs : logs
 
@@ -210,8 +201,8 @@ def RootRollupCircuit(
         parent.state.l1_to_l2_message_tree,
         l1_to_l2_roots.public_inputs.converted_root,
         l1_to_l2_msgs_sibling_path,
-        L1_TO_L2_SUBTREE_HEIGHT,
-        L1_To_L2_HEIGHT
+        L1_TO_L2_MSG_SUBTREE_HEIGHT,
+        L1_TO_L2_MSG_TREE_HEIGHT
     )
 
     header = Header(

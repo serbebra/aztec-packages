@@ -1,7 +1,5 @@
 #include "avm_common.test.hpp"
 
-using namespace bb;
-
 namespace tests_avm {
 /**
  * @brief Helper routine proving and verifying a proof based on the supplied trace
@@ -12,7 +10,6 @@ void validate_trace_proof(std::vector<Row>&& trace)
 {
     auto circuit_builder = AvmCircuitBuilder();
     circuit_builder.set_trace(std::move(trace));
-
     EXPECT_TRUE(circuit_builder.check_circuit());
 
     // TODO(#4944): uncomment the following lines to revive full verification
@@ -54,11 +51,10 @@ void mutate_ic_in_trace(std::vector<Row>& trace, std::function<bool(Row)>&& sele
     if (alu) {
         auto const clk = row->avm_main_clk;
         // Find the relevant alu trace entry.
-        auto alu_row =
-            std::ranges::find_if(trace.begin(), trace.end(), [clk](Row r) { return r.avm_alu_alu_clk == clk; });
+        auto alu_row = std::ranges::find_if(trace.begin(), trace.end(), [clk](Row r) { return r.avm_alu_clk == clk; });
 
         EXPECT_TRUE(alu_row != trace.end());
-        alu_row->avm_alu_alu_ic = newValue;
+        alu_row->avm_alu_ic = newValue;
     }
 
     // Adapt the memory trace to be consistent with the wrong result
@@ -67,9 +63,9 @@ void mutate_ic_in_trace(std::vector<Row>& trace, std::function<bool(Row)>&& sele
 
     // Find the relevant memory trace entry.
     auto mem_row = std::ranges::find_if(
-        trace.begin(), trace.end(), [clk, addr](Row r) { return r.avm_mem_m_clk == clk && r.avm_mem_m_addr == addr; });
+        trace.begin(), trace.end(), [clk, addr](Row r) { return r.avm_mem_clk == clk && r.avm_mem_addr == addr; });
 
     EXPECT_TRUE(mem_row != trace.end());
-    mem_row->avm_mem_m_val = newValue;
+    mem_row->avm_mem_val = newValue;
 };
 } // namespace tests_avm

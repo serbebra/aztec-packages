@@ -11,11 +11,11 @@ import {
   MAX_NEW_L2_TO_L1_MSGS_PER_CALL,
   MAX_NEW_NOTE_HASHES_PER_CALL,
   MAX_NEW_NULLIFIERS_PER_CALL,
+  MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL,
   MAX_NULLIFIER_READ_REQUESTS_PER_CALL,
   MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL,
   MAX_PUBLIC_DATA_READS_PER_CALL,
   MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL,
-  NUM_FIELDS_PER_SHA256,
   PUBLIC_CIRCUIT_PUBLIC_INPUTS_LENGTH,
   RETURN_VALUES_LENGTH,
 } from '../constants.gen.js';
@@ -25,6 +25,7 @@ import { ContractStorageUpdateRequest } from './contract_storage_update_request.
 import { Header } from './header.js';
 import { L2ToL1Message } from './l2_to_l1_message.js';
 import { ReadRequest } from './read_request.js';
+import { RevertCode } from './revert_code.js';
 import { SideEffect, SideEffectLinkedToNoteHash } from './side_effects.js';
 
 /**
@@ -48,6 +49,13 @@ export class PublicCircuitPublicInputs {
      * Nullifier read requests executed during the call.
      */
     public nullifierReadRequests: Tuple<ReadRequest, typeof MAX_NULLIFIER_READ_REQUESTS_PER_CALL>,
+    /**
+     * Nullifier non existent read requests executed during the call.
+     */
+    public nullifierNonExistentReadRequests: Tuple<
+      ReadRequest,
+      typeof MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL
+    >,
     /**
      * Contract storage update requests executed during the call.
      */
@@ -76,10 +84,18 @@ export class PublicCircuitPublicInputs {
      */
     public newL2ToL1Msgs: Tuple<L2ToL1Message, typeof MAX_NEW_L2_TO_L1_MSGS_PER_CALL>,
     /**
-     * Hash of the unencrypted logs emitted in this function call.
-     * Note: Represented as an array of 2 fields in order to fit in all of the 256 bits of sha256 hash.
+     * The side effect counter when this context was started.
      */
-    public unencryptedLogsHash: [Fr, Fr],
+    public startSideEffectCounter: Fr,
+    /**
+     * The side effect counter when this context finished.
+     */
+    public endSideEffectCounter: Fr,
+    /**
+     * Hash of the unencrypted logs emitted in this function call.
+     * Note: Truncated to 31 bytes to fit in Fr.
+     */
+    public unencryptedLogsHash: Fr,
     /**
      * Length of the unencrypted log preimages emitted in this function call.
      */
@@ -97,7 +113,7 @@ export class PublicCircuitPublicInputs {
     /**
      * Flag indicating if the call was reverted.
      */
-    public reverted: boolean,
+    public revertCode: RevertCode,
   ) {}
 
   /**
@@ -119,17 +135,20 @@ export class PublicCircuitPublicInputs {
       Fr.ZERO,
       makeTuple(RETURN_VALUES_LENGTH, Fr.zero),
       makeTuple(MAX_NULLIFIER_READ_REQUESTS_PER_CALL, ReadRequest.empty),
+      makeTuple(MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL, ReadRequest.empty),
       makeTuple(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL, ContractStorageUpdateRequest.empty),
       makeTuple(MAX_PUBLIC_DATA_READS_PER_CALL, ContractStorageRead.empty),
       makeTuple(MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL, Fr.zero),
       makeTuple(MAX_NEW_NOTE_HASHES_PER_CALL, SideEffect.empty),
       makeTuple(MAX_NEW_NULLIFIERS_PER_CALL, SideEffectLinkedToNoteHash.empty),
       makeTuple(MAX_NEW_L2_TO_L1_MSGS_PER_CALL, L2ToL1Message.empty),
-      makeTuple(2, Fr.zero),
+      Fr.ZERO,
+      Fr.ZERO,
+      Fr.ZERO,
       Fr.ZERO,
       Header.empty(),
       AztecAddress.ZERO,
-      false,
+      RevertCode.OK,
     );
   }
 
@@ -143,17 +162,20 @@ export class PublicCircuitPublicInputs {
       this.argsHash.isZero() &&
       isFrArrayEmpty(this.returnValues) &&
       isArrayEmpty(this.nullifierReadRequests, item => item.isEmpty()) &&
+      isArrayEmpty(this.nullifierNonExistentReadRequests, item => item.isEmpty()) &&
       isArrayEmpty(this.contractStorageUpdateRequests, item => item.isEmpty()) &&
       isArrayEmpty(this.contractStorageReads, item => item.isEmpty()) &&
       isFrArrayEmpty(this.publicCallStackHashes) &&
       isSideEffectArrayEmpty(this.newNoteHashes) &&
       isSideEffectLinkedArrayEmpty(this.newNullifiers) &&
       isArrayEmpty(this.newL2ToL1Msgs, item => item.isEmpty()) &&
-      isFrArrayEmpty(this.unencryptedLogsHash) &&
+      this.startSideEffectCounter.isZero() &&
+      this.endSideEffectCounter.isZero() &&
+      this.unencryptedLogsHash.isZero() &&
       this.unencryptedLogPreimagesLength.isZero() &&
       this.historicalHeader.isEmpty() &&
       this.proverAddress.isZero() &&
-      this.reverted === false
+      this.revertCode.isOK()
     );
   }
 
@@ -168,17 +190,20 @@ export class PublicCircuitPublicInputs {
       fields.argsHash,
       fields.returnValues,
       fields.nullifierReadRequests,
+      fields.nullifierNonExistentReadRequests,
       fields.contractStorageUpdateRequests,
       fields.contractStorageReads,
       fields.publicCallStackHashes,
       fields.newNoteHashes,
       fields.newNullifiers,
       fields.newL2ToL1Msgs,
+      fields.startSideEffectCounter,
+      fields.endSideEffectCounter,
       fields.unencryptedLogsHash,
       fields.unencryptedLogPreimagesLength,
       fields.historicalHeader,
       fields.proverAddress,
-      fields.reverted,
+      fields.revertCode,
     ] as const;
   }
 
@@ -212,17 +237,20 @@ export class PublicCircuitPublicInputs {
       reader.readObject(Fr),
       reader.readArray(RETURN_VALUES_LENGTH, Fr),
       reader.readArray(MAX_NULLIFIER_READ_REQUESTS_PER_CALL, ReadRequest),
+      reader.readArray(MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL, ReadRequest),
       reader.readArray(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL, ContractStorageUpdateRequest),
       reader.readArray(MAX_PUBLIC_DATA_READS_PER_CALL, ContractStorageRead),
       reader.readArray(MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL, Fr),
       reader.readArray(MAX_NEW_NOTE_HASHES_PER_CALL, SideEffect),
       reader.readArray(MAX_NEW_NULLIFIERS_PER_CALL, SideEffectLinkedToNoteHash),
       reader.readArray(MAX_NEW_L2_TO_L1_MSGS_PER_CALL, L2ToL1Message),
-      reader.readArray(NUM_FIELDS_PER_SHA256, Fr),
+      reader.readObject(Fr),
+      reader.readObject(Fr),
+      reader.readObject(Fr),
       reader.readObject(Fr),
       reader.readObject(Header),
       reader.readObject(AztecAddress),
-      reader.readBoolean(),
+      reader.readObject(RevertCode),
     );
   }
 
@@ -234,24 +262,24 @@ export class PublicCircuitPublicInputs {
       reader.readField(),
       reader.readFieldArray(RETURN_VALUES_LENGTH),
       reader.readArray(MAX_NULLIFIER_READ_REQUESTS_PER_CALL, ReadRequest),
+      reader.readArray(MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL, ReadRequest),
       reader.readArray(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL, ContractStorageUpdateRequest),
       reader.readArray(MAX_PUBLIC_DATA_READS_PER_CALL, ContractStorageRead),
       reader.readFieldArray(MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL),
       reader.readArray(MAX_NEW_NOTE_HASHES_PER_CALL, SideEffect),
       reader.readArray(MAX_NEW_NULLIFIERS_PER_CALL, SideEffectLinkedToNoteHash),
       reader.readArray(MAX_NEW_L2_TO_L1_MSGS_PER_CALL, L2ToL1Message),
-      reader.readFieldArray(NUM_FIELDS_PER_SHA256),
+      reader.readField(),
+      reader.readField(),
+      reader.readField(),
       reader.readField(),
       Header.fromFields(reader),
       AztecAddress.fromFields(reader),
-      reader.readBoolean(),
+      RevertCode.fromFields(reader),
     );
   }
 
   hash(): Fr {
-    return pedersenHash(
-      this.toFields().map(field => field.toBuffer()),
-      GeneratorIndex.PUBLIC_CIRCUIT_PUBLIC_INPUTS,
-    );
+    return pedersenHash(this.toFields(), GeneratorIndex.PUBLIC_CIRCUIT_PUBLIC_INPUTS);
   }
 }

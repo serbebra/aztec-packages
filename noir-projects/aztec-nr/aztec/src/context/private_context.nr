@@ -4,14 +4,13 @@ use crate::{
     oracle::{
     arguments, call_private_function::call_private_function_internal,
     enqueue_public_function_call::enqueue_public_function_call_internal, context::get_portal_address,
-    header::get_header_at, nullifier_key::{get_nullifier_key_pair, NullifierKeyPair},
-    debug_log::debug_log
+    header::get_header_at, nullifier_key::{get_nullifier_key_pair, NullifierKeyPair}
 }
 };
 use dep::protocol_types::{
     abis::{
     call_context::CallContext, function_data::FunctionData, function_selector::FunctionSelector,
-    nullifier_key_validation_request::NullifierKeyValidationRequest,
+    max_block_number::MaxBlockNumber, nullifier_key_validation_request::NullifierKeyValidationRequest,
     private_call_stack_item::PrivateCallStackItem,
     private_circuit_public_inputs::PrivateCircuitPublicInputs,
     public_call_stack_item::PublicCallStackItem,
@@ -24,10 +23,11 @@ use dep::protocol_types::{
     MAX_PRIVATE_CALL_STACK_LENGTH_PER_CALL, MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL,
     MAX_PUBLIC_DATA_READS_PER_CALL, MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL,
     MAX_NOTE_HASH_READ_REQUESTS_PER_CALL, MAX_NULLIFIER_READ_REQUESTS_PER_CALL,
-    MAX_NULLIFIER_KEY_VALIDATION_REQUESTS_PER_CALL, NUM_FIELDS_PER_SHA256, RETURN_VALUES_LENGTH
+    MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL, MAX_NULLIFIER_KEY_VALIDATION_REQUESTS_PER_CALL,
+    RETURN_VALUES_LENGTH
 },
     contrakt::{storage_read::StorageRead, storage_update_request::StorageUpdateRequest},
-    grumpkin_private_key::GrumpkinPrivateKey, hash::hash_args, header::Header,
+    grumpkin_private_key::GrumpkinPrivateKey, hash::hash_args_array, header::Header,
     messaging::l2_to_l1_message::L2ToL1Message, utils::reader::Reader, traits::is_empty
 };
 
@@ -44,6 +44,8 @@ struct PrivateContext {
 
     args_hash : Field,
     return_values : BoundedVec<Field, RETURN_VALUES_LENGTH>,
+
+    max_block_number: MaxBlockNumber,
 
     note_hash_read_requests: BoundedVec<SideEffect, MAX_NOTE_HASH_READ_REQUESTS_PER_CALL>,
     nullifier_read_requests: BoundedVec<ReadRequest, MAX_NULLIFIER_READ_REQUESTS_PER_CALL>,
@@ -92,9 +94,13 @@ impl ContextInterface for PrivateContext {
         self.inputs.call_context.function_selector
     }
 
+    fn get_args_hash(self) -> Field {
+        self.args_hash
+    }
+
     // Returns the header of a block whose state is used during private execution (not the block the transaction is
     // included in).
-    pub fn get_header(self) -> Header {
+    fn get_header(self) -> Header {
         self.historical_header
     }
 
@@ -113,7 +119,7 @@ impl ContextInterface for PrivateContext {
 
 impl PrivateContext {
     pub fn new(inputs: PrivateContextInputs, args_hash: Field) -> PrivateContext {
-        let side_effect_counter = inputs.call_context.start_side_effect_counter;
+        let side_effect_counter = inputs.start_side_effect_counter;
         let mut min_revertible_side_effect_counter = 0;
         if is_empty(inputs.call_context.msg_sender) {
             min_revertible_side_effect_counter = side_effect_counter;
@@ -124,6 +130,7 @@ impl PrivateContext {
             min_revertible_side_effect_counter,
             args_hash,
             return_values: BoundedVec::new(),
+            max_block_number: MaxBlockNumber::default(),
             note_hash_read_requests: BoundedVec::new(),
             nullifier_read_requests: BoundedVec::new(),
             nullifier_key_validation_requests: BoundedVec::new(),
@@ -140,11 +147,6 @@ impl PrivateContext {
         }
     }
 
-    pub fn is_deployment(self) -> bool {
-        // TODO(#4738): Implement this
-        false
-    }
-
     // Returns the header of an arbitrary block whose block number is less than or equal to the block number
     // of historical header.
     pub fn get_header_at(self, block_number: u32) -> Header {
@@ -153,8 +155,8 @@ impl PrivateContext {
 
     pub fn finish(self) -> PrivateCircuitPublicInputs {
         // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
-        let encrypted_logs_hash = [0; NUM_FIELDS_PER_SHA256];
-        let unencrypted_logs_hash = [0; NUM_FIELDS_PER_SHA256];
+        let encrypted_logs_hash = 0;
+        let unencrypted_logs_hash = 0;
         let encrypted_log_preimages_length = 0;
         let unencrypted_log_preimages_length = 0;
 
@@ -162,12 +164,8 @@ impl PrivateContext {
             call_context: self.inputs.call_context,
             args_hash: self.args_hash,
             return_values: self.return_values.storage,
-            // TODO(fees): start this from 0 and test the following:
-            // - in the private circuit init that it gets set correctly
-            // - in the private circuit inner that it remains 0
-            // I've had to initialize the counter here so that it would work for contract deployments
-            // the above checks should be doable after we figure out fee payments for contract deployments
             min_revertible_side_effect_counter: self.min_revertible_side_effect_counter,
+            max_block_number: self.max_block_number,
             note_hash_read_requests: self.note_hash_read_requests.storage,
             nullifier_read_requests: self.nullifier_read_requests.storage,
             nullifier_key_validation_requests: self.nullifier_key_validation_requests.storage,
@@ -176,13 +174,13 @@ impl PrivateContext {
             private_call_stack_hashes: self.private_call_stack_hashes.storage,
             public_call_stack_hashes: self.public_call_stack_hashes.storage,
             new_l2_to_l1_msgs: self.new_l2_to_l1_msgs.storage,
+            start_side_effect_counter: self.inputs.start_side_effect_counter,
             end_side_effect_counter: self.side_effect_counter,
             encrypted_logs_hash,
             unencrypted_logs_hash,
             encrypted_log_preimages_length,
             unencrypted_log_preimages_length,
             historical_header: self.historical_header,
-            contract_deployment_data: self.inputs.contract_deployment_data,
             chain_id: self.inputs.private_global_variables.chain_id,
             version: self.inputs.private_global_variables.version
         };
@@ -191,6 +189,12 @@ impl PrivateContext {
 
     pub fn capture_min_revertible_side_effect_counter(&mut self) {
         self.min_revertible_side_effect_counter = self.side_effect_counter;
+    }
+
+    // docs:start:max-block-number
+    pub fn request_max_block_number(&mut self, max_block_number: u32) {
+        // docs:end:max-block-number
+        self.max_block_number = MaxBlockNumber::min_with_u32(self.max_block_number, max_block_number);
     }
 
     pub fn push_note_hash_read_request(&mut self, note_hash: Field) {
@@ -269,7 +273,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) -> [Field; RETURN_VALUES_LENGTH] {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, false)
     }
@@ -280,7 +284,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) -> [Field; RETURN_VALUES_LENGTH] {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, true, false)
     }
@@ -291,7 +295,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) -> [Field; RETURN_VALUES_LENGTH] {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, true)
     }
@@ -338,7 +342,8 @@ impl PrivateContext {
             is_delegate_call
         );
 
-        assert_eq(item.public_inputs.call_context.start_side_effect_counter, self.side_effect_counter);
+        assert_eq(item.public_inputs.call_context.side_effect_counter, self.side_effect_counter);
+        assert_eq(item.public_inputs.start_side_effect_counter, self.side_effect_counter);
         self.side_effect_counter = item.public_inputs.end_side_effect_counter + 1;
 
         assert(contract_address.eq(item.contract_address));
@@ -349,7 +354,6 @@ impl PrivateContext {
         // Assert that the call context of the enqueued call generated by the oracle matches our request.
         assert(item.public_inputs.call_context.is_delegate_call == is_delegate_call);
         assert(item.public_inputs.call_context.is_static_call == is_static_call);
-        assert(item.public_inputs.call_context.is_contract_deployment == false);
 
         if (is_delegate_call) {
             // For delegate calls, we also constrain the execution context address for the nested call to be equal to our address.
@@ -376,7 +380,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, false, false)
     }
@@ -387,7 +391,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, true, false)
     }
@@ -398,7 +402,7 @@ impl PrivateContext {
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) {
-        let args_hash = hash_args(args);
+        let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, false, true)
     }
@@ -457,17 +461,20 @@ impl PrivateContext {
                 args_hash: reader.read(),
                 return_values: [0; RETURN_VALUES_LENGTH],
                 nullifier_read_requests: [ReadRequest::empty(); MAX_NULLIFIER_READ_REQUESTS_PER_CALL],
+                nullifier_non_existent_read_requests: [ReadRequest::empty(); MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL],
                 contract_storage_update_requests: [StorageUpdateRequest::empty(); MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_CALL],
                 contract_storage_reads: [StorageRead::empty(); MAX_PUBLIC_DATA_READS_PER_CALL],
                 public_call_stack_hashes: [0; MAX_PUBLIC_CALL_STACK_LENGTH_PER_CALL],
                 new_note_hashes: [SideEffect::empty(); MAX_NEW_NOTE_HASHES_PER_CALL],
                 new_nullifiers: [SideEffectLinkedToNoteHash::empty(); MAX_NEW_NULLIFIERS_PER_CALL],
                 new_l2_to_l1_msgs: [L2ToL1Message::empty(); MAX_NEW_L2_TO_L1_MSGS_PER_CALL],
-                unencrypted_logs_hash: [0; NUM_FIELDS_PER_SHA256],
+                start_side_effect_counter: 0,
+                end_side_effect_counter: 0,
+                unencrypted_logs_hash: 0,
                 unencrypted_log_preimages_length: 0,
                 historical_header: Header::empty(),
                 prover_address: AztecAddress::zero(),
-                reverted: false
+                revert_code: 0
             },
             is_execution_request: true
         };
@@ -476,7 +483,7 @@ impl PrivateContext {
         assert(contract_address.eq(item.contract_address));
         assert(function_selector.eq(item.function_data.selector));
 
-        assert_eq(item.public_inputs.call_context.start_side_effect_counter, self.side_effect_counter);
+        assert_eq(item.public_inputs.call_context.side_effect_counter, self.side_effect_counter);
         // We increment the sideffect counter by one, to account for the call itself being a side effect.
         self.side_effect_counter = self.side_effect_counter + 1;
 
@@ -485,7 +492,6 @@ impl PrivateContext {
         // Assert that the call context of the enqueued call generated by the oracle matches our request.
         assert(item.public_inputs.call_context.is_delegate_call == is_delegate_call);
         assert(item.public_inputs.call_context.is_static_call == is_static_call);
-        assert(item.public_inputs.call_context.is_contract_deployment == false);
 
         if (is_delegate_call) {
             // For delegate calls, we also constrain the execution context address for the nested call to be equal to our address.

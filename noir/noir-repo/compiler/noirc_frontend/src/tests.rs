@@ -81,7 +81,7 @@ mod test {
                 &mut context,
                 program.clone().into_sorted(),
                 root_file_id,
-                Vec::new(), // No macro processors
+                &[], // No macro processors
             ));
         }
         (program, context, errors)
@@ -535,15 +535,13 @@ mod test {
         assert!(errors.len() == 1, "Expected 1 error, got: {:?}", errors);
         for (err, _file_id) in errors {
             match &err {
-                CompilationError::DefinitionError(
-                    DefCollectorErrorKind::MismatchTraitImplementationNumParameters {
-                        actual_num_parameters,
-                        expected_num_parameters,
-                        trait_name,
-                        method_name,
-                        ..
-                    },
-                ) => {
+                CompilationError::TypeError(TypeCheckError::MismatchTraitImplNumParameters {
+                    actual_num_parameters,
+                    expected_num_parameters,
+                    trait_name,
+                    method_name,
+                    ..
+                }) => {
                     assert_eq!(actual_num_parameters, &1_usize);
                     assert_eq!(expected_num_parameters, &2_usize);
                     assert_eq!(method_name, "default");
@@ -780,6 +778,8 @@ mod test {
                 HirStatement::Semi(semi_expr) => semi_expr,
                 HirStatement::For(for_loop) => for_loop.block,
                 HirStatement::Error => panic!("Invalid HirStatement!"),
+                HirStatement::Break => panic!("Unexpected break"),
+                HirStatement::Continue => panic!("Unexpected continue"),
             };
             let expr = interner.expression(&expr_id);
 
@@ -1205,5 +1205,80 @@ fn lambda$f1(mut env$l1: (Field)) -> Field {
             }
         "#;
         assert_eq!(get_program_errors(src).len(), 1);
+    }
+
+    #[test]
+    fn type_aliases_in_entry_point() {
+        let src = r#"
+            type Foo = u8;
+            fn main(_x: Foo) {}
+        "#;
+        assert_eq!(get_program_errors(src).len(), 0);
+    }
+
+    #[test]
+    fn operators_in_global_used_in_type() {
+        let src = r#"
+            global ONE = 1;
+            global COUNT = ONE + 2;
+            fn main() {
+                let _array: [Field; COUNT] = [1, 2, 3];
+            }
+        "#;
+        assert_eq!(get_program_errors(src).len(), 0);
+    }
+
+    #[test]
+    fn break_and_continue_in_constrained_fn() {
+        let src = r#"
+            fn main() {
+                for i in 0 .. 10 {
+                    if i == 2 {
+                        continue;
+                    }
+                    if i == 5 {
+                        break;
+                    }
+                }
+            }
+        "#;
+        assert_eq!(get_program_errors(src).len(), 2);
+    }
+
+    #[test]
+    fn break_and_continue_outside_loop() {
+        let src = r#"
+            unconstrained fn main() {
+                continue;
+                break;
+            }
+        "#;
+        assert_eq!(get_program_errors(src).len(), 2);
+    }
+
+    // Regression for #2540
+    #[test]
+    fn for_loop_over_array() {
+        let src = r#"
+            fn hello<N>(_array: [u1; N]) {
+                for _ in 0..N {}
+            }
+
+            fn main() {
+                let array: [u1; 2] = [0, 1];
+                hello(array);
+            }
+        "#;
+        assert_eq!(get_program_errors(src).len(), 0);
+    }
+
+    // Regression for #4545
+    #[test]
+    fn type_aliases_in_main() {
+        let src = r#"
+            type Outer<N> = [u8; N];
+            fn main(_arg: Outer<1>) {}
+        "#;
+        assert_eq!(get_program_errors(src).len(), 0);
     }
 }

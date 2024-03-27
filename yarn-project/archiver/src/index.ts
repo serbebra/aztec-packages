@@ -33,7 +33,6 @@ async function main() {
     l1Contracts.availabilityOracleAddress,
     l1Contracts.inboxAddress,
     l1Contracts.registryAddress,
-    l1Contracts.contractDeploymentEmitterAddress,
     archiverStore,
   );
 

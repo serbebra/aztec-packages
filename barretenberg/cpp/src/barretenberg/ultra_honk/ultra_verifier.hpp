@@ -1,8 +1,8 @@
 #pragma once
-#include "barretenberg/flavor/goblin_ultra.hpp"
-#include "barretenberg/flavor/ultra.hpp"
 #include "barretenberg/honk/proof_system/types/proof.hpp"
 #include "barretenberg/srs/global_crs.hpp"
+#include "barretenberg/stdlib_circuit_builders/goblin_ultra_flavor.hpp"
+#include "barretenberg/stdlib_circuit_builders/ultra_flavor.hpp"
 #include "barretenberg/sumcheck/sumcheck.hpp"
 
 namespace bb {
@@ -27,7 +27,6 @@ template <typename Flavor> class UltraVerifier_ {
     bool verify_proof(const HonkProof& proof);
 
     std::shared_ptr<VerificationKey> key;
-    std::map<std::string, Commitment> commitments;
     std::shared_ptr<Transcript> transcript;
 };
 
