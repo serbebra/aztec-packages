@@ -45,6 +45,7 @@ import { computeVarArgsHash } from '@aztec/circuits.js/hash';
 import { arrayNonEmptyLength, padArrayEnd } from '@aztec/foundation/collection';
 import { DebugLogger, createDebugLogger } from '@aztec/foundation/log';
 import { Tuple } from '@aztec/foundation/serialize';
+import { Timer } from '@aztec/foundation/timer';
 import {
   PublicExecution,
   PublicExecutionResult,
@@ -215,7 +216,9 @@ export abstract class AbstractPhaseManager {
             ? this.publicExecutor.simulateAvm(execution, globalVariables, sideEffectCounter)
             : this.publicExecutor.simulate(execution, globalVariables, sideEffectCounter);
 
+        const simTimer = new Timer();
         const result = isExecutionRequest ? await simulator(current, this.globalVariables) : current;
+        this.log(`Simulated public function in ${simTimer.ms()}ms`);
 
         const functionSelector = result.execution.functionData.selector.toString();
         if (result.reverted && !PhaseIsRevertible[this.phase]) {
@@ -235,7 +238,9 @@ export abstract class AbstractPhaseManager {
         executionStack.push(...result.nestedExecutions);
         const callData = await this.getPublicCallData(result, isExecutionRequest);
 
+        const timer = new Timer();
         [kernelOutput, kernelProof] = await this.runKernelCircuit(kernelOutput, kernelProof, callData);
+        this.log(`Ran public kernel circuit in ${timer.ms()}ms`);
 
         // sanity check. Note we can't expect them to just be equal, because e.g.
         // if the simulator reverts in app logic, it "resets" and result.reverted will be false when we run teardown,

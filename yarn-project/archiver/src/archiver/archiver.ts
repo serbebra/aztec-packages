@@ -291,7 +291,7 @@ export class Archiver implements ArchiveSource {
    * Extracts and stores contract classes out of ContractClassRegistered events emitted by the class registerer contract.
    * @param allLogs - All logs emitted in a bunch of blocks.
    */
-  private async storeRegisteredContractClasses(allLogs: UnencryptedL2Log[], blockNum: number) {
+  protected async storeRegisteredContractClasses(allLogs: UnencryptedL2Log[], blockNum: number) {
     const contractClasses = ContractClassRegisteredEvent.fromLogs(allLogs, getCanonicalClassRegistererAddress()).map(
       e => e.toContractClassPublic(),
     );
@@ -305,7 +305,7 @@ export class Archiver implements ArchiveSource {
    * Extracts and stores contract instances out of ContractInstanceDeployed events emitted by the canonical deployer contract.
    * @param allLogs - All logs emitted in a bunch of blocks.
    */
-  private async storeDeployedContractInstances(allLogs: UnencryptedL2Log[], blockNum: number) {
+  protected async storeDeployedContractInstances(allLogs: UnencryptedL2Log[], blockNum: number) {
     const contractInstances = ContractInstanceDeployedEvent.fromLogs(allLogs).map(e => e.toContractInstance());
     if (contractInstances.length > 0) {
       contractInstances.forEach(c => this.log(`Storing contract instance at ${c.address.toString()}`));
@@ -313,7 +313,7 @@ export class Archiver implements ArchiveSource {
     }
   }
 
-  private async storeBroadcastedIndividualFunctions(allLogs: UnencryptedL2Log[], _blockNum: number) {
+  protected async storeBroadcastedIndividualFunctions(allLogs: UnencryptedL2Log[], _blockNum: number) {
     // Filter out private and unconstrained function broadcast events
     const privateFnEvents = PrivateFunctionBroadcastedEvent.fromLogs(allLogs, getCanonicalClassRegistererAddress());
     const unconstrainedFnEvents = UnconstrainedFunctionBroadcastedEvent.fromLogs(

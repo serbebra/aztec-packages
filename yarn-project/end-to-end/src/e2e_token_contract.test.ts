@@ -11,6 +11,7 @@ import {
   computeMessageSecretHash,
 } from '@aztec/aztec.js';
 import { decodeFunctionSignature } from '@aztec/foundation/abi';
+import { Timer } from '@aztec/foundation/timer';
 import { DocsExampleContract, ReaderContract, TokenContract } from '@aztec/noir-contracts.js';
 
 import { jest } from '@jest/globals';
@@ -66,11 +67,6 @@ describe('e2e_token_contract', () => {
   beforeAll(async () => {
     ({ teardown, logger, wallets, accounts } = await setup(3));
     await publicDeployAccounts(wallets[0], accounts.slice(0, 2));
-
-    TokenContract.artifact.functions.forEach(fn => {
-      const sig = decodeFunctionSignature(fn.name, fn.parameters);
-      logger(`Function ${sig} and the selector: ${FunctionSelector.fromNameAndParameters(fn.name, fn.parameters)}`);
-    });
 
     asset = await TokenContract.deploy(wallets[0], accounts[0], TOKEN_NAME, TOKEN_SYMBOL, TOKEN_DECIMALS)
       .send()
@@ -198,7 +194,9 @@ describe('e2e_token_contract', () => {
     describe('Public', () => {
       it('as minter', async () => {
         const amount = 10000n;
+        const timer = new Timer();
         await asset.methods.mint_public(accounts[0].address, amount).send().wait();
+        logger(`Mint Tx round trip took ${timer.ms()}ms`);
 
         tokenSim.mintPublic(accounts[0].address, amount);
         expect(await asset.methods.balance_of_public(accounts[0].address).view()).toEqual(

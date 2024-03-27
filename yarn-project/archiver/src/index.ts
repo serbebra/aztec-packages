@@ -9,6 +9,7 @@ import { MemoryArchiverStore } from './archiver/memory_archiver_store/memory_arc
 
 export * from './archiver/index.js';
 export * from './rpc/index.js';
+export * from './test/index.js';
 
 const log = createDebugLogger('aztec:archiver');
 

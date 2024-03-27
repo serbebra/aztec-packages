@@ -10,7 +10,7 @@ import { P2P } from '@aztec/p2p';
 import { WorldStateStatus, WorldStateSynchronizer } from '@aztec/world-state';
 
 import { GlobalVariableBuilder } from '../global_variable_builder/global_builder.js';
-import { L1Publisher } from '../publisher/l1-publisher.js';
+import { L2BlockReceiver } from '../receiver.js';
 import { WorldStatePublicDB } from '../simulator/public_executor.js';
 import { SequencerConfig } from './config.js';
 import { PublicProcessorFactory } from './public_processor.js';
@@ -37,7 +37,7 @@ export class Sequencer {
   private state = SequencerState.STOPPED;
 
   constructor(
-    private publisher: L1Publisher,
+    private publisher: L2BlockReceiver,
     private globalsBuilder: GlobalVariableBuilder,
     private p2pClient: P2P,
     private worldState: WorldStateSynchronizer,

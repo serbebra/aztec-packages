@@ -1,6 +1,6 @@
 import { SchnorrAccountContractArtifact } from '@aztec/accounts/schnorr';
 import { createAccounts, getDeployedTestAccountsWallets } from '@aztec/accounts/testing';
-import { AztecNodeConfig, AztecNodeService, getConfigEnvVars } from '@aztec/aztec-node';
+import { AztecNodeConfig, AztecNodeService, createIntegrationNode, getConfigEnvVars } from '@aztec/aztec-node';
 import {
   AccountWalletWithPrivateKey,
   AztecAddress,
@@ -367,6 +367,95 @@ export async function setup(
   }
   config.l1BlockPublishRetryIntervalMS = 100;
   const aztecNode = await AztecNodeService.createAndSync(config);
+  const sequencer = aztecNode.getSequencer();
+
+  const { pxe, accounts, wallets } = await setupPXEService(numberOfAccounts, aztecNode!, pxeOpts, logger);
+
+  if (['1', 'true'].includes(ENABLE_GAS)) {
+    await deployCanonicalGasToken(new SignerlessWallet(pxe, new DefaultMultiCallEntrypoint()));
+  }
+
+  const cheatCodes = CheatCodes.create(config.rpcUrl, pxe!);
+
+  const teardown = async () => {
+    if (aztecNode instanceof AztecNodeService) {
+      await aztecNode?.stop();
+    }
+    if (pxe instanceof PXEService) {
+      await pxe?.stop();
+    }
+
+    if (acvmConfig?.directoryToCleanup) {
+      // remove the temp directory created for the acvm
+      logger(`Cleaning up ACVM temp directory ${acvmConfig.directoryToCleanup}`);
+      await fs.rm(acvmConfig.directoryToCleanup, { recursive: true, force: true });
+    }
+  };
+
+  return {
+    aztecNode,
+    pxe,
+    deployL1ContractsValues,
+    accounts,
+    config,
+    wallet: wallets[0],
+    wallets,
+    logger,
+    cheatCodes,
+    sequencer,
+    teardown,
+  };
+}
+
+/**
+ * Sets up the environment for the end-to-end tests.
+ * @param numberOfAccounts - The number of new accounts to be created once the PXE is initiated.
+ * @param opts - Options to pass to the node initialization and to the setup script.
+ * @param pxeOpts - Options to pass to the PXE initialization.
+ */
+export async function setupIntegrationTest(
+  numberOfAccounts = 1,
+  opts: SetupOptions = {},
+  pxeOpts: Partial<PXEServiceConfig> = {},
+): Promise<EndToEndContext> {
+  const config = { ...getConfigEnvVars(), ...opts };
+
+  // Enable logging metrics to a local file named after the test suite
+  if (isMetricsLoggingRequested()) {
+    const filename = path.join('log', getJobName() + '.jsonl');
+    setupMetricsLogger(filename);
+  }
+
+  if (opts.stateLoad) {
+    const ethCheatCodes = new EthCheatCodes(config.rpcUrl);
+    await ethCheatCodes.loadChainState(opts.stateLoad);
+  }
+
+  const logger = getLogger();
+  const hdAccount = mnemonicToAccount(MNEMONIC);
+  const privKeyRaw = hdAccount.getHdKey().privateKey;
+  const publisherPrivKey = privKeyRaw === null ? null : Buffer.from(privKeyRaw);
+
+  if (PXE_URL) {
+    // we are setting up against a remote environment, l1 contracts are assumed to already be deployed
+    return await setupWithRemoteEnvironment(hdAccount, config, logger, numberOfAccounts);
+  }
+
+  const deployL1ContractsValues =
+    opts.deployL1ContractsValues ?? (await setupL1Contracts(config.rpcUrl, hdAccount, logger));
+
+  config.publisherPrivateKey = `0x${publisherPrivKey!.toString('hex')}`;
+  config.l1Contracts = deployL1ContractsValues.l1ContractAddresses;
+
+  logger('Creating and synching an aztec node...');
+
+  const acvmConfig = await getACVMConfig(logger);
+  if (acvmConfig) {
+    config.acvmWorkingDirectory = acvmConfig.acvmWorkingDirectory;
+    config.acvmBinaryPath = acvmConfig.expectedAcvmPath;
+  }
+  config.l1BlockPublishRetryIntervalMS = 100;
+  const aztecNode = await createIntegrationNode(config);
   const sequencer = aztecNode.getSequencer();
 
   const { pxe, accounts, wallets } = await setupPXEService(numberOfAccounts, aztecNode!, pxeOpts, logger);

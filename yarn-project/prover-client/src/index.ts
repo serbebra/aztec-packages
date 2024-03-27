@@ -6,3 +6,5 @@ export * from './dummy-prover.js';
 export { getVerificationKeys } from './mocks/verification_keys.js';
 export { EmptyRollupProver } from './prover/empty.js';
 export { RealRollupCircuitSimulator } from './simulator/rollup.js';
+
+export * from './test/integration-prover.js';

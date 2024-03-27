@@ -10,4 +10,8 @@ export interface L2BlockReceiver {
    * @param l2BlockData - L2 block to process.
    */
   processL2Block(l2BlockData: L2Block): Promise<boolean>;
+
+  interrupt(): void;
+
+  restart(): void;
 }

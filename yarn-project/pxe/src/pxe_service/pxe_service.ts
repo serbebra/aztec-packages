@@ -404,7 +404,7 @@ export class PXEService implements PXE {
       if (simulatePublic) {
         await this.#simulatePublicCalls(tx);
       }
-      this.log.info(`Executed local simulation for ${tx.getTxHash()}`);
+      this.log.info(`Executed local simulation for ${tx.getTxHash()} in ${timer.ms()}ms`);
 
       return tx;
     });
