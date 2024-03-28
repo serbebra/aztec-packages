@@ -7,7 +7,7 @@ import { AztecPeerDb } from './peer_store.js';
 import { createLibP2PPeerId } from './util.js';
 
 const {
-  PRIVATE_KEY = '0802122016b00d00f30e91f8590883a3483caa190c9aa6295c8798b7ec05d65f6dd59ca1',
+  PRIVATE_KEY,
   LISTEN_IP = '127.0.0.1',
   LISTEN_PORT = '40100',
   PUBLIC_IP = '86.22.89.3',
