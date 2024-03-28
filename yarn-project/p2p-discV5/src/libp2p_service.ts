@@ -70,7 +70,7 @@ export class LibP2PNode {
       if (!msg.length) {
         console.log(`Empty message received from peer ${incoming.connection.remotePeer}`);
       }
-      console.log(`RECEIVED MSG from peer ${incoming.connection.remotePeer}: ${msg.toString('hex')}`);
+      console.log(`\n\n MSG from peer ${incoming.connection.remotePeer}: ${msg.toString('hex')}\n\n`);
     });
 
     await this.node.start();
@@ -122,12 +122,17 @@ export class LibP2PNode {
 
   public async connectToPeersIfUnknown(enrs: ENR[]) {
     for (const enr of enrs) {
+      console.log('connecting to enr: ', enr.encodeTxt());
       const addr = await enr.getFullMultiaddr('tcp');
+      if (!addr) {
+        // No TCP multiaddr found in ENR. Skipping.
+        continue;
+      }
       const peerMultiAddr = multiaddr(addr);
       const peerIdStr = peerMultiAddr.getPeerId();
 
       if (!peerIdStr) {
-        throw new Error("Peer ID not found in discovered node's multiaddr");
+        throw new Error(`Peer ID not found in discovered node's multiaddr: ${addr}`);
       }
 
       const peerId = peerIdFromString(peerIdStr);
