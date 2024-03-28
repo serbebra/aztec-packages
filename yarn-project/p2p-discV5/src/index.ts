@@ -10,6 +10,7 @@ const {
   PRIVATE_KEY = '0802122016b00d00f30e91f8590883a3483caa190c9aa6295c8798b7ec05d65f6dd59ca1',
   LISTEN_IP = '127.0.0.1',
   LISTEN_PORT = '40100',
+  PUBLIC_IP = '86.22.89.3',
   // ANNOUNCE_PORT = '40100',
   // ANNOUNCE_HOSTAME = '/ip4/10.1.0.85',
   BOOTSTRAP_NODE,
@@ -23,7 +24,7 @@ async function main() {
   console.log('peerId: ', peerId.toString());
 
   const node = await LibP2PNode.new(peerId, peerDb);
-  const discV5 = new DiscV5Service(node, peerId, LISTEN_IP, +LISTEN_PORT, BOOTSTRAP_NODE);
+  const discV5 = new DiscV5Service(node, peerId, PUBLIC_IP, +LISTEN_PORT, BOOTSTRAP_NODE);
 
   await node.start();
   console.log('LibP2P Node started');

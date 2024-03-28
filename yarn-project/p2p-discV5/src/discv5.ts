@@ -16,6 +16,8 @@ export class DiscV5Service {
     const multiAddrUdp = multiaddr(`/ip4/${hostname}/udp/${port}/p2p/${peerId.toString()}`);
     const multiAddrTcp = multiaddr(`/ip4/${hostname}/tcp/${port}/p2p/${peerId.toString()}`);
 
+    const listenMultiAddrUdp = multiaddr(`/ip4/0.0.0.0/udp/${port}`);
+
     // set location multiaddr in ENR record
     this.enr.setLocationMultiaddr(multiAddrUdp);
     this.enr.setLocationMultiaddr(multiAddrTcp);
@@ -23,19 +25,21 @@ export class DiscV5Service {
     this.discv5 = Discv5.create({
       enr: this.enr,
       peerId,
-      bindAddrs: { ip4: multiAddrUdp },
+      bindAddrs: { ip4: listenMultiAddrUdp },
       config: {
         lookupTimeout: 2000,
       },
     });
 
     console.log('ENR NodeId: ', this.enr.nodeId);
+    console.log('ENR UDP: ', multiAddrUdp.toString());
 
-    (this.discv5 as Discv5EventEmitter).on('discovered', this.onDiscovered);
+    (this.discv5 as Discv5EventEmitter).on('discovered', async (enr: ENR) => await this.onDiscovered(enr));
     (this.discv5 as Discv5EventEmitter).on('enrAdded', async (enr: ENR) => {
+      console.log('ENR added: ', enr.encodeTxt());
       const multiAddrTcp = await enr.getFullMultiaddr('tcp');
       const multiAddrUdp = await enr.getFullMultiaddr('udp');
-      console.log('ENR added', multiAddrTcp?.toString(), multiAddrUdp?.toString());
+      console.log('ENR multiaddr: ', multiAddrTcp?.toString(), multiAddrUdp?.toString());
     });
 
     (this.discv5 as Discv5EventEmitter).on('peer', (peerId: PeerId) => {
@@ -45,7 +49,11 @@ export class DiscV5Service {
     // Add bootnode ENR if provided
     if (bootnodeEnr) {
       console.log('adding enr: ', bootnodeEnr);
-      this.discv5.addEnr(bootnodeEnr);
+      try {
+        this.discv5.addEnr(bootnodeEnr);
+      } catch (e) {
+        console.error('Error adding bootnode ENR: ', e);
+      }
     }
   }
 
@@ -75,7 +83,8 @@ export class DiscV5Service {
     }, 2000);
   }
 
-  private onDiscovered(enr: ENR) {
+  private async onDiscovered(enr: ENR) {
     console.log(`DiscV5 Discovered: ${enr.nodeId}, ${enr.getLocationMultiaddr('udp')}`);
+    await this.libp2pNode.connectToPeersIfUnknown([enr]);
   }
 }

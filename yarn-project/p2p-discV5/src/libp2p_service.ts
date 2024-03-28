@@ -18,8 +18,8 @@ import { AztecPeerStore } from './peer_store.js';
 const {
   LISTEN_IP = '0.0.0.0',
   LISTEN_PORT = '40100',
-  // ANNOUNCE_PORT = '40100',
-  // ANNOUNCE_HOSTAME = '/ip4/10.1.0.85',
+  ANNOUNCE_PORT = '40100',
+  PUBLIC_IP = '',
   // BOOTSTRAP_NODES = '',
 } = process.env;
 
@@ -37,6 +37,7 @@ export class LibP2PNode {
     }
 
     console.log(`Starting P2P node on ${LISTEN_IP}:${LISTEN_PORT}`);
+    console.log(`External: ${`/ip4/${PUBLIC_IP}/tcp/${ANNOUNCE_PORT}`}`);
 
     this.node.addEventListener('peer:discovery', e => {
       console.log(`Discovered peer: ${e.detail.id.toString()}`);
@@ -96,6 +97,7 @@ export class LibP2PNode {
       peerId,
       addresses: {
         listen: [bindAddrTcp],
+        announce: [`/ip4/${PUBLIC_IP}/tcp/${ANNOUNCE_PORT}/p2p/${peerId.toString()}`],
       },
       transports: [tcp()],
       streamMuxers: [yamux(), mplex()],

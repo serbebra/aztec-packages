@@ -473,6 +473,34 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@aztec/foundation@npm:0.32.0":
+  version: 0.32.0
+  resolution: "@aztec/foundation@npm:0.32.0"
+  dependencies:
+    "@aztec/bb.js": 0.32.0
+    "@koa/cors": ^4.0.0
+    "@noble/curves": ^1.2.0
+    bn.js: ^5.2.1
+    debug: ^4.3.4
+    detect-node: ^2.1.0
+    elliptic: ^6.5.4
+    hash.js: ^1.1.7
+    koa: ^2.14.2
+    koa-bodyparser: ^4.4.0
+    koa-compress: ^5.1.0
+    koa-router: ^12.0.0
+    leveldown: ^6.1.1
+    levelup: ^5.1.1
+    lodash.chunk: ^4.2.0
+    lodash.clonedeepwith: ^4.5.0
+    memdown: ^6.1.1
+    pako: ^2.1.0
+    sha3: ^2.1.4
+    zod: ^3.22.4
+  checksum: 5d2c5cb62baeeddeefced025d027722b9c0f7ecf11cabdae747ab321e91597720e2dde7ec88e0fc9696e26191c8158d8705424c62aa16454b82558c1fe191585
+  languageName: node
+  linkType: hard
+
 "@aztec/foundation@workspace:^, @aztec/foundation@workspace:foundation":
   version: 0.0.0-use.local
   resolution: "@aztec/foundation@workspace:foundation"
@@ -552,6 +580,16 @@ __metadata:
     typescript: ^5.0.4
   languageName: unknown
   linkType: soft
+
+"@aztec/kv-store@npm:0.32.0":
+  version: 0.32.0
+  resolution: "@aztec/kv-store@npm:0.32.0"
+  dependencies:
+    "@aztec/foundation": 0.32.0
+    lmdb: ^2.9.2
+  checksum: 7e0baa2c187a457e36c7d5ca7e26129605b3ee5b389428d6201e08e1748c21b4635deee9294a973b38776cf8a1063cd07ba1283a31991a31369af9a65f296329
+  languageName: node
+  linkType: hard
 
 "@aztec/kv-store@workspace:^, @aztec/kv-store@workspace:kv-store":
   version: 0.0.0-use.local
@@ -703,7 +741,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@aztec/p2p-discV5@workspace:p2p-discV5"
   dependencies:
-    "@aztec/kv-store": "workspace:^"
+    "@aztec/kv-store": 0.32.0
     "@chainsafe/discv5": ^9.0.0
     "@chainsafe/enr": ^3.0.0
     "@chainsafe/libp2p-noise": ^15.0.0
@@ -712,6 +750,7 @@ __metadata:
     "@libp2p/crypto": ^4.0.3
     "@libp2p/identify": ^1.0.15
     "@libp2p/interface": ^1.1.4
+    "@libp2p/interface-libp2p": ^3.2.0
     "@libp2p/mplex": ^10.0.16
     "@libp2p/peer-id": ^4.0.7
     "@libp2p/peer-id-factory": ^4.0.7
