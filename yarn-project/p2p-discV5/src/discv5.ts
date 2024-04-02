@@ -62,11 +62,6 @@ export class DiscV5Service {
     this.discoveryInterval = setInterval(async () => {
       const enrs = await this.discv5.findRandomNode();
       if (enrs?.length) {
-        console.log(
-          'Found random nodes: ',
-          enrs.map(n => n.nodeId.toString()),
-        );
-
         // Filter peers with TCP multiaddrs
         const peerEnrs = (
           await Promise.all(
@@ -84,7 +79,6 @@ export class DiscV5Service {
   }
 
   private async onDiscovered(enr: ENR) {
-    console.log(`DiscV5 Discovered: ${enr.nodeId}, ${enr.getLocationMultiaddr('udp')}`);
     await this.libp2pNode.connectToPeersIfUnknown([enr]);
   }
 }

@@ -97,7 +97,6 @@ export class LibP2PNode {
       peerId,
       addresses: {
         listen: [bindAddrTcp],
-        announce: [`/ip4/${PUBLIC_IP}/tcp/${ANNOUNCE_PORT}/p2p/${peerId.toString()}`],
       },
       transports: [tcp()],
       streamMuxers: [yamux(), mplex()],
@@ -122,7 +121,6 @@ export class LibP2PNode {
 
   public async connectToPeersIfUnknown(enrs: ENR[]) {
     for (const enr of enrs) {
-      console.log('connecting to enr: ', enr.encodeTxt());
       const addr = await enr.getFullMultiaddr('tcp');
       if (!addr) {
         // No TCP multiaddr found in ENR. Skipping.
