@@ -18,7 +18,7 @@ contract ImportTest {
     #[aztec(private)]
     fn main(target: AztecAddress) -> Field {
         let test_contract_instance = TestPrivateContextInterface::at(target);
-        let return_values = test_contract_instance.test_code_gen(
+        let returned_field: Field = test_contract_instance.test_code_gen(
             &mut context,
             1,
             true,
@@ -35,9 +35,9 @@ contract ImportTest {
                 ManyNotesADeepStructTestCodeGenStruct { amount: 1, secret_hash: 2 }
             ]
         }
-        );
+        ).unpack_into();
 
-        return_values[0]
+        returned_field
     }
 
     // Calls the get_this_address on the Test contract at the target address
@@ -46,9 +46,9 @@ contract ImportTest {
     #[aztec(private)]
     fn call_no_args(target: AztecAddress) -> Field {
         let test_contract_instance = TestPrivateContextInterface::at(target);
-        let return_values = test_contract_instance.get_this_address(&mut context);
+        let returned_field: Field = test_contract_instance.get_this_address(&mut context).unpack_into();
 
-        return_values[0]
+        returned_field
     }
 
     // Calls the create_nullifier_public on the Test contract at the target address

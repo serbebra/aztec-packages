@@ -1,15 +1,15 @@
 // A contract used along with `Child` contract to test nested calls.
 contract Parent {
-    use dep::aztec::prelude::{AztecAddress, FunctionSelector};
+    use dep::aztec::prelude::{AztecAddress, FunctionSelector, Deserialize};
 
     // Private function to call another private function in the target_contract using the provided selector
     #[aztec(private)]
     fn entry_point(target_contract: AztecAddress, target_selector: FunctionSelector) -> Field {
         // Call the target private function
-        let return_values = context.call_private_function(target_contract, target_selector, [0]);
+        let return_value: Field = context.call_private_function(target_contract, target_selector, [0]).unpack_into();
 
         // Copy the return value from the call to this function's return values
-        return_values[0]
+        return_value
     }
 
     // Public function to directly call another public function to the target_contract using the selector and value provided
@@ -140,10 +140,10 @@ contract Parent {
         args: [Field; 2]
     ) -> Field {
         // Call the target private function
-        let return_values = context.static_call_private_function(target_contract, target_selector, args);
+        let return_value: Field = context.static_call_private_function(target_contract, target_selector, args).unpack_into();
 
         // Copy the return value from the call to this function's return values
-        return_values[0]
+        return_value
     }
 
     #[aztec(private)]
@@ -153,10 +153,10 @@ contract Parent {
         args: [Field; 2]
     ) -> Field {
         // Call the target private function
-        let return_values = context.call_private_function(target_contract, target_selector, args);
+        let return_value: Field = context.call_private_function(target_contract, target_selector, args).unpack_into();
 
         // Copy the return value from the call to this function's return values
-        return_values[0]
+        return_value
     }
 
     // Private function to set a static context and verify correct propagation for nested private calls
@@ -169,14 +169,14 @@ contract Parent {
         // Call the target private function statically
         let private_call_selector = FunctionSelector::from_signature("private_call((Field),(u32),[Field;2])");
         let this_address = context.this_address();
-        let return_values = context.static_call_private_function(
+        let return_value: Field = context.static_call_private_function(
             this_address,
             private_call_selector,
             [target_contract.to_field(), target_selector.to_field(), args[0], args[1]]
-        );
+        ).unpack_into();
 
         // Copy the return value from the call to this function's return values
-        return_values[0]
+        return_value
     }
 
     // Public function to directly call another public function to the target_contract using the selector and value provided

@@ -147,7 +147,7 @@ function generateFunctionInterface(functionData: FunctionArtifact, kind: 'privat
   const allParams = ['self', `context: ${contextType}`, ...parameters.map(p => generateParameter(p, functionData))];
   const isPrivate = isPrivateCall(functionData.functionType);
   const isSync = (isPrivate && kind === 'private') || (!isPrivate && kind === 'public');
-  const retType = isSync ? `-> [Field; RETURN_VALUES_LENGTH] ` : ``;
+  const retType = isSync ? `-> PackedReturns ` : ``;
 
   return `
   pub fn ${name}(
@@ -165,7 +165,7 @@ ${callStatement}
  */
 function generateStaticImports() {
   return `use dep::std;
-use dep::aztec::context::{ PrivateContext, PublicContext };
+use dep::aztec::context::{ PrivateContext, PublicContext, packed_returns::PackedReturns };
 use dep::aztec::protocol_types::{
   address::AztecAddress,
   abis::function_selector::FunctionSelector,

@@ -302,7 +302,9 @@ contract DocsExample {
         // ************************************************************
         // Return values are pushed into the context
         // docs:start:context-example-context-return
-        context.return_values.push(result);
+        let mut return_hasher = dep::aztec::hash::ArgsHasher::new();
+        return_hasher.add(result);
+        context.set_return_hash(return_hasher);
         // docs:end:context-example-context-return
 
         // The context is returned to be consumed by the kernel circuit!

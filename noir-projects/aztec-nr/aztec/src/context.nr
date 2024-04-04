@@ -4,6 +4,7 @@ mod inputs;
 mod private_context;
 mod public_context;
 mod avm_context;
+mod packed_returns;
 mod interface;
 
 use interface::ContextInterface;

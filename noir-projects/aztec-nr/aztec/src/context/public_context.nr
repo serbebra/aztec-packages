@@ -1,7 +1,8 @@
 use crate::{
     context::{inputs::PublicContextInputs, interface::ContextInterface, interface::PublicContextInterface},
     messaging::process_l1_to_l2_message,
-    oracle::{arguments, public_call::call_public_function_internal}, hash::hash_args_array
+    oracle::{arguments, public_call::call_public_function_internal, returns},
+    hash::{hash_args_array, ArgsHasher}
 };
 use dep::protocol_types::{
     abis::{
@@ -28,7 +29,7 @@ struct PublicContext {
     side_effect_counter: u32,
 
     args_hash : Field,
-    return_values : BoundedVec<Field, RETURN_VALUES_LENGTH>,
+    return_hash : Field,
 
     nullifier_read_requests: BoundedVec<ReadRequest, MAX_NULLIFIER_READ_REQUESTS_PER_CALL>,
     nullifier_non_existent_read_requests: BoundedVec<ReadRequest, MAX_NULLIFIER_NON_EXISTENT_READ_REQUESTS_PER_CALL>,
@@ -56,7 +57,7 @@ impl PublicContext {
             inputs,
             side_effect_counter: inputs.start_side_effect_counter,
             args_hash,
-            return_values: BoundedVec::new(),
+            return_hash: 0,
             nullifier_read_requests: BoundedVec::new(),
             nullifier_non_existent_read_requests: BoundedVec::new(),
             contract_storage_update_requests: BoundedVec::new(),
@@ -120,6 +121,11 @@ impl PublicContext {
         )
     }
 
+    pub fn set_return_hash(&mut self, returns_hasher: ArgsHasher) {
+        returns::pack_returns(returns_hasher.fields);
+        self.return_hash = returns_hasher.hash();
+    }
+
     pub fn finish(self) -> PublicCircuitPublicInputs {
         // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
         let unencrypted_logs_hash = 0;
@@ -133,7 +139,7 @@ impl PublicContext {
             nullifier_non_existent_read_requests: self.nullifier_non_existent_read_requests.storage,
             contract_storage_update_requests: self.contract_storage_update_requests.storage,
             contract_storage_reads: self.contract_storage_reads.storage,
-            return_values: self.return_values.storage,
+            return_values: [self.return_hash, 0, 0, 0],
             new_note_hashes: self.new_note_hashes.storage,
             new_nullifiers: self.new_nullifiers.storage,
             public_call_stack_hashes: self.public_call_stack_hashes.storage,

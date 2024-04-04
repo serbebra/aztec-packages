@@ -19,7 +19,7 @@ import {
 import { AcirSimulator } from '../client/simulator.js';
 import { ExecutionError, createSimulationError } from '../common/errors.js';
 import { SideEffectCounter } from '../common/index.js';
-import { PackedArgsCache } from '../common/packed_args_cache.js';
+import { PackedValuesCache } from '../common/packed_args_cache.js';
 import { type CommitmentsDB, type PublicContractsDB, type PublicStateDB } from './db.js';
 import { type PublicExecution, type PublicExecutionResult, checkValidStaticCall } from './execution.js';
 import { PublicExecutionContext } from './public_execution_context.js';
@@ -185,7 +185,7 @@ export class PublicExecutor {
 
     // Functions can request to pack arguments before calling other functions.
     // We use this cache to hold the packed arguments.
-    const packedArgs = PackedArgsCache.create([]);
+    const packedArgs = PackedValuesCache.create([]);
 
     const context = new PublicExecutionContext(
       execution,
