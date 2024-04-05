@@ -113,13 +113,13 @@ contract PendingNoteHashes {
         get_then_nullify_fn_selector: FunctionSelector
     ) {
         // nested call to create/insert note
-        let _callStackItem1 = context.call_private_function(
+        let _res: [Field; 0] = context.call_private_function(
             inputs.call_context.storage_contract_address,
             insert_fn_selector,
             [amount, owner.to_field()]
         );
         // nested call to read and nullify that note
-        let _callStackItem2 = context.call_private_function(
+        let _res: [Field; 1] = context.call_private_function(
             inputs.call_context.storage_contract_address,
             get_then_nullify_fn_selector,
             [amount, owner.to_field()]

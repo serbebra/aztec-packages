@@ -19,7 +19,7 @@ contract Reader {
     #[aztec(private)]
     fn check_name_private(who: AztecAddress, what: str<31>) {
         let selector = FunctionSelector::from_signature("private_get_name()");
-        let result: Field = context.call_private_function_no_args(who, selector).unpack_into();
+        let result: Field = Deserialize::deserialize(context.call_private_function_no_args(who, selector));
         let name = FieldCompressedString::from_field(result);
         let _what = FieldCompressedString::from_string(what);
         assert(name.is_eq(_what));
@@ -42,7 +42,7 @@ contract Reader {
     #[aztec(private)]
     fn check_symbol_private(who: AztecAddress, what: str<31>) {
         let selector = FunctionSelector::from_signature("private_get_symbol()");
-        let result: Field = context.call_private_function_no_args(who, selector).unpack_into();
+        let result: Field = Deserialize::deserialize(context.call_private_function_no_args(who, selector));
         let symbol = FieldCompressedString::from_field(result);
         let _what = FieldCompressedString::from_string(what);
         assert(symbol.is_eq(_what));
@@ -63,7 +63,7 @@ contract Reader {
     #[aztec(private)]
     fn check_decimals_private(who: AztecAddress, what: u8) {
         let selector = FunctionSelector::from_signature("private_get_decimals()");
-        let result: u8 = context.call_private_function_no_args(who, selector).unpack_into();
+        let result: u8 = Deserialize::deserialize(context.call_private_function_no_args(who, selector));
         assert(result == what);
     }
 

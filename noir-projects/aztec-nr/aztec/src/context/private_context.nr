@@ -1,5 +1,5 @@
 use crate::{
-    context::{inputs::PrivateContextInputs, interface::ContextInterface, packed_returns::PackedReturns},
+    context::{inputs::PrivateContextInputs, interface::ContextInterface},
     key::nullifier_key::validate_nullifier_key_against_address, messaging::process_l1_to_l2_message,
     hash::{hash_args_array, ArgsHasher},
     oracle::{
@@ -273,71 +273,71 @@ impl PrivateContext {
         // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
     }
 
-    pub fn call_private_function<ARGS_COUNT>(
+    pub fn call_private_function<ARGS_COUNT, RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, false)
     }
 
-    pub fn static_call_private_function<ARGS_COUNT>(
+    pub fn static_call_private_function<ARGS_COUNT, RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, true, false)
     }
 
-    pub fn delegate_call_private_function<ARGS_COUNT>(
+    pub fn delegate_call_private_function<ARGS_COUNT, RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, true)
     }
 
-    pub fn call_private_function_no_args(
+    pub fn call_private_function_no_args<RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, false, false)
     }
 
-    pub fn static_call_private_function_no_args(
+    pub fn static_call_private_function_no_args<RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, true, false)
     }
 
-    pub fn delegate_call_private_function_no_args<ARGS_COUNT>(
+    pub fn delegate_call_private_function_no_args<ARGS_COUNT, RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, false, true)
     }
 
-    pub fn call_private_function_with_packed_args(
+    pub fn call_private_function_with_packed_args<RETURNS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args_hash: Field,
         is_static_call: bool,
         is_delegate_call: bool
-    ) -> PackedReturns {
+    ) -> [Field; RETURNS_COUNT] {
         let mut is_static_call = is_static_call | self.inputs.call_context.is_static_call;
         let item = call_private_function_internal(
             contract_address,
@@ -377,7 +377,10 @@ impl PrivateContext {
 
         self.private_call_stack_hashes.push(item.hash());
 
-        PackedReturns::new(item.public_inputs.return_values[0])
+        let return_hash = item.public_inputs.return_values[0];
+        let unpacked_returns: [Field; RETURNS_COUNT] = returns::unpack_returns(return_hash);
+        assert_eq(hash_args_array(unpacked_returns), return_hash);
+        unpacked_returns
     }
 
     pub fn call_public_function<ARGS_COUNT>(

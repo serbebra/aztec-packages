@@ -6,7 +6,7 @@ contract Parent {
     #[aztec(private)]
     fn entry_point(target_contract: AztecAddress, target_selector: FunctionSelector) -> Field {
         // Call the target private function
-        let return_value: Field = context.call_private_function(target_contract, target_selector, [0]).unpack_into();
+        let return_value: Field = Deserialize::deserialize(context.call_private_function(target_contract, target_selector, [0]));
 
         // Copy the return value from the call to this function's return values
         return_value
@@ -140,7 +140,7 @@ contract Parent {
         args: [Field; 2]
     ) -> Field {
         // Call the target private function
-        let return_value: Field = context.static_call_private_function(target_contract, target_selector, args).unpack_into();
+        let return_value: Field = Deserialize::deserialize(context.static_call_private_function(target_contract, target_selector, args));
 
         // Copy the return value from the call to this function's return values
         return_value
@@ -153,7 +153,7 @@ contract Parent {
         args: [Field; 2]
     ) -> Field {
         // Call the target private function
-        let return_value: Field = context.call_private_function(target_contract, target_selector, args).unpack_into();
+        let return_value: Field = Deserialize::deserialize(context.call_private_function(target_contract, target_selector, args));
 
         // Copy the return value from the call to this function's return values
         return_value
@@ -169,11 +169,13 @@ contract Parent {
         // Call the target private function statically
         let private_call_selector = FunctionSelector::from_signature("private_call((Field),(u32),[Field;2])");
         let this_address = context.this_address();
-        let return_value: Field = context.static_call_private_function(
-            this_address,
-            private_call_selector,
-            [target_contract.to_field(), target_selector.to_field(), args[0], args[1]]
-        ).unpack_into();
+        let return_value: Field = Deserialize::deserialize(
+            context.static_call_private_function(
+                this_address,
+                private_call_selector,
+                [target_contract.to_field(), target_selector.to_field(), args[0], args[1]]
+            )
+        );
 
         // Copy the return value from the call to this function's return values
         return_value

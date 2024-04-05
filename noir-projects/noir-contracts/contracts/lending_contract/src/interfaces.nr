@@ -1,4 +1,4 @@
-use dep::aztec::prelude::{FunctionSelector, AztecAddress, PrivateContext, PackedReturns};
+use dep::aztec::prelude::{FunctionSelector, AztecAddress, PrivateContext};
 
 use dep::aztec::context::PublicContext;
 use dep::aztec::protocol_types::constants::RETURN_VALUES_LENGTH;
@@ -79,26 +79,20 @@ impl Token {
         to: AztecAddress,
         amount: Field,
         nonce: Field
-    ) -> PackedReturns {
+    ) {
         context.call_private_function(
             self.address,
             FunctionSelector::from_signature("unshield((Field),(Field),Field,Field)"),
             [from.to_field(), to.to_field(), amount, nonce]
-        )
+        );
     }
 
-    pub fn burn(
-        self: Self,
-        context: &mut PrivateContext,
-        from: AztecAddress,
-        amount: Field,
-        nonce: Field
-    ) -> PackedReturns {
+    pub fn burn(self: Self, context: &mut PrivateContext, from: AztecAddress, amount: Field, nonce: Field) {
         context.call_private_function(
             self.address,
             FunctionSelector::from_signature("burn((Field),Field,Field)"),
             [from.to_field(), amount, nonce]
-        )
+        );
     }
 }
 

@@ -1,5 +1,5 @@
 use dep::aztec::protocol_types::{abis::function_selector::FunctionSelector, address::AztecAddress};
-
+use dep::aztec::prelude::Deserialize;
 use dep::aztec::context::{PrivateContext, PublicContext, Context};
 
 struct SlowMap {
@@ -28,11 +28,13 @@ impl SlowMap {
     }
 
     pub fn read_at(self: Self, context: &mut PrivateContext, index: Field) -> Field {
-        let returned: Field = context.call_private_function(
-            self.address,
-            FunctionSelector::from_signature("read_at(Field)"),
-            [index]
-        ).unpack_into();
+        let returned: Field = Deserialize::deserialize(
+            context.call_private_function(
+                self.address,
+                FunctionSelector::from_signature("read_at(Field)"),
+                [index]
+            )
+        );
         returned
     }
 

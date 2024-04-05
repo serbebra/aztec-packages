@@ -1,8 +1,8 @@
 #[oracle(packReturns)]
 fn pack_returns_oracle<N>(_returns: [Field]) -> Field {}
 
-unconstrained pub fn pack_returns(returns: [Field]) -> Field {
-    pack_returns_oracle(returns)
+unconstrained pub fn pack_returns(returns: [Field]) {
+    let _unused = pack_returns_oracle(returns);
 }
 
 #[oracle(unpackReturns)]

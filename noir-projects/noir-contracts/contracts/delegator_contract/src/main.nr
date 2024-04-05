@@ -2,7 +2,7 @@
 contract Delegator {
     use dep::aztec::prelude::{
         AztecAddress, FunctionSelector, NoteHeader, NoteViewerOptions, emit_unencrypted_log,
-        PublicMutable, PrivateSet
+        PublicMutable, PrivateSet, Deserialize
     };
     use dep::value_note::value_note::ValueNote;
 
@@ -18,7 +18,7 @@ contract Delegator {
         args: [Field; 2]
     ) {
         // Call the target private function
-        let return_value: Field = context.delegate_call_private_function(target_contract, target_selector, args).unpack_into();
+        let return_value: Field = Deserialize::deserialize(context.delegate_call_private_function(target_contract, target_selector, args));
         // Copy the return value from the call to this function's return values
         return_value
     }

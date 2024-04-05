@@ -75,38 +75,38 @@ impl PublicContext {
         }
     }
 
-    pub fn call_public_function_no_args(
+    pub fn call_public_function_no_args<RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_public_function_with_packed_args(contract_address, function_selector, 0, false, false)
     }
 
-    pub fn static_call_public_function_no_args(
+    pub fn static_call_public_function_no_args<RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_public_function_with_packed_args(contract_address, function_selector, 0, true, false)
     }
 
-    pub fn delegate_call_public_function_no_args(
+    pub fn delegate_call_public_function_no_args<RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         self.call_public_function_with_packed_args(contract_address, function_selector, 0, false, true)
     }
 
-    pub fn call_public_function_with_packed_args(
+    pub fn call_public_function_with_packed_args<RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args_hash: Field,
         is_static_call: bool,
         is_delegate_call: bool
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         let side_effect_counter = self.side_effect_counter;
         // TODO get next value from output of `call_public_function_internal`
         self.side_effect_counter += 1;
@@ -270,34 +270,34 @@ impl PublicContextInterface for PublicContext {
         // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
     }
 
-    fn call_public_function<ARGS_COUNT>(
+    fn call_public_function<ARGS_COUNT, RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, false, false)
     }
 
-    fn static_call_public_function<ARGS_COUNT>(
+    fn static_call_public_function<ARGS_COUNT, RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, true, false)
     }
 
-    fn delegate_call_public_function<ARGS_COUNT>(
+    fn delegate_call_public_function<ARGS_COUNT, RETURNS_COUNT>(
         self: &mut Self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURN_VALUES_LENGTH] {
+    ) -> [Field; RETURNS_COUNT] {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_public_function_with_packed_args(contract_address, function_selector, args_hash, false, true)
