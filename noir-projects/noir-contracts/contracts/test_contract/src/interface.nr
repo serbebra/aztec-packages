@@ -3,6 +3,7 @@
 use dep::std;
 use dep::aztec::context::{PrivateContext, PublicContext};
 use dep::aztec::protocol_types::{address::AztecAddress, abis::function_selector::FunctionSelector, constants::RETURN_VALUES_LENGTH};
+use dep::aztec::prelude::PackedReturns;
 
 struct AStructTestCodeGenStruct {
   amount: Field,
@@ -56,7 +57,7 @@ impl TestPrivateContextInterface {
         Self { address }
     }
 
-    pub fn test_code_gen<RETURNS_LENGTH>(
+    pub fn test_code_gen(
         self,
         context: &mut PrivateContext,
         a_field: Field,
@@ -65,7 +66,7 @@ impl TestPrivateContextInterface {
         an_array: [Field; 2],
         a_struct: AStructTestCodeGenStruct,
         a_deep_struct: ADeepStructTestCodeGenStruct
-    ) -> [Field; RETURNS_LENGTH] {
+    ) -> PackedReturns {
         let mut serialized_args = [0; 17];
         serialized_args[0] = a_field;
         serialized_args[1] = a_bool as Field;
@@ -92,11 +93,11 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn get_public_key<RETURNS_COUNT>(
+    pub fn get_public_key(
         self,
         context: &mut PrivateContext,
         address: AddressGetPublicKeyStruct
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let mut serialized_args = [0; 1];
         serialized_args[0] = address.inner;
 
@@ -119,7 +120,7 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn emit_msg_sender<RETURNS_COUNT>(self, context: &mut PrivateContext) -> [Field; RETURNS_COUNT] {
+    pub fn emit_msg_sender(self, context: &mut PrivateContext) -> PackedReturns {
         let mut serialized_args = [0; 0];
 
         context.call_private_function(
@@ -129,11 +130,11 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn get_portal_contract_address<RETURNS_COUNT>(
+    pub fn get_portal_contract_address(
         self,
         context: &mut PrivateContext,
         aztec_address: AztecAddressGetPortalContractAddressStruct
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let mut serialized_args = [0; 1];
         serialized_args[0] = aztec_address.inner;
 
@@ -155,7 +156,7 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn get_this_portal_address<RETURNS_COUNT>(self, context: &mut PrivateContext) -> [Field; RETURNS_COUNT] {
+    pub fn get_this_portal_address(self, context: &mut PrivateContext) -> PackedReturns {
         let mut serialized_args = [0; 0];
 
         context.call_private_function(
@@ -165,7 +166,7 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn get_this_address<RETURNS_COUNT>(self, context: &mut PrivateContext) -> [Field; RETURNS_COUNT] {
+    pub fn get_this_address(self, context: &mut PrivateContext) -> PackedReturns {
         let mut serialized_args = [0; 0];
 
         context.call_private_function(
@@ -186,14 +187,14 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn consume_mint_private_message<RETURNS_COUNT>(
+    pub fn consume_mint_private_message(
         self,
         context: &mut PrivateContext,
         secret_hash_for_redeeming_minted_notes: Field,
         amount: Field,
         canceller: CancellerConsumeMintPrivateMessageStruct,
         secret_for_L1_to_L2_message_consumption: Field
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let mut serialized_args = [0; 4];
         serialized_args[0] = secret_hash_for_redeeming_minted_notes;
         serialized_args[1] = amount;
@@ -207,11 +208,7 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn emit_nullifier<RETURNS_COUNT>(
-        self,
-        context: &mut PrivateContext,
-        nullifier: Field
-    ) -> [Field; RETURNS_COUNT] {
+    pub fn emit_nullifier(self, context: &mut PrivateContext, nullifier: Field) -> PackedReturns {
         let mut serialized_args = [0; 1];
         serialized_args[0] = nullifier;
 
@@ -260,11 +257,7 @@ impl TestPrivateContextInterface {
         )
     }
 
-    pub fn set_constant<RETURNS_COUNT>(
-        self,
-        context: &mut PrivateContext,
-        value: Field
-    ) -> [Field; RETURNS_COUNT] {
+    pub fn set_constant(self, context: &mut PrivateContext, value: Field) -> PackedReturns {
         let mut serialized_args = [0; 1];
         serialized_args[0] = value;
 

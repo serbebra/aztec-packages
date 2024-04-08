@@ -18,15 +18,14 @@ contract ImportTest {
     #[aztec(private)]
     fn main(target: AztecAddress) -> Field {
         let test_contract_instance = TestPrivateContextInterface::at(target);
-        let returned_field: Field = Deserialize::deserialize(
-            test_contract_instance.test_code_gen(
-                &mut context,
-                1,
-                true,
-                1 as u32,
-                [1, 2],
-                AStructTestCodeGenStruct { amount: 1, secret_hash: 2 },
-                ADeepStructTestCodeGenStruct {
+        let returned_field: Field = test_contract_instance.test_code_gen(
+            &mut context,
+            1,
+            true,
+            1 as u32,
+            [1, 2],
+            AStructTestCodeGenStruct { amount: 1, secret_hash: 2 },
+            ADeepStructTestCodeGenStruct {
             a_field: 1,
             a_bool: true,
             a_note: ANoteADeepStructTestCodeGenStruct { amount: 1, secret_hash: 2 },
@@ -36,8 +35,7 @@ contract ImportTest {
                 ManyNotesADeepStructTestCodeGenStruct { amount: 1, secret_hash: 2 }
             ]
         }
-            )
-        );
+        ).unpack_into();
 
         returned_field
     }
@@ -48,7 +46,7 @@ contract ImportTest {
     #[aztec(private)]
     fn call_no_args(target: AztecAddress) -> Field {
         let test_contract_instance = TestPrivateContextInterface::at(target);
-        let returned_field: Field = Deserialize::deserialize(test_contract_instance.get_this_address(&mut context));
+        let returned_field: Field = test_contract_instance.get_this_address(&mut context).unpack_into();
 
         returned_field
     }

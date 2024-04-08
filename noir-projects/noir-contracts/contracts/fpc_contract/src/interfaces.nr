@@ -20,7 +20,7 @@ impl Token {
         amount: Field,
         nonce: Field
     ) {
-        let _ = context.call_public_function(
+        let _void: [Field; 0] = context.call_public_function(
             self.address,
             FunctionSelector::from_signature("transfer_public((Field),(Field),Field,Field)"),
             [from.to_field(), to.to_field(), amount, nonce]
@@ -35,7 +35,7 @@ impl Token {
         secret_hash: Field,
         nonce: Field
     ) {
-        let _ = context.call_public_function(
+        let _void: [Field; 0] = context.call_public_function(
             self.address,
             FunctionSelector::from_signature("shield((Field),Field,Field,Field)"),
             [from.to_field(), amount, secret_hash, nonce]

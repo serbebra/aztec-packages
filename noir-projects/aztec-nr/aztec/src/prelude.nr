@@ -9,7 +9,7 @@ use crate::{
     public_immutable::PublicImmutable, public_mutable::PublicMutable, private_set::PrivateSet,
     shared_immutable::SharedImmutable
 },
-    log::{emit_unencrypted_log, emit_encrypted_log}, context::PrivateContext,
+    log::{emit_unencrypted_log, emit_encrypted_log}, context::{PrivateContext, PackedReturns},
     note::{
     note_header::NoteHeader, note_interface::NoteInterface, note_getter_options::NoteGetterOptions,
     note_viewer_options::NoteViewerOptions,

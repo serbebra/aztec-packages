@@ -16,7 +16,7 @@ contract DocsExample {
     use dep::aztec::prelude::{
         AztecAddress, FunctionSelector, NoteHeader, NoteGetterOptions, NoteViewerOptions,
         PrivateContext, Map, PublicMutable, PublicImmutable, PrivateMutable, PrivateImmutable,
-        PrivateSet, SharedImmutable
+        PrivateSet, SharedImmutable, Deserialize
     };
     use dep::aztec::{note::note_getter_options::Comparator, context::{PublicContext, Context}};
     // how to import methods from other files/folders within your workspace
@@ -115,11 +115,11 @@ contract DocsExample {
         // and returns the response.
         // Used to test that we can retrieve values through calls and 
         // correctly return them in the simulation
-        let ret = context.call_private_function_no_args(
+        let leader: Leader = context.call_private_function_no_args(
             context.this_address(),
             FunctionSelector::from_signature("get_shared_immutable_constrained_private()")
-        );
-        Leader::deserialize([ret[0], ret[1]])
+        ).unpack_into();
+        leader
     }
 
     #[aztec(public)]
@@ -128,11 +128,13 @@ contract DocsExample {
         // and returns the response.
         // Used to test that we can retrieve values through calls and 
         // correctly return them in the simulation
-        let ret = context.call_public_function_no_args(
-            context.this_address(),
-            FunctionSelector::from_signature("get_shared_immutable_constrained_public()")
+        let leader: Leader = Deserialize::deserialize(
+            context.call_public_function_no_args(
+                context.this_address(),
+                FunctionSelector::from_signature("get_shared_immutable_constrained_public()")
+            )
         );
-        Leader::deserialize([ret[0], ret[1]])
+        leader
     }
 
     #[aztec(public)]

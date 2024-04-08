@@ -29,7 +29,7 @@ use dep::protocol_types::{
 },
     contrakt::{storage_read::StorageRead, storage_update_request::StorageUpdateRequest},
     grumpkin_private_key::GrumpkinPrivateKey, header::Header,
-    messaging::l2_to_l1_message::L2ToL1Message, utils::reader::Reader, traits::is_empty
+    messaging::l2_to_l1_message::L2ToL1Message, utils::reader::Reader, traits::{is_empty, Deserialize}
 };
 
 // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
@@ -273,34 +273,34 @@ impl PrivateContext {
         // TODO(https://github.com/AztecProtocol/aztec-packages/issues/1165)
     }
 
-    pub fn call_private_function<ARGS_COUNT, RETURNS_COUNT>(
+    pub fn call_private_function<ARGS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, false)
     }
 
-    pub fn static_call_private_function<ARGS_COUNT, RETURNS_COUNT>(
+    pub fn static_call_private_function<ARGS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, true, false)
     }
 
-    pub fn delegate_call_private_function<ARGS_COUNT, RETURNS_COUNT>(
+    pub fn delegate_call_private_function<ARGS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let args_hash = hash_args_array(args);
         assert(args_hash == arguments::pack_arguments(args));
         self.call_private_function_with_packed_args(contract_address, function_selector, args_hash, false, true)
@@ -310,7 +310,7 @@ impl PrivateContext {
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, false, false)
     }
 
@@ -318,15 +318,15 @@ impl PrivateContext {
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, true, false)
     }
 
-    pub fn delegate_call_private_function_no_args<ARGS_COUNT, RETURNS_COUNT>(
+    pub fn delegate_call_private_function_no_args<ARGS_COUNT>(
         &mut self,
         contract_address: AztecAddress,
         function_selector: FunctionSelector
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         self.call_private_function_with_packed_args(contract_address, function_selector, 0, false, true)
     }
 
@@ -337,7 +337,7 @@ impl PrivateContext {
         args_hash: Field,
         is_static_call: bool,
         is_delegate_call: bool
-    ) -> [Field; RETURNS_COUNT] {
+    ) -> PackedReturns {
         let mut is_static_call = is_static_call | self.inputs.call_context.is_static_call;
         let item = call_private_function_internal(
             contract_address,
@@ -378,9 +378,7 @@ impl PrivateContext {
         self.private_call_stack_hashes.push(item.hash());
 
         let return_hash = item.public_inputs.return_values[0];
-        let unpacked_returns: [Field; RETURNS_COUNT] = returns::unpack_returns(return_hash);
-        assert_eq(hash_args_array(unpacked_returns), return_hash);
-        unpacked_returns
+        PackedReturns::new(return_hash)
     }
 
     pub fn call_public_function<ARGS_COUNT>(
@@ -517,5 +515,34 @@ impl PrivateContext {
         }
 
         self.public_call_stack_hashes.push(item.hash());
+    }
+}
+
+struct PackedReturns {
+  packed_returns: Field,
+}
+
+impl PackedReturns {
+    pub fn new(packed_returns: Field) -> Self {
+        PackedReturns { packed_returns }
+    }
+
+    pub fn assert_empty(self) {
+        assert_eq(self.packed_returns, 0);
+    }
+
+    pub fn raw(self) -> Field {
+        self.packed_returns
+    }
+
+    pub fn unpack<N>(self) -> [Field; N] {
+        let unpacked: [Field; N] = returns::unpack_returns(self.packed_returns);
+        assert_eq(self.packed_returns, hash_args_array(unpacked));
+        unpacked
+    }
+
+    pub fn unpack_into<T, N>(self) -> T where T: Deserialize<N> {
+        let unpacked: [Field; N] = self.unpack();
+        Deserialize::deserialize(unpacked)
     }
 }

@@ -12,29 +12,28 @@ impl SlowMap {
     }
 
     pub fn initialize(self: Self, context: &mut PublicContext) {
-        let _ = context.call_public_function_no_args(
+        let _void: [Field; 0] = context.call_public_function_no_args(
             self.address,
             FunctionSelector::from_signature("initialize()")
         );
     }
 
     pub fn read_at_pub(self: Self, context: &mut PublicContext, index: Field) -> Field {
-        let _return_values = context.call_public_function(
-            self.address,
-            FunctionSelector::from_signature("read_at_pub(Field)"),
-            [index]
-        );
-        _return_values[0]
+        Deserialize::deserialize(
+            context.call_public_function(
+                self.address,
+                FunctionSelector::from_signature("read_at_pub(Field)"),
+                [index]
+            )
+        )
     }
 
     pub fn read_at(self: Self, context: &mut PrivateContext, index: Field) -> Field {
-        let returned: Field = Deserialize::deserialize(
-            context.call_private_function(
-                self.address,
-                FunctionSelector::from_signature("read_at(Field)"),
-                [index]
-            )
-        );
+        let returned: Field = context.call_private_function(
+            self.address,
+            FunctionSelector::from_signature("read_at(Field)"),
+            [index]
+        ).unpack_into();
         returned
     }
 
