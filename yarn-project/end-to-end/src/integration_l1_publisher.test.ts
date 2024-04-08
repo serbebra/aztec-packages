@@ -12,22 +12,21 @@ import {
 } from '@aztec/aztec.js';
 // eslint-disable-next-line no-restricted-imports
 import {
+  PROVING_STATUS,
   type ProcessedTx,
-  type ProvingSuccess,
   makeEmptyProcessedTx as makeEmptyProcessedTxFromHistoricalTreeRoots,
   makeProcessedTx,
 } from '@aztec/circuit-types';
 import {
   EthAddress,
   type Header,
+  KernelCircuitPublicInputs,
   MAX_NEW_L2_TO_L1_MSGS_PER_TX,
+  MAX_NEW_NOTE_HASHES_PER_TX,
   MAX_NEW_NULLIFIERS_PER_TX,
-  MAX_REVERTIBLE_NOTE_HASHES_PER_TX,
-  MAX_REVERTIBLE_NULLIFIERS_PER_TX,
-  MAX_REVERTIBLE_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
+  MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
   NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP,
   PublicDataUpdateRequest,
-  PublicKernelCircuitPublicInputs,
   SideEffectLinkedToNoteHash,
 } from '@aztec/circuits.js';
 import { fr, makeNewSideEffect, makeNewSideEffectLinkedToNoteHash, makeProof } from '@aztec/circuits.js/testing';
@@ -143,6 +142,7 @@ describe('L1Publisher integration', () => {
       l2QueueSize: 10,
     };
     const worldStateSynchronizer = new ServerWorldStateSynchronizer(tmpStore, builderDb, blockSource, worldStateConfig);
+    await worldStateSynchronizer.start();
     builder = await TxProver.new({}, worldStateSynchronizer, new WASMSimulator());
     l2Proof = Buffer.alloc(0);
 
@@ -168,21 +168,21 @@ describe('L1Publisher integration', () => {
 
   const makeBloatedProcessedTx = (seed = 0x1) => {
     const tx = mockTx(seed);
-    const kernelOutput = PublicKernelCircuitPublicInputs.empty();
+    const kernelOutput = KernelCircuitPublicInputs.empty();
     kernelOutput.constants.txContext.chainId = fr(chainId);
     kernelOutput.constants.txContext.version = fr(config.version);
     kernelOutput.constants.historicalHeader = prevHeader;
     kernelOutput.end.publicDataUpdateRequests = makeTuple(
-      MAX_REVERTIBLE_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
+      MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
       i => new PublicDataUpdateRequest(fr(i), fr(i + 10)),
       seed + 0x500,
     );
 
     const processedTx = makeProcessedTx(tx, kernelOutput, makeProof());
 
-    processedTx.data.end.newNoteHashes = makeTuple(MAX_REVERTIBLE_NOTE_HASHES_PER_TX, makeNewSideEffect, seed + 0x100);
+    processedTx.data.end.newNoteHashes = makeTuple(MAX_NEW_NOTE_HASHES_PER_TX, makeNewSideEffect, seed + 0x100);
     processedTx.data.end.newNullifiers = makeTuple(
-      MAX_REVERTIBLE_NULLIFIERS_PER_TX,
+      MAX_NEW_NULLIFIERS_PER_TX,
       makeNewSideEffectLinkedToNoteHash,
       seed + 0x200,
     );
@@ -391,8 +391,12 @@ describe('L1Publisher integration', () => {
       );
       const ticket = await buildBlock(globalVariables, txs, currentL1ToL2Messages, makeEmptyProcessedTx());
       const result = await ticket.provingPromise;
-      const block = (result as ProvingSuccess).block;
+      expect(result.status).toBe(PROVING_STATUS.SUCCESS);
+      const blockResult = await builder.finaliseBlock();
+      const block = blockResult.block;
       prevHeader = block.header;
+      blockSource.getL1ToL2Messages.mockResolvedValueOnce(currentL1ToL2Messages);
+      blockSource.getBlocks.mockResolvedValueOnce([block]);
 
       const newL2ToL1MsgsArray = block.body.txEffects.flatMap(txEffect => txEffect.l2ToL1Msgs);
 
@@ -481,8 +485,12 @@ describe('L1Publisher integration', () => {
       );
       const blockTicket = await buildBlock(globalVariables, txs, l1ToL2Messages, makeEmptyProcessedTx());
       const result = await blockTicket.provingPromise;
-      const block = (result as ProvingSuccess).block;
+      expect(result.status).toBe(PROVING_STATUS.SUCCESS);
+      const blockResult = await builder.finaliseBlock();
+      const block = blockResult.block;
       prevHeader = block.header;
+      blockSource.getL1ToL2Messages.mockResolvedValueOnce(l1ToL2Messages);
+      blockSource.getBlocks.mockResolvedValueOnce([block]);
 
       writeJson(`empty_block_${i}`, block, [], AztecAddress.ZERO, deployerAccount.address);
 

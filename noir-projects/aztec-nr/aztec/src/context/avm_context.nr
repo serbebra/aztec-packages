@@ -123,7 +123,7 @@ impl PublicContextInterface for AvmContext {
         temporary_function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) -> [Field; RETURNS_COUNT] {
-        let gas = [/*l1_gas*/42, /*l2_gas*/24, /*da_gas*/420];
+        let gas = [/*l1_gas*/10000, /*l2_gas*/10000, /*da_gas*/10000];
 
         let results = call(
             gas,
@@ -144,7 +144,7 @@ impl PublicContextInterface for AvmContext {
         temporary_function_selector: FunctionSelector,
         args: [Field; ARGS_COUNT]
     ) -> [Field; RETURNS_COUNT] {
-        let gas = [/*l1_gas*/42, /*l2_gas*/24, /*da_gas*/420];
+        let gas = [/*l1_gas*/10000, /*l2_gas*/10000, /*da_gas*/10000];
 
         let (data_to_return, success): ([Field; RETURNS_COUNT], u8) = call_static(
             gas,

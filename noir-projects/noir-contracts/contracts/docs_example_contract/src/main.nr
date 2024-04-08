@@ -23,6 +23,7 @@ contract DocsExample {
     use crate::options::create_account_card_getter_options;
     use crate::types::{card_note::{CardNote, CARD_NOTE_LEN}, leader::Leader};
 
+    #[aztec(storage)]
     struct Storage {
         // Shows how to create a custom struct in PublicMutable
         // docs:start:storage-leader-declaration
@@ -108,6 +109,42 @@ contract DocsExample {
         assert(read.points == expected.points, "Invalid points");
     }
 
+    #[aztec(private)]
+    fn get_shared_immutable_constrained_private_indirect() -> pub Leader {
+        // This is a private function that calls another private function
+        // and returns the response.
+        // Used to test that we can retrieve values through calls and 
+        // correctly return them in the simulation
+        let ret = context.call_private_function_no_args(
+            context.this_address(),
+            FunctionSelector::from_signature("get_shared_immutable_constrained_private()")
+        );
+        Leader::deserialize([ret[0], ret[1]])
+    }
+
+    #[aztec(public)]
+    fn get_shared_immutable_constrained_public_indirect() -> pub Leader {
+        // This is a public function that calls another public function
+        // and returns the response.
+        // Used to test that we can retrieve values through calls and 
+        // correctly return them in the simulation
+        let ret = context.call_public_function_no_args(
+            context.this_address(),
+            FunctionSelector::from_signature("get_shared_immutable_constrained_public()")
+        );
+        Leader::deserialize([ret[0], ret[1]])
+    }
+
+    #[aztec(public)]
+    fn get_shared_immutable_constrained_public() -> pub Leader {
+        storage.shared_immutable.read_public()
+    }
+
+    #[aztec(private)]
+    fn get_shared_immutable_constrained_private() -> pub Leader {
+        storage.shared_immutable.read_private()
+    }
+
     unconstrained fn get_shared_immutable() -> pub Leader {
         storage.shared_immutable.read_public()
     }
@@ -158,12 +195,14 @@ contract DocsExample {
 
     // docs:start:state_vars-NoteGetterOptionsComparatorExampleNoir
     unconstrained fn read_note(amount: Field, comparator: u8) -> pub [Option<CardNote>; 10] {
-        let options = NoteViewerOptions::new().select(
-            CardNote::properties().points,
-            amount,
-            Option::some(comparator)
+        let mut options = NoteViewerOptions::new();
+        let notes = storage.set.view_notes(
+            options.select(
+                CardNote::properties().points,
+                amount,
+                Option::some(comparator)
+            )
         );
-        let notes = storage.set.view_notes(options);
 
         notes
     }
