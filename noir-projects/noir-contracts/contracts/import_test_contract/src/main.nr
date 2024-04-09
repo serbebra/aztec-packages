@@ -64,11 +64,9 @@ contract ImportTest {
     // Used for testing calling an open function from another open function
     // See yarn-project/end-to-end/src/e2e_nested_contract.test.ts
     #[aztec(public)]
-    fn pub_call_open_fn(target: AztecAddress) -> Field {
+    fn pub_call_open_fn(target: AztecAddress) {
         let test_contract_instance = TestPublicContextInterface::at(target);
-        let ret: Field = Deserialize::deserialize(test_contract_instance.create_nullifier_public(&mut context, 1, 2));
-
-        ret
+        let _void: [Field; 0] = Deserialize::deserialize(test_contract_instance.create_nullifier_public(&mut context, 1, 2));
     }
 }
 

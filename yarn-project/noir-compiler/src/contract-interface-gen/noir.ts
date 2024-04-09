@@ -147,6 +147,7 @@ function generateFunctionInterface(functionData: FunctionArtifact, kind: 'privat
   const allParams = ['self', `context: ${contextType}`, ...parameters.map(p => generateParameter(p, functionData))];
   const isPrivate = isPrivateCall(functionData.functionType);
   const isSync = (isPrivate && kind === 'private') || (!isPrivate && kind === 'public');
+  // TODO: When return typing data is available in the artifact, we can instead codegen the concrete return type for public and private.
   const generics = !isPrivate && isSync ? `<RETURN_LENGTH>` : ``;
   const retType = isPrivate ? `-> PackedReturns` : isSync ? `-> [Field; RETURN_LENGTH] ` : ``;
 
