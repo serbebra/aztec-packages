@@ -1,22 +1,33 @@
 // Utility function to console.log data in the acir simulator
 // WARNING: sometimes when using debug logs the ACVM errors with: `thrown: "solver opcode resolution error: cannot solve opcode: expression has too many unknowns x155"`
 
+// HEADS UP FOR THOSE IN palla/04-09-fix_use_entrypoint_instead_of_pay_init_fee-with-a-stupid-number-of-logs!!
+// You need to remove the #[oracle] attribute from all these calls when running the noir-projects/bug-repro,
+// and restore them when running the e2e tests.
+
+// #[oracle(debugLog)]
+// fn debug_log_oracle<T, N>(_msg: T, _num_args: Field) -> Field {}
+// #[oracle(debugLog)]
+// fn debug_log_format_oracle<T, N>(_msg: T, _args: [Field; N], _num_args: Field) -> Field {}
+// #[oracle(debugLog)]
+// fn debug_log_field_oracle(_field: Field) -> Field {}
+// #[oracle(debugLog)]
+// fn debug_log_array_oracle<T, N>(_arbitrary_array: [T; N]) -> Field {}
+// #[oracle(debugLogWithPrefix)]
+// fn debug_log_array_with_prefix_oracle<S, T, N>(_prefix: S, _arbitrary_array: [T; N]) -> Field {}
+
 fn debug_log_oracle<T, N>(_msg: T, _num_args: Field) -> Field {
     0
 }
-
 fn debug_log_format_oracle<T, N>(_msg: T, _args: [Field; N], _num_args: Field) -> Field {
     0
 }
-
 fn debug_log_field_oracle(_field: Field) -> Field {
     0
 }
-
 fn debug_log_array_oracle<T, N>(_arbitrary_array: [T; N]) -> Field {
     0
 }
-
 fn debug_log_array_with_prefix_oracle<S, T, N>(_prefix: S, _arbitrary_array: [T; N]) -> Field {
     0
 }
