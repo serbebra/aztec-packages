@@ -1,6 +1,7 @@
 // A contract used along with `Child` contract to test nested calls.
 contract Parent {
     use dep::aztec::prelude::{AztecAddress, FunctionSelector, Deserialize};
+    use dep::aztec::context::gas::GasOpts;
 
     // Private function to call another private function in the target_contract using the provided selector
     #[aztec(private)]
@@ -19,7 +20,14 @@ contract Parent {
         target_selector: FunctionSelector,
         init_value: Field
     ) -> Field {
-        let return_value: Field = Deserialize::deserialize(context.call_public_function(target_contract, target_selector, [init_value]));
+        let return_value: Field = Deserialize::deserialize(
+            context.call_public_function(
+                target_contract,
+                target_selector,
+                [init_value],
+                GasOpts::default()
+            )
+        );
 
         return_value
     }
@@ -31,8 +39,22 @@ contract Parent {
         target_selector: FunctionSelector,
         init_value: Field
     ) -> Field {
-        let return_value: Field = Deserialize::deserialize(context.call_public_function(target_contract, target_selector, [init_value]));
-        let return_value: Field = Deserialize::deserialize(context.call_public_function(target_contract, target_selector, [return_value]));
+        let return_value: Field = Deserialize::deserialize(
+            context.call_public_function(
+                target_contract,
+                target_selector,
+                [init_value],
+                GasOpts::default()
+            )
+        );
+        let return_value: Field = Deserialize::deserialize(
+            context.call_public_function(
+                target_contract,
+                target_selector,
+                [return_value],
+                GasOpts::default()
+            )
+        );
 
         return_value
     }
@@ -186,7 +208,9 @@ contract Parent {
         target_selector: FunctionSelector,
         args: [Field; 1]
     ) -> Field {
-        Deserialize::deserialize(context.static_call_public_function(target_contract, target_selector, args))
+        Deserialize::deserialize(
+            context.static_call_public_function(target_contract, target_selector, args, GasOpts::default())
+        )
     }
 
     // Public function to set a static context and verify correct propagation for nested public calls
@@ -203,7 +227,8 @@ contract Parent {
             context.static_call_public_function(
                 this_address,
                 pub_entry_point_selector,
-                [target_contract.to_field(), target_selector.to_field(), args[0]]
+                [target_contract.to_field(), target_selector.to_field(), args[0]],
+                GasOpts::default()
             )
         )
     }

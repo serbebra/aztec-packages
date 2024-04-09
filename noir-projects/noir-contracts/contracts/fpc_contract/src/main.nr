@@ -4,7 +4,7 @@ contract FPC {
     use dep::aztec::protocol_types::{abis::function_selector::FunctionSelector, address::AztecAddress, traits::is_empty};
     use dep::aztec::state_vars::SharedImmutable;
     use dep::aztec::prelude::Deserialize;
-
+    use dep::aztec::context::gas::GasOpts;
     use crate::interfaces::Token;
 
     #[aztec(storage)]
@@ -67,7 +67,8 @@ contract FPC {
             context.call_public_function(
                 storage.gas_token_address.read_public(),
                 FunctionSelector::from_signature("pay_fee(Field)"),
-                [amount]
+                [amount],
+                GasOpts::default()
             )
         );
 
@@ -82,7 +83,8 @@ contract FPC {
             context.call_public_function(
                 storage.gas_token_address.read_public(),
                 FunctionSelector::from_signature("pay_fee(Field)"),
-                [amount]
+                [amount],
+                GasOpts::default()
             )
         );
 

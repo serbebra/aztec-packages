@@ -1,6 +1,6 @@
 // docs:start:interfaces
 use dep::aztec::prelude::{FunctionSelector, AztecAddress, EthAddress, PrivateContext, Deserialize};
-use dep::aztec::context::PublicContext;
+use dep::aztec::context::{PublicContext, gas::GasOpts};
 
 struct Token {
   address: AztecAddress,
@@ -22,7 +22,8 @@ impl Token {
         let _void: [Field; 0] = context.call_public_function(
             self.address,
             FunctionSelector::from_signature("transfer_public((Field),(Field),Field,Field)"),
-            [from.to_field(), to.to_field(), amount, nonce]
+            [from.to_field(), to.to_field(), amount, nonce],
+            GasOpts::default()
         );
     }
 
@@ -56,7 +57,8 @@ impl TokenBridge {
             context.call_public_function(
                 self.address,
                 FunctionSelector::from_signature("get_token()"),
-                []
+                [],
+                GasOpts::default()
             )
         );
         address
@@ -73,7 +75,8 @@ impl TokenBridge {
         let _void: [Field; 0] = context.call_public_function(
             self.address,
             FunctionSelector::from_signature("exit_to_l1_public((Field),Field,(Field),Field)"),
-            [recipient.to_field(), amount, caller_on_l1.to_field(), nonce]
+            [recipient.to_field(), amount, caller_on_l1.to_field(), nonce],
+            GasOpts::default()
         );
     }
 }

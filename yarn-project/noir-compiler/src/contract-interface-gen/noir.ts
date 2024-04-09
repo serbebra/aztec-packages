@@ -27,10 +27,20 @@ function isPrivateCall(functionType: FunctionType) {
  * @param functionType - Type of the function.
  * @returns A code string.
  */
-function generateCallStatement(selector: FunctionSelector, functionType: FunctionType) {
+function generateCallStatement(
+  selector: FunctionSelector,
+  functionType: FunctionType,
+  callingContext: 'private' | 'public',
+) {
   const callMethod = isPrivateCall(functionType) ? 'call_private_function' : 'call_public_function';
+  const args = [
+    'self.address',
+    `FunctionSelector::from_field(${selector.toString()})`,
+    'serialized_args',
+    ...(callingContext === 'private' ? [] : ['GasOpts::default()']),
+  ];
   return `
-    context.${callMethod}(self.address, FunctionSelector::from_field(${selector.toString()}), serialized_args)`;
+    context.${callMethod}(${args.join(', ')})`;
 }
 
 /**
@@ -143,7 +153,7 @@ function generateFunctionInterface(functionData: FunctionArtifact, kind: 'privat
   const selector = FunctionSelector.fromNameAndParameters(name, parameters);
   const serialization = generateSerialization(parameters);
   const contextType = kind === 'private' ? '&mut PrivateContext' : '&mut PublicContext';
-  const callStatement = generateCallStatement(selector, functionData.functionType);
+  const callStatement = generateCallStatement(selector, functionData.functionType, kind);
   const allParams = ['self', `context: ${contextType}`, ...parameters.map(p => generateParameter(p, functionData))];
   const isPrivate = isPrivateCall(functionData.functionType);
   const isSync = (isPrivate && kind === 'private') || (!isPrivate && kind === 'public');
@@ -167,7 +177,7 @@ ${callStatement}
  */
 function generateStaticImports() {
   return `use dep::std;
-use dep::aztec::context::{ PrivateContext, PublicContext, PackedReturns };
+use dep::aztec::context::{ PrivateContext, PublicContext, PackedReturns, gas::GasOpts };
 use dep::aztec::protocol_types::{
   address::AztecAddress,
   abis::function_selector::FunctionSelector,

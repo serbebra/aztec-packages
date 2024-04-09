@@ -1,6 +1,6 @@
 use dep::aztec::protocol_types::{abis::function_selector::FunctionSelector, address::AztecAddress};
 use dep::aztec::prelude::Deserialize;
-use dep::aztec::context::{PrivateContext, PublicContext, Context};
+use dep::aztec::context::{PrivateContext, PublicContext, Context, gas::GasOpts};
 
 struct SlowMap {
   address: AztecAddress,
@@ -23,7 +23,8 @@ impl SlowMap {
             context.call_public_function(
                 self.address,
                 FunctionSelector::from_signature("read_at_pub(Field)"),
-                [index]
+                [index],
+                GasOpts::default()
             )
         )
     }
