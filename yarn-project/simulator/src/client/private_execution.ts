@@ -41,6 +41,7 @@ export async function executePrivateFunction(
   );
 
   const returnWitness = extractReturnWitness(acir, partialWitness);
+  log.debug('Return witnesses' + returnWitness.map(fr => fr.toString()).join(', '));
   const publicInputs = PrivateCircuitPublicInputs.fromFields(returnWitness);
 
   const encryptedLogs = context.getEncryptedLogs();

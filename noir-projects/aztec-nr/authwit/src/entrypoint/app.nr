@@ -55,8 +55,14 @@ impl AppPayload {
     // Executes all private and public calls
     // docs:start:entrypoint-execute-calls
     fn execute_calls(self, context: &mut PrivateContext) {
+        dep::aztec::oracle::debug_log::debug_log("Starting execute calls");
+        context.print_note_hash_read_requests();
         for call in self.function_calls {
             if !call.target_address.is_zero() {
+                dep::aztec::oracle::debug_log::debug_log_format(
+                    "Executing function call to={0} args={1}",
+                    [call.target_address.to_field(), call.args_hash]
+                );
                 if call.is_public {
                     context.call_public_function_with_packed_args(
                         call.target_address,
@@ -76,6 +82,8 @@ impl AppPayload {
                 }
             }
         }
+        dep::aztec::oracle::debug_log::debug_log("Ended execute calls");
+        context.print_note_hash_read_requests();
     }
     // docs:end:entrypoint-execute-calls
 }

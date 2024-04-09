@@ -26,6 +26,7 @@ import { type FunctionAbi, type FunctionArtifact, countArgumentsSize } from '@az
 import { type AztecAddress } from '@aztec/foundation/aztec-address';
 import { Fr, type Point } from '@aztec/foundation/fields';
 import { createDebugLogger } from '@aztec/foundation/log';
+import { toFriendlyJSON } from '@aztec/foundation/serialize';
 
 import { type NoteData, toACVMWitness } from '../acvm/index.js';
 import { type PackedArgsCache } from '../common/packed_args_cache.js';
@@ -390,6 +391,12 @@ export class ClientExecutionContext extends ViewDataOracle {
       targetFunctionData,
     );
 
+    this.log(
+      `Executed private function ${targetArtifact.name} and got result with note hash read requests: ${toFriendlyJSON(
+        childExecutionResult.callStackItem.publicInputs.noteHashReadRequests,
+      )}`,
+    );
+
     if (isStaticCall) {
       this.#checkValidStaticCall(childExecutionResult);
     }
@@ -404,7 +411,7 @@ export class ClientExecutionContext extends ViewDataOracle {
       Count of note hash read requests=${ci.publicInputs.noteHashReadRequests.filter(x => !x.isEmpty()).length}
     `);
 
-    // this.log(`Called private function public inputs: ${ci.publicInputs.toFields().map(f => f.toString())}`);
+    this.log(`Called private function public inputs: ${ci.publicInputs.toFields().map(f => f.toString())}`);
 
     return childExecutionResult.callStackItem;
   }

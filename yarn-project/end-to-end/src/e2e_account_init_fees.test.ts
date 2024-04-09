@@ -141,6 +141,7 @@ describe('e2e_fees_account_init', () => {
       beforeEach(initBalances);
 
       it('account pays for its own fee', async () => {
+        console.log(`GONNA SEND TX`);
         await bobsAccountManager
           .deploy({
             fee: {
@@ -149,6 +150,7 @@ describe('e2e_fees_account_init', () => {
             },
           })
           .wait();
+        console.log(`DONE TX`);
 
         await expectMapping(
           gasBalances,

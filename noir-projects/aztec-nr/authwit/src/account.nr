@@ -61,12 +61,21 @@ impl AccountActions {
 
         let fee_hash = fee_payload.hash();
         assert(valid_fn(private_context, fee_hash));
+
+        dep::aztec::oracle::debug_log::debug_log("Gonna call fee payload execute calls");
+        private_context.print_note_hash_read_requests();
         fee_payload.execute_calls(private_context);
+        dep::aztec::oracle::debug_log::debug_log("Called fee payload execute calls");
+        private_context.print_note_hash_read_requests();
         private_context.capture_min_revertible_side_effect_counter();
 
         let app_hash = app_payload.hash();
         assert(valid_fn(private_context, app_hash));
+        dep::aztec::oracle::debug_log::debug_log("Gonna call app payload execute calls");
+        private_context.print_note_hash_read_requests();
         app_payload.execute_calls(private_context);
+        dep::aztec::oracle::debug_log::debug_log("Called app payload execute calls");
+        private_context.print_note_hash_read_requests();
     }
     // docs:end:entrypoint
 

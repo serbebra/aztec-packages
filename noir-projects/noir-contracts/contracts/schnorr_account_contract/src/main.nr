@@ -40,12 +40,15 @@ contract SchnorrAccount {
     #[aztec(private)]
     #[aztec(noinitcheck)]
     fn entrypoint(app_payload: pub AppPayload, fee_payload: pub FeePayload) {
+        context.print_note_hash_read_requests();
         let actions = AccountActions::private(
             &mut context,
             storage.approved_actions.storage_slot,
             is_valid_impl
         );
+        context.print_note_hash_read_requests();
         actions.entrypoint(app_payload, fee_payload);
+        context.print_note_hash_read_requests();
     }
 
     #[aztec(private)]
