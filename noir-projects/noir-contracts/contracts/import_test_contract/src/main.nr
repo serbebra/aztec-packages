@@ -66,9 +66,9 @@ contract ImportTest {
     #[aztec(public)]
     fn pub_call_open_fn(target: AztecAddress) -> Field {
         let test_contract_instance = TestPublicContextInterface::at(target);
-        let ret = test_contract_instance.create_nullifier_public(&mut context, 1, 2);
+        let ret: Field = Deserialize::deserialize(test_contract_instance.create_nullifier_public(&mut context, 1, 2));
 
-        ret[0]
+        ret
     }
 }
 

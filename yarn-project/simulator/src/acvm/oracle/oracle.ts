@@ -359,7 +359,7 @@ export class Oracle {
       frToBoolean(fromACVMField(isStaticCall)),
       frToBoolean(fromACVMField(isDelegateCall)),
     );
-    return padArrayEnd(returnValues, Fr.ZERO, RETURN_VALUES_LENGTH).map(toACVMField);
+    return returnValues.map(toACVMField);
   }
 
   async enqueuePublicFunctionCall(

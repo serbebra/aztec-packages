@@ -30,7 +30,7 @@ function isPrivateCall(functionType: FunctionType) {
 function generateCallStatement(selector: FunctionSelector, functionType: FunctionType) {
   const callMethod = isPrivateCall(functionType) ? 'call_private_function' : 'call_public_function';
   return `
-    context.${callMethod}(self.address, FunctionSelector::from_field(0x${selector.toString()}), serialized_args)`;
+    context.${callMethod}(self.address, FunctionSelector::from_field(${selector.toString()}), serialized_args)`;
 }
 
 /**
@@ -142,15 +142,16 @@ function generateFunctionInterface(functionData: FunctionArtifact, kind: 'privat
   const { name, parameters } = functionData;
   const selector = FunctionSelector.fromNameAndParameters(name, parameters);
   const serialization = generateSerialization(parameters);
-  const contextType = kind === 'private' ? '&mut PrivateContext' : 'PublicContext';
+  const contextType = kind === 'private' ? '&mut PrivateContext' : '&mut PublicContext';
   const callStatement = generateCallStatement(selector, functionData.functionType);
   const allParams = ['self', `context: ${contextType}`, ...parameters.map(p => generateParameter(p, functionData))];
   const isPrivate = isPrivateCall(functionData.functionType);
   const isSync = (isPrivate && kind === 'private') || (!isPrivate && kind === 'public');
-  const retType = isSync ? `-> [Field; RETURNS_COUNT] ` : ``;
+  const generics = !isPrivate && isSync ? `<RETURN_LENGTH>` : ``;
+  const retType = isPrivate ? `-> PackedReturns` : isSync ? `-> [Field; RETURN_LENGTH] ` : ``;
 
   return `
-  pub fn ${name}(
+  pub fn ${name}${generics}(
     ${allParams.join(',\n    ')}
   ) ${retType}{
 ${serialization}
@@ -165,11 +166,10 @@ ${callStatement}
  */
 function generateStaticImports() {
   return `use dep::std;
-use dep::aztec::context::{ PrivateContext, PublicContext, packed_returns::[Field; RETURNS_COUNT] };
+use dep::aztec::context::{ PrivateContext, PublicContext, PackedReturns };
 use dep::aztec::protocol_types::{
   address::AztecAddress,
   abis::function_selector::FunctionSelector,
-  constants::RETURN_VALUES_LENGTH,
 };`;
 }
 
