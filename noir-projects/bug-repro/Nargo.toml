@@ -1,0 +1,10 @@
+[package]
+name = "test"
+type = "bin"
+authors = [""]
+compiler_version = ">=0.25.0"
+
+[dependencies]
+aztec = { path = "../aztec-nr/aztec" }
+authwit = { path = "../aztec-nr/authwit" }
+protocol_types = { path = "../noir-protocol-circuits/crates/types" }
