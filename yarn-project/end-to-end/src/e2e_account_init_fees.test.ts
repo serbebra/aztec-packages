@@ -3,7 +3,9 @@ import {
   type AccountManager,
   type DebugLogger,
   ExtendedNote,
+  FeePaymentMethod,
   Fr,
+  FunctionCall,
   NativeFeePaymentMethod,
   Note,
   PrivateFeePaymentMethod,
@@ -15,7 +17,14 @@ import {
   computeMessageSecretHash,
   generatePublicKey,
 } from '@aztec/aztec.js';
-import { type AztecAddress, CompleteAddress, Fq, getContractClassFromArtifact } from '@aztec/circuits.js';
+import {
+  type AztecAddress,
+  CompleteAddress,
+  Fq,
+  FunctionData,
+  FunctionSelector,
+  getContractClassFromArtifact,
+} from '@aztec/circuits.js';
 import {
   TokenContract as BananaCoin,
   FPCContract,
@@ -41,6 +50,37 @@ const TOKEN_DECIMALS = 18n;
 const BRIDGED_FPC_GAS = 444n;
 
 jest.setTimeout(1000_000);
+
+class NoopFeePaymentMethod implements FeePaymentMethod {
+  constructor(private readonly self: AztecAddress) {}
+
+  getAsset(): AztecAddress {
+    throw new Error('Method not implemented.');
+  }
+  getPaymentContract(): AztecAddress {
+    throw new Error('Method not implemented.');
+  }
+  getFunctionCalls(_maxFee: Fr): Promise<FunctionCall[]> {
+    return Promise.resolve([]);
+  }
+}
+
+it('minimal example for empty app payload issue', async () => {
+  const { pxe } = await setup(0);
+
+  const privateEncryptionKey = Fq.random();
+  const privateSigningKey = Fq.random();
+  const accountManager = getSchnorrAccount(pxe, privateEncryptionKey, privateSigningKey, Fr.random());
+
+  await accountManager
+    .deploy({
+      fee: {
+        maxFee: 100,
+        paymentMethod: new NoopFeePaymentMethod(accountManager.getCompleteAddress().address),
+      },
+    })
+    .wait();
+});
 
 describe('e2e_fees_account_init', () => {
   let ctx: EndToEndContext;
