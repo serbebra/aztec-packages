@@ -1,17 +1,17 @@
-import { Bufferable, serializeToBuffer } from '@aztec/foundation/serialize';
+import { type Bufferable, serializeToBuffer } from '@aztec/foundation/serialize';
 
-import { AztecArray } from '../../interfaces/array.js';
-import { AztecSingleton } from '../../interfaces/singleton.js';
-import { Factory, KVStore } from '../kv_store.js';
+import { type AztecArray } from '../../interfaces/array.js';
+import { type AztecSingleton } from '../../interfaces/singleton.js';
+import type { Deserialize, KVStore } from '../kv_store.js';
 import { Singleton } from './singleton.js';
 
 export class AArray<T extends Bufferable> implements AztecArray<T> {
   #store: KVStore;
   #name: string;
-  #factory: Factory<T>;
+  #factory: Deserialize<T>;
   #length: AztecSingleton<number>;
 
-  constructor(store: KVStore, name: string, factory: Factory<T>) {
+  constructor(store: KVStore, name: string, factory: Deserialize<T>) {
     this.#store = store;
     this.#name = name;
     this.#factory = factory;

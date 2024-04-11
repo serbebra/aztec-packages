@@ -1,6 +1,6 @@
-import { Bufferable, serializeToBuffer } from '@aztec/foundation/serialize';
+import { type Bufferable, serializeToBuffer } from '@aztec/foundation/serialize';
 
-import { Factory, KVStore, Key, KeyRange, Value } from './kv_store.js';
+import type { Deserialize, KVStore, Key, KeyRange, Value } from './kv_store.js';
 
 const TOMBSTONE = Symbol('tombstone');
 
@@ -27,8 +27,8 @@ export class MemoryKVStore implements KVStore {
   }
 
   get<K extends Key>(key: K): Buffer | undefined;
-  get<K extends Key, V extends Value>(key: K, factory: Factory<V>): V | undefined;
-  get<K extends Key, V extends Value>(key: K, factory?: Factory<V>): V | Buffer | undefined {
+  get<K extends Key, V extends Value>(key: K, factory: Deserialize<V>): V | undefined;
+  get<K extends Key, V extends Value>(key: K, factory?: Deserialize<V>): V | Buffer | undefined {
     const serializedKey = this.#serializeKey(key);
     const entry = this.#getEntry(serializedKey);
     if (!entry) {

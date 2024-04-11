@@ -5,7 +5,10 @@
   "exports": {
     ".": "./dest/interfaces/index.js",
     "./lmdb": "./dest/lmdb/index.js",
-    "./utils": "./dest/utils.js"
+    "./utils": "./dest/utils.js",
+    "./new/map": "./dest/new/ds/map.js",
+    "./new/lmdb-store": "./dest/new/lmdb_store.js",
+    "./new/mem-store": "./dest/new/mem_store.js"
   },
   "scripts": {
     "build": "yarn clean && tsc -b",

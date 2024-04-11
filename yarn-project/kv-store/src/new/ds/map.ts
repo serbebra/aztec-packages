@@ -1,11 +1,11 @@
-import { Factory, KVStore, Key, Value } from '../kv_store.js';
+import type { Deserialize, KVStore, Key, Value } from '../kv_store.js';
 
 export class AMap<K extends Key, V extends Value> {
   #store: KVStore;
   #name: string;
-  #factory: Factory<V>;
+  #factory: Deserialize<V>;
 
-  constructor(store: KVStore, name: string, factory: Factory<V>) {
+  constructor(store: KVStore, name: string, factory: Deserialize<V>) {
     this.#store = store;
     this.#name = name;
     this.#factory = factory;

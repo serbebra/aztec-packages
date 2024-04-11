@@ -1,8 +1,8 @@
 import { serializeToBuffer } from '@aztec/foundation/serialize';
 
-import { RootDatabase, open } from 'lmdb';
+import { type RootDatabase, open } from 'lmdb';
 
-import { Factory, KVStore, Key, KeyRange, Value } from './kv_store.js';
+import type { Deserialize, KVStore, Key, KeyRange, Value } from './kv_store.js';
 
 export class LMDBStore implements KVStore {
   #db: RootDatabase<Buffer, string>;
@@ -29,8 +29,8 @@ export class LMDBStore implements KVStore {
   }
 
   get<K extends Key>(key: K): Buffer | undefined;
-  get<K extends Key, V extends Value>(key: K, factory: Factory<V>): V | undefined;
-  get<K extends Key, V extends Value>(key: K, factory?: Factory<V>): V | Buffer | undefined {
+  get<K extends Key, V extends Value>(key: K, factory: Deserialize<V>): V | undefined;
+  get<K extends Key, V extends Value>(key: K, factory?: Deserialize<V>): V | Buffer | undefined {
     const buffer = this.#db.getBinary(this.#serializeKey(key));
     if (buffer === undefined) {
       return undefined;
