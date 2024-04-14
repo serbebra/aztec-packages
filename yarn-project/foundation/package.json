@@ -14,7 +14,7 @@
     "./aztec-address": "./dest/aztec-address/index.js",
     "./collection": "./dest/collection/index.js",
     "./crypto": "./dest/crypto/index.js",
-    "./error": "./dest/error/index.js",
+    "./errors": "./dest/errors/index.js",
     "./eth-address": "./dest/eth-address/index.js",
     "./fifo": "./dest/fifo/index.js",
     "./json-rpc": "./dest/json-rpc/index.js",

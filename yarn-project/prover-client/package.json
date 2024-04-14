@@ -20,7 +20,8 @@
     "formatting": "run -T prettier --check ./src && run -T eslint ./src",
     "formatting:fix": "run -T eslint --fix ./src && run -T prettier -w ./src",
     "bb": "node --no-warnings ./dest/bb/index.js",
-    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules ../node_modules/.bin/jest --passWithNoTests"
+    "test": "NODE_NO_WARNINGS=1 node --experimental-vm-modules ../node_modules/.bin/jest --passWithNoTests",
+    "ntest": "NODE_NO_WARNINGS=1 node --import @swc-node/register/esm-register --watch --test **/*.ntest.ts"
   },
   "inherits": [
     "../package.common.json"
@@ -55,6 +56,8 @@
   },
   "devDependencies": {
     "@jest/globals": "^29.5.0",
+    "@swc-node/register": "^1.9.0",
+    "@swc/helpers": "^0.5.9",
     "@types/jest": "^29.5.0",
     "@types/memdown": "^3.0.0",
     "@types/node": "^18.7.23",
