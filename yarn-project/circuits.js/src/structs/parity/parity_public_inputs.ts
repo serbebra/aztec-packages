@@ -22,6 +22,10 @@ export class ParityPublicInputs {
     return serializeToBuffer(...ParityPublicInputs.getFields(this));
   }
 
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
   static from(fields: FieldsOf<ParityPublicInputs>): ParityPublicInputs {
     return new ParityPublicInputs(...ParityPublicInputs.getFields(fields));
   }
@@ -33,5 +37,9 @@ export class ParityPublicInputs {
   static fromBuffer(buffer: Buffer | BufferReader) {
     const reader = BufferReader.asReader(buffer);
     return new ParityPublicInputs(reader.readObject(AggregationObject), reader.readObject(Fr), reader.readObject(Fr));
+  }
+
+  static fromString(str: string) {
+    return ParityPublicInputs.fromBuffer(Buffer.from(str, 'hex'));
   }
 }

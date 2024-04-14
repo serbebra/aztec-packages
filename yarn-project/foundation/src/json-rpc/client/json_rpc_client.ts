@@ -12,7 +12,7 @@ import { JsonStringify, convertFromJsonObj, convertToJsonObj } from '../convert.
 
 export { JsonStringify } from '../convert.js';
 
-const log = createDebugLogger('json-rpc:json_rpc_client');
+const log = createDebugLogger('aztec:foundation:json-rpc:client');
 /**
  * A normal fetch function that does not retry.
  * Alternatives are a fetch function with retries, or a mocked fetch.

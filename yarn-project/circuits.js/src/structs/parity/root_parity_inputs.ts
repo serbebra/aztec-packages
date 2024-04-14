@@ -13,8 +13,16 @@ export class RootParityInputs {
     return serializeToBuffer(this.children);
   }
 
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
   static fromBuffer(buffer: Buffer | BufferReader) {
     const reader = BufferReader.asReader(buffer);
     return new RootParityInputs(reader.readArray(NUM_BASE_PARITY_PER_ROOT_PARITY, RootParityInput));
+  }
+
+  static fromString(str: string) {
+    return RootParityInputs.fromBuffer(Buffer.from(str, 'hex'));
   }
 }

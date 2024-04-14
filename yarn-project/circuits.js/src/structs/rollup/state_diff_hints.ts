@@ -1,16 +1,16 @@
-import { type Fr } from '@aztec/foundation/fields';
-import { type Tuple, serializeToBuffer } from '@aztec/foundation/serialize';
+import { Fr } from '@aztec/foundation/fields';
+import { BufferReader, type Tuple, serializeToBuffer } from '@aztec/foundation/serialize';
 import { type FieldsOf } from '@aztec/foundation/types';
 
 import {
-  type MAX_NEW_NULLIFIERS_PER_TX,
-  type NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH,
-  type NULLIFIER_SUBTREE_SIBLING_PATH_LENGTH,
-  type NULLIFIER_TREE_HEIGHT,
-  type PUBLIC_DATA_SUBTREE_SIBLING_PATH_LENGTH,
+  MAX_NEW_NULLIFIERS_PER_TX,
+  NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH,
+  NULLIFIER_SUBTREE_SIBLING_PATH_LENGTH,
+  NULLIFIER_TREE_HEIGHT,
+  PUBLIC_DATA_SUBTREE_SIBLING_PATH_LENGTH,
 } from '../../constants.gen.js';
-import { type MembershipWitness } from '../membership_witness.js';
-import { type NullifierLeafPreimage } from './nullifier_leaf/index.js';
+import { MembershipWitness } from '../membership_witness.js';
+import { NullifierLeafPreimage } from './nullifier_leaf/index.js';
 
 /**
  * Hints used while proving state diff validity.
@@ -70,5 +70,20 @@ export class StateDiffHints {
 
   toBuffer(): Buffer {
     return serializeToBuffer(...StateDiffHints.getFields(this));
+  }
+
+  static fromBuffer(buffer: Buffer | BufferReader): StateDiffHints {
+    const reader = BufferReader.asReader(buffer);
+    return new StateDiffHints(
+      reader.readArray(MAX_NEW_NULLIFIERS_PER_TX, NullifierLeafPreimage),
+      reader.readArray(MAX_NEW_NULLIFIERS_PER_TX, {
+        fromBuffer: b => MembershipWitness.fromBuffer(b, NULLIFIER_TREE_HEIGHT),
+      }),
+      reader.readArray(MAX_NEW_NULLIFIERS_PER_TX, Fr),
+      reader.readArray(MAX_NEW_NULLIFIERS_PER_TX, { fromBuffer: b => b.readNumber() }),
+      reader.readArray(NOTE_HASH_SUBTREE_SIBLING_PATH_LENGTH, Fr),
+      reader.readArray(NULLIFIER_SUBTREE_SIBLING_PATH_LENGTH, Fr),
+      reader.readArray(PUBLIC_DATA_SUBTREE_SIBLING_PATH_LENGTH, Fr),
+    );
   }
 }

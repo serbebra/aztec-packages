@@ -1,6 +1,6 @@
-import { serializeToBuffer } from '@aztec/foundation/serialize';
+import { BufferReader, serializeToBuffer } from '@aztec/foundation/serialize';
 
-import { type PreviousRollupData } from './previous_rollup_data.js';
+import { PreviousRollupData } from './previous_rollup_data.js';
 
 /**
  * Represents inputs of the merge rollup circuit.
@@ -15,5 +15,18 @@ export class MergeRollupInputs {
 
   toBuffer() {
     return serializeToBuffer(this.previousRollupData);
+  }
+
+  static fromBuffer(buffer: Buffer | BufferReader) {
+    const reader = BufferReader.asReader(buffer);
+    return new MergeRollupInputs([reader.readObject(PreviousRollupData), reader.readObject(PreviousRollupData)]);
+  }
+
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return MergeRollupInputs.fromBuffer(Buffer.from(str, 'hex'));
   }
 }

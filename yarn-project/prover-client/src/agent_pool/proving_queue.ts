@@ -13,6 +13,8 @@ import { InterruptError } from '@aztec/foundation/errors';
 import { MemoryFifo } from '@aztec/foundation/fifo';
 import { createDebugLogger } from '@aztec/foundation/log';
 
+import { type CircuitProver } from '../prover/interface.js';
+
 export enum ParityProvingType {
   BASE_PARITY = 0,
   ROOT_PARITY,
@@ -60,29 +62,49 @@ export type ProvingJob<T extends ProvingRequest> = {
   reject: (err: Error) => void;
 };
 
-export interface ProvingQueue {
-  put(request: ProvingRequest): Promise<[PublicInputs<(typeof request)['type']>, Proof]>;
+export interface ProvingQueue extends CircuitProver {
   get(timeout?: number): Promise<ProvingJob<ProvingRequest> | null>;
-  size: number;
 }
 
 export class InMemoryProvingQueue implements ProvingQueue {
-  log = createDebugLogger('aztec:prover-client:in-memory-proving-queue');
+  static #id = 0;
+  #log = createDebugLogger('aztec:prover:proving_queue:' + InMemoryProvingQueue.#id++);
   queue = new MemoryFifo<ProvingJob<ProvingRequest>>();
 
-  put(
-    request: ProvingRequest,
-  ): Promise<[ParityPublicInputs | BaseOrMergeRollupPublicInputs | RootRollupPublicInputs, Proof]> {
+  getBaseParityProof(inputs: BaseParityInputs): Promise<[ParityPublicInputs, Proof]> {
+    return this.#put({
+      type: ParityProvingType.BASE_PARITY,
+      inputs,
+    });
+  }
+
+  getBaseRollupProof(input: BaseRollupInputs): Promise<[BaseOrMergeRollupPublicInputs, Proof]> {
+    return this.#put({ type: RollupProvingType.BASE_ROLLUP, inputs: input });
+  }
+
+  getMergeRollupProof(input: MergeRollupInputs): Promise<[BaseOrMergeRollupPublicInputs, Proof]> {
+    return this.#put({ type: RollupProvingType.MERGE_ROLLUP, inputs: input });
+  }
+
+  getRootParityProof(inputs: RootParityInputs): Promise<[ParityPublicInputs, Proof]> {
+    return this.#put({ type: ParityProvingType.ROOT_PARITY, inputs });
+  }
+
+  getRootRollupProof(input: RootRollupInputs): Promise<[RootRollupPublicInputs, Proof]> {
+    return this.#put({ type: RollupProvingType.ROOT_ROLLUP, inputs: input });
+  }
+
+  #put<T extends ProvingRequest>(request: T): Promise<ProvingResult<T['type']>> {
     let resolve: ProvingJob<typeof request>['resolve'] | undefined;
     let reject: ProvingJob<typeof request>['reject'] | undefined;
 
     const promise = new Promise<ProvingResult<(typeof request)['type']>>((res, rej) => {
       resolve = x => {
-        this.log.debug(`Proving job completed`);
+        this.#log.debug(`Proving job completed`);
         res(x);
       };
       reject = e => {
-        this.log.error(`Proving job failed`, e);
+        this.#log.error(`Proving job failed`, e);
         rej(e);
       };
     });
@@ -97,7 +119,7 @@ export class InMemoryProvingQueue implements ProvingQueue {
       reject,
     };
 
-    this.log.debug(`Adding ${ParityProvingType[request.type] ?? RollupProvingType[request.type]} proving job to queue`);
+    this.#log.info(`Adding ${ParityProvingType[request.type] ?? RollupProvingType[request.type]} proving job to queue`);
     if (!this.queue.put(job)) {
       return Promise.reject(new Error('Failed to submit proving request'));
     }
@@ -107,6 +129,7 @@ export class InMemoryProvingQueue implements ProvingQueue {
 
   async get(timeoutSec = 1): Promise<ProvingJob<ProvingRequest> | null> {
     try {
+      this.#log.info(`returning proving job, qSize: ${this.queue.length()}`);
       return await this.queue.get(timeoutSec);
     } catch (err) {
       if (err instanceof InterruptError) {

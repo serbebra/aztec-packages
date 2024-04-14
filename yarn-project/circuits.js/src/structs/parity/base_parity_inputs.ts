@@ -23,6 +23,14 @@ export class BaseParityInputs {
     return serializeToBuffer(this.msgs);
   }
 
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return BaseParityInputs.fromBuffer(Buffer.from(str, 'hex'));
+  }
+
   static fromBuffer(buffer: Buffer | BufferReader) {
     const reader = BufferReader.asReader(buffer);
     return new BaseParityInputs(reader.readArray(NUM_MSGS_PER_BASE_PARITY, Fr));

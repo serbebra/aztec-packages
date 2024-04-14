@@ -88,4 +88,12 @@ export class BaseOrMergeRollupPublicInputs {
       this.outHash,
     );
   }
+
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return BaseOrMergeRollupPublicInputs.fromBuffer(Buffer.from(str, 'hex'));
+  }
 }

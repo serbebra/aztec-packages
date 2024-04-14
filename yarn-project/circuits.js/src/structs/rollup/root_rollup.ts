@@ -1,17 +1,17 @@
-import { type Fr } from '@aztec/foundation/fields';
+import { Fr } from '@aztec/foundation/fields';
 import { BufferReader, type Tuple, serializeToBuffer } from '@aztec/foundation/serialize';
 import { type FieldsOf } from '@aztec/foundation/types';
 
 import {
-  type ARCHIVE_HEIGHT,
-  type L1_TO_L2_MSG_SUBTREE_SIBLING_PATH_LENGTH,
-  type NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP,
+  ARCHIVE_HEIGHT,
+  L1_TO_L2_MSG_SUBTREE_SIBLING_PATH_LENGTH,
+  NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP,
 } from '../../constants.gen.js';
 import { AggregationObject } from '../aggregation_object.js';
 import { Header } from '../header.js';
-import { type RootParityInput } from '../parity/root_parity_input.js';
+import { RootParityInput } from '../parity/root_parity_input.js';
 import { AppendOnlyTreeSnapshot } from './append_only_tree_snapshot.js';
-import { type PreviousRollupData } from './previous_rollup_data.js';
+import { PreviousRollupData } from './previous_rollup_data.js';
 
 /**
  * Represents inputs of the root rollup circuit.
@@ -69,6 +69,27 @@ export class RootRollupInputs {
       fields.newArchiveSiblingPath,
     ] as const;
   }
+
+  static fromBuffer(buffer: Buffer | BufferReader): RootRollupInputs {
+    const reader = BufferReader.asReader(buffer);
+    return new RootRollupInputs(
+      [reader.readObject(PreviousRollupData), reader.readObject(PreviousRollupData)],
+      reader.readObject(RootParityInput),
+      reader.readArray(NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP, Fr),
+      reader.readArray(L1_TO_L2_MSG_SUBTREE_SIBLING_PATH_LENGTH, Fr),
+      reader.readObject(AppendOnlyTreeSnapshot),
+      reader.readObject(AppendOnlyTreeSnapshot),
+      reader.readArray(ARCHIVE_HEIGHT, Fr),
+    );
+  }
+
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return RootRollupInputs.fromBuffer(Buffer.from(str, 'hex'));
+  }
 }
 
 /**
@@ -110,5 +131,13 @@ export class RootRollupPublicInputs {
       reader.readObject(AppendOnlyTreeSnapshot),
       reader.readObject(Header),
     );
+  }
+
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return RootRollupPublicInputs.fromBuffer(Buffer.from(str, 'hex'));
   }
 }

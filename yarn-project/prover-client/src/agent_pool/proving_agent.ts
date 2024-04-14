@@ -10,16 +10,22 @@ import {
   RollupProvingType,
 } from './proving_queue.js';
 
-export class ProvingAgent {
+export interface ProvingAgent {
+  start(queue: ProvingQueue): void;
+  stop(): Promise<void>;
+}
+
+export class LocalProvingAgent {
+  static #id = 0;
   #runningPromise?: RunningPromise;
-  #log = createDebugLogger('aztec:prover-client:proving-agent');
+  #log = createDebugLogger('aztec:prover-client:proving-agent:' + LocalProvingAgent.#id++);
 
   constructor(private prover: CircuitProver) {}
 
   start(queue: ProvingQueue): void {
     this.#runningPromise = new RunningPromise(async () => {
-      this.#log.debug('Proving running');
-      const job = await queue.get(1);
+      this.#log.debug('Asking for proving jobs');
+      const job = await queue.get();
       if (!job) {
         this.#log.debug('No proving job available');
         return;
@@ -31,6 +37,7 @@ export class ProvingAgent {
         );
         job.resolve(await this.work(job.request));
       } catch (err) {
+        this.#log.error(`Error processing proving job ${err}`);
         job.reject(err as Error);
       }
     }, 10);

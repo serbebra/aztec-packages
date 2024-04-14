@@ -3,19 +3,19 @@ import { BufferReader, type Tuple, serializeToBuffer } from '@aztec/foundation/s
 import { type FieldsOf } from '@aztec/foundation/types';
 
 import {
-  type ARCHIVE_HEIGHT,
-  type MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
-  type PUBLIC_DATA_TREE_HEIGHT,
+  ARCHIVE_HEIGHT,
+  MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX,
+  PUBLIC_DATA_TREE_HEIGHT,
 } from '../../constants.gen.js';
 import { GlobalVariables } from '../global_variables.js';
-import { type KernelData } from '../kernel/kernel_data.js';
-import { type MembershipWitness } from '../membership_witness.js';
-import { type PartialStateReference } from '../partial_state_reference.js';
+import { KernelData } from '../kernel/kernel_data.js';
+import { MembershipWitness } from '../membership_witness.js';
+import { PartialStateReference } from '../partial_state_reference.js';
 import { type UInt32 } from '../shared.js';
 import { AppendOnlyTreeSnapshot } from './append_only_tree_snapshot.js';
 import { NullifierLeaf, NullifierLeafPreimage } from './nullifier_leaf/index.js';
 import { PublicDataTreeLeaf, PublicDataTreeLeafPreimage } from './public_data_leaf/index.js';
-import { type StateDiffHints } from './state_diff_hints.js';
+import { StateDiffHints } from './state_diff_hints.js';
 
 export { NullifierLeaf, NullifierLeafPreimage, PublicDataTreeLeaf, PublicDataTreeLeafPreimage };
 
@@ -149,5 +149,32 @@ export class BaseRollupInputs {
 
   toBuffer() {
     return serializeToBuffer(...BaseRollupInputs.getFields(this));
+  }
+
+  static fromBuffer(buffer: Buffer | BufferReader): BaseRollupInputs {
+    const reader = BufferReader.asReader(buffer);
+    return new BaseRollupInputs(
+      reader.readObject(KernelData),
+      reader.readObject(PartialStateReference),
+      reader.readObject(StateDiffHints),
+      reader.readArray(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX, PublicDataTreeLeaf),
+      reader.readNumbers(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX),
+      reader.readArray(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX, PublicDataTreeLeafPreimage),
+      reader.readArray(MAX_PUBLIC_DATA_UPDATE_REQUESTS_PER_TX, {
+        fromBuffer: b => MembershipWitness.fromBuffer(b, PUBLIC_DATA_TREE_HEIGHT),
+      }),
+      reader.readObject({
+        fromBuffer: b => MembershipWitness.fromBuffer(b, ARCHIVE_HEIGHT),
+      }),
+      reader.readObject(ConstantRollupData),
+    );
+  }
+
+  toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return BaseRollupInputs.fromBuffer(Buffer.from(str, 'hex'));
   }
 }

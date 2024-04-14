@@ -15,6 +15,8 @@ import { type ClassMaps, JsonProxy } from './json_proxy.js';
  * Minimal, dev-friendly mechanism to create a server from an object.
  */
 export class JsonRpcServer {
+  private httpServer?: http.Server;
+
   /**
    * The proxy object.
    */
@@ -142,8 +144,12 @@ export class JsonRpcServer {
    * @param prefix - Prefix string.
    */
   public start(port: number, prefix = '') {
-    const httpServer = http.createServer(this.getApp(prefix).callback());
-    httpServer.listen(port);
+    this.httpServer = http.createServer(this.getApp(prefix).callback());
+    this.httpServer.listen(port);
+  }
+
+  public stop() {
+    this.httpServer?.close();
   }
 
   /**

@@ -52,7 +52,7 @@ describe('prover/orchestrator', () => {
 
     builderDb = await MerkleTrees.new(openTmpStore()).then(t => t.asLatest());
     expectsDb = await MerkleTrees.new(openTmpStore()).then(t => t.asLatest());
-    builder = new ProvingOrchestrator(builderDb, prover, 1);
+    builder = new ProvingOrchestrator(builderDb, prover);
   }, 20_000);
 
   describe('blocks', () => {

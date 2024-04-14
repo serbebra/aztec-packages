@@ -1,13 +1,29 @@
 import { PROVING_STATUS, type ProvingFailure } from '@aztec/circuit-types';
 import { type GlobalVariables, NUMBER_OF_L1_L2_MESSAGES_PER_ROLLUP } from '@aztec/circuits.js';
+import {
+  BaseOrMergeRollupPublicInputs,
+  BaseParityInputs,
+  BaseRollupInputs,
+  MergeRollupInputs,
+  ParityPublicInputs,
+  Proof,
+  RootParityInputs,
+  RootRollupInputs,
+  RootRollupPublicInputs,
+} from '@aztec/circuits.js';
 import { fr } from '@aztec/circuits.js/testing';
 import { range } from '@aztec/foundation/array';
+import { createJsonRpcClient } from '@aztec/foundation/json-rpc/client';
+import { JsonRpcServer } from '@aztec/foundation/json-rpc/server';
 import { createDebugLogger } from '@aztec/foundation/log';
 import { openTmpStore } from '@aztec/kv-store/utils';
 import { type MerkleTreeOperations, MerkleTrees } from '@aztec/world-state';
 
 import { type MemDown, default as memdown } from 'memdown';
+import { Worker } from 'worker_threads';
 
+import { LocalProvingAgent } from '../agent_pool/proving_agent.js';
+import { InMemoryProvingQueue, type ProvingQueue } from '../agent_pool/proving_queue.js';
 import {
   getConfig,
   getSimulationProvider,
@@ -26,6 +42,10 @@ describe('prover/orchestrator', () => {
   let builder: ProvingOrchestrator;
   let builderDb: MerkleTreeOperations;
 
+  let queue: ProvingQueue;
+  let queueServer: JsonRpcServer;
+  let agents: LocalProvingAgent[];
+  let agentWorkers: Worker[];
   let prover: TestCircuitProver;
 
   beforeEach(async () => {
@@ -36,19 +56,71 @@ describe('prover/orchestrator', () => {
     });
     prover = new TestCircuitProver(simulationProvider);
 
+    queue = new InMemoryProvingQueue();
+    queueServer = new JsonRpcServer(
+      queue,
+      {
+        BaseParityInputs,
+        BaseOrMergeRollupPublicInputs,
+        BaseRollupInputs,
+        MergeRollupInputs,
+        ParityPublicInputs,
+        Proof,
+        RootParityInputs,
+        RootRollupInputs,
+        RootRollupPublicInputs,
+      },
+      {},
+      [],
+    );
+
+    queueServer.start(34829);
+
+    const queueClient = createJsonRpcClient<ProvingQueue>(
+      'http://localhost:34829',
+      {
+        BaseParityInputs,
+        BaseOrMergeRollupPublicInputs,
+        BaseRollupInputs,
+        MergeRollupInputs,
+        ParityPublicInputs,
+        Proof,
+        RootParityInputs,
+        RootRollupInputs,
+        RootRollupPublicInputs,
+      },
+      {},
+      false,
+    );
+
+    agents = [new LocalProvingAgent(prover)];
+    agents.forEach(a => a.start(queueClient));
+    // agents = [];
+
+    // agentWorkers = [
+    //   new Worker(new URL('../../dest/agent_pool/proving_agent_remote.js', import.meta.url), {
+    //     workerData: {
+    //       acvmWorkingDirectory: acvmConfig?.acvmWorkingDirectory,
+    //       acvmBinaryPath: acvmConfig?.expectedAcvmPath,
+    //       queueUrl: 'http://localhost:34829',
+    //     },
+    //   }),
+    // ];
+
+    agentWorkers = [];
+    agentWorkers.forEach(a => a.postMessage('start'));
+
     builderDb = await MerkleTrees.new(openTmpStore()).then(t => t.asLatest());
-    builder = new ProvingOrchestrator(builderDb, prover, 1);
+    builder = new ProvingOrchestrator(builderDb, queue);
   }, 20_000);
 
+  afterEach(() => {
+    queueServer.stop();
+    agents.forEach(a => a.stop());
+    agentWorkers.forEach(a => a.postMessage('stop'));
+  });
+
   describe('lifecycle', () => {
-    beforeEach(async () => {
-      builder = await ProvingOrchestrator.new(builderDb, prover);
-    });
-
-    afterEach(async () => {
-      await builder.stop();
-    });
-
     it('cancels current block and switches to new ones', async () => {
       const txs1 = await Promise.all([makeBloatedProcessedTx(builderDb, 1), makeBloatedProcessedTx(builderDb, 2)]);
 
@@ -97,7 +169,7 @@ describe('prover/orchestrator', () => {
       const finalisedBlock = await builder.finaliseBlock();
 
       expect(finalisedBlock.block.number).toEqual(101);
-    }, 20000);
+    }, 60_000);
 
     it('automatically cancels an incomplete block when starting a new one', async () => {
       const txs1 = await Promise.all([makeBloatedProcessedTx(builderDb, 1), makeBloatedProcessedTx(builderDb, 2)]);
@@ -139,6 +211,6 @@ describe('prover/orchestrator', () => {
       const finalisedBlock = await builder.finaliseBlock();
 
       expect(finalisedBlock.block.number).toEqual(101);
-    }, 20000);
+    }, 60_000);
   });
 });

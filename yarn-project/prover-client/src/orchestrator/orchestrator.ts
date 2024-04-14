@@ -23,10 +23,8 @@ import {
 } from '@aztec/circuits.js';
 import { makeTuple } from '@aztec/foundation/array';
 import { padArrayEnd } from '@aztec/foundation/collection';
-import { MemoryFifo } from '@aztec/foundation/fifo';
 import { createDebugLogger } from '@aztec/foundation/log';
 import { type Tuple } from '@aztec/foundation/serialize';
-import { sleep } from '@aztec/foundation/sleep';
 import { elapsed } from '@aztec/foundation/timer';
 import { type MerkleTreeOperations } from '@aztec/world-state';
 
@@ -58,14 +56,6 @@ const logger = createDebugLogger('aztec:prover:proving-orchestrator');
  * The proving implementation is determined by the provided prover. This could be for example a local prover or a remote prover pool.
  */
 
-const SLEEP_TIME = 50;
-const MAX_CONCURRENT_JOBS = 64;
-
-enum PROMISE_RESULT {
-  SLEEP,
-  OPERATIONS,
-}
-
 /**
  * Enums and structs to communicate the type of work required in each request.
  */
@@ -89,14 +79,9 @@ export type ProvingJob = {
  */
 export class ProvingOrchestrator {
   private provingState: ProvingState | undefined = undefined;
-  private jobQueue: MemoryFifo<ProvingJob> = new MemoryFifo<ProvingJob>();
   private jobProcessPromise?: Promise<void>;
   private stopped = false;
-  constructor(
-    private db: MerkleTreeOperations,
-    private prover: CircuitProver,
-    private maxConcurrentJobs = MAX_CONCURRENT_JOBS,
-  ) {}
+  constructor(private db: MerkleTreeOperations, private prover: CircuitProver) {}
 
   public static async new(db: MerkleTreeOperations, prover: CircuitProver) {
     const orchestrator = new ProvingOrchestrator(db, prover);
@@ -105,13 +90,11 @@ export class ProvingOrchestrator {
   }
 
   public start() {
-    this.jobProcessPromise = this.processJobQueue();
     return Promise.resolve();
   }
 
   public async stop() {
     this.stopped = true;
-    this.jobQueue.cancel();
     await this.jobProcessPromise;
   }
 
@@ -184,9 +167,7 @@ export class ProvingOrchestrator {
     }).catch((reason: string) => ({ status: PROVING_STATUS.FAILURE, reason } as const));
 
     for (let i = 0; i < baseParityInputs.length; i++) {
-      this.enqueueJob(provingState, PROVING_JOB_TYPE.BASE_PARITY, () =>
-        this.runBaseParityCircuit(provingState, baseParityInputs[i], i),
-      );
+      void this.runBaseParityCircuit(provingState, baseParityInputs[i], i);
     }
 
     this.provingState = provingState;
@@ -217,9 +198,7 @@ export class ProvingOrchestrator {
     // We start the transaction by enqueueing the state updates
     const txIndex = this.provingState.addNewTx(tx);
     await this.prepareBaseRollupInputs(this.provingState, tx);
-    this.enqueueJob(this.provingState, PROVING_JOB_TYPE.PUBLIC_KERNEL, () =>
-      this.proveNextPublicFunction(this.provingState, txIndex, 0),
-    );
+    this.proveNextPublicFunction(this.provingState, txIndex, 0);
   }
 
   /**
@@ -243,9 +222,7 @@ export class ProvingOrchestrator {
       const tx = this.provingState.allTxs[paddingTxIndex];
       const inputs = this.provingState.baseRollupInputs[paddingTxIndex];
       const treeSnapshots = this.provingState.txTreeSnapshots[paddingTxIndex];
-      this.enqueueJob(this.provingState, PROVING_JOB_TYPE.BASE_ROLLUP, () =>
-        this.runBaseRollup(this.provingState, BigInt(paddingTxIndex), tx, inputs, treeSnapshots),
-      );
+      void this.runBaseRollup(this.provingState, BigInt(paddingTxIndex), tx, inputs, treeSnapshots);
     }
   }
 
@@ -308,38 +285,10 @@ export class ProvingOrchestrator {
     return blockResult;
   }
 
-  /**
-   * Enqueue a job to be scheduled
-   * @param provingState - The proving state object being operated on
-   * @param jobType - The type of job to be queued
-   * @param job - The actual job, returns a promise notifying of the job's completion
-   */
-  private enqueueJob(provingState: ProvingState | undefined, jobType: PROVING_JOB_TYPE, job: () => Promise<void>) {
-    if (!provingState?.verifyState()) {
-      logger.debug(`Not enqueueing job, proving state invalid`);
-      return;
-    }
-    // We use a 'safeJob'. We don't want promise rejections in the proving pool, we want to capture the error here
-    // and reject the proving job whilst keeping the event loop free of rejections
-    const safeJob = async () => {
-      try {
-        await job();
-      } catch (err) {
-        logger.error(`Error thrown when proving job type ${PROVING_JOB_TYPE[jobType]}: ${err}`);
-        provingState!.reject(`${err}`);
-      }
-    };
-    const provingJob: ProvingJob = {
-      type: jobType,
-      operation: safeJob,
-    };
-    this.jobQueue.put(provingJob);
-  }
-
   private proveNextPublicFunction(provingState: ProvingState | undefined, txIndex: number, nextFunctionIndex: number) {
     if (!provingState?.verifyState()) {
       logger.debug(`Not executing public function, state invalid`);
-      return Promise.resolve();
+      return;
     }
     const request = provingState.getPublicFunction(txIndex, nextFunctionIndex);
     if (!request) {
@@ -347,15 +296,10 @@ export class ProvingOrchestrator {
       const tx = provingState.allTxs[txIndex];
       const inputs = provingState.baseRollupInputs[txIndex];
       const treeSnapshots = provingState.txTreeSnapshots[txIndex];
-      this.enqueueJob(provingState, PROVING_JOB_TYPE.BASE_ROLLUP, () =>
-        this.runBaseRollup(provingState, BigInt(txIndex), tx, inputs, treeSnapshots),
-      );
-      return Promise.resolve();
+      void this.runBaseRollup(provingState, BigInt(txIndex), tx, inputs, treeSnapshots);
+      return;
     }
-    this.enqueueJob(provingState, PROVING_JOB_TYPE.PUBLIC_KERNEL, () =>
-      this.proveNextPublicFunction(provingState, txIndex, nextFunctionIndex + 1),
-    );
-    return Promise.resolve();
+    this.proveNextPublicFunction(provingState, txIndex, nextFunctionIndex + 1);
   }
 
   // Updates the merkle trees for a transaction. The first enqueued job for a transaction
@@ -535,9 +479,7 @@ export class ProvingOrchestrator {
     const rootParityInputs = new RootParityInputs(
       provingState.rootParityInput as Tuple<RootParityInput, typeof NUM_BASE_PARITY_PER_ROOT_PARITY>,
     );
-    this.enqueueJob(provingState, PROVING_JOB_TYPE.ROOT_PARITY, () =>
-      this.runRootParityCircuit(provingState, rootParityInputs),
-    );
+    void this.runRootParityCircuit(provingState, rootParityInputs);
   }
 
   // Runs the root parity circuit ans stored the outputs
@@ -564,15 +506,15 @@ export class ProvingOrchestrator {
       return;
     }
     provingState!.finalRootParityInput = circuitOutputs;
-    this.checkAndExecuteRootRollup(provingState);
+    await this.checkAndExecuteRootRollup(provingState);
   }
 
-  private checkAndExecuteRootRollup(provingState: ProvingState | undefined) {
+  private async checkAndExecuteRootRollup(provingState: ProvingState | undefined) {
     if (!provingState?.isReadyForRootRollup()) {
       logger.debug('Not ready for root rollup');
       return;
     }
-    this.enqueueJob(provingState, PROVING_JOB_TYPE.ROOT_ROLLUP, () => this.runRootRollup(provingState));
+    await this.runRootRollup(provingState);
   }
 
   private storeAndExecuteNextMergeLevel(
@@ -589,77 +531,10 @@ export class ProvingOrchestrator {
     }
 
     if (result.mergeLevel === 0n) {
-      this.checkAndExecuteRootRollup(provingState);
+      void this.checkAndExecuteRootRollup(provingState);
     } else {
       // onto the next merge level
-      this.enqueueJob(provingState, PROVING_JOB_TYPE.MERGE_ROLLUP, () =>
-        this.runMergeRollup(provingState, result.mergeLevel, result.indexWithinMergeLevel, result.mergeInputData),
-      );
-    }
-  }
-
-  /**
-   * Process the job queue
-   * Works by managing an input queue of proof requests and an active pool of proving 'jobs'
-   */
-  private async processJobQueue() {
-    // Used for determining the current state of a proving job
-    const promiseState = (p: Promise<void>) => {
-      const t = {};
-      return Promise.race([p, t]).then(
-        v => (v === t ? 'pending' : 'fulfilled'),
-        () => 'rejected',
-      );
-    };
-
-    // Just a short break between managing the sets of requests and active jobs
-    const createSleepPromise = () =>
-      sleep(SLEEP_TIME).then(_ => {
-        return PROMISE_RESULT.SLEEP;
-      });
-
-    let sleepPromise = createSleepPromise();
-    let promises: Promise<void>[] = [];
-    while (!this.stopped) {
-      // first look for more work
-      if (this.jobQueue.length() && promises.length < this.maxConcurrentJobs) {
-        // more work could be available
-        const job = await this.jobQueue.get();
-        if (job !== null) {
-          // a proving job, add it to the pool of outstanding jobs
-          promises.push(job.operation());
-        }
-        // continue adding more work
-        continue;
-      }
-
-      // no more work to add, here we wait for any outstanding jobs to finish and/or sleep a little
-      try {
-        const ops = Promise.race(promises).then(_ => {
-          return PROMISE_RESULT.OPERATIONS;
-        });
-        const result = await Promise.race([sleepPromise, ops]);
-        if (result === PROMISE_RESULT.SLEEP) {
-          // this is the sleep promise
-          // we simply setup the promise again and go round the loop checking for more work
-          sleepPromise = createSleepPromise();
-          continue;
-        }
-      } catch (err) {
-        // We shouldn't get here as all jobs should be wrapped in a 'safeJob' meaning they don't fail!
-        logger.error(`Unexpected error in proving orchestrator ${err}`);
-      }
-
-      // one or more of the jobs completed, remove them
-      const pendingPromises = [];
-      for (const jobPromise of promises) {
-        const state = await promiseState(jobPromise);
-        if (state === 'pending') {
-          pendingPromises.push(jobPromise);
-        }
-      }
-      // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      promises = pendingPromises;
+      void this.runMergeRollup(provingState, result.mergeLevel, result.indexWithinMergeLevel, result.mergeInputData);
     }
   }
 }

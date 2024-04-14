@@ -11,8 +11,8 @@ import assert from 'node:assert';
 import { afterEach, beforeEach, describe, it, mock } from 'node:test';
 
 import { type CircuitProver } from '../prover/interface.js';
-import { ProvingAgent } from './proving_agent.js';
-import { InMemoryProvingQueue, ParityProvingType, type ProvingQueue } from './proving_queue.js';
+import { LocalProvingAgent } from './proving_agent.js';
+import { InMemoryProvingQueue, type ProvingQueue } from './proving_queue.js';
 
 interface MockFunctionCall<
   F extends Function,
@@ -98,7 +98,7 @@ describe('ProvingAgent', () => {
     [K in keyof CircuitProver]: Mock<CircuitProver[K]>;
   };
   let queue: ProvingQueue;
-  let agent: ProvingAgent;
+  let agent: LocalProvingAgent;
 
   beforeEach(() => {
     circuitProver = {
@@ -125,7 +125,7 @@ describe('ProvingAgent', () => {
     };
 
     queue = new InMemoryProvingQueue();
-    agent = new ProvingAgent(circuitProver);
+    agent = new LocalProvingAgent(circuitProver);
 
     agent.start(queue);
   });
@@ -137,11 +137,7 @@ describe('ProvingAgent', () => {
   it('picks up proving jobs', async () => {
     const expectedResult = [makeParityPublicInputs(), makeEmptyProof()];
     circuitProver.getBaseParityProof.mock.mockImplementationOnce(() => Promise.resolve(expectedResult));
-
-    const result = await queue.put({
-      type: ParityProvingType.BASE_PARITY,
-      inputs: makeBaseParityInputs(),
-    });
+    const result = await queue.getBaseParityProof(makeBaseParityInputs());
 
     assert.deepEqual(result, expectedResult);
   });

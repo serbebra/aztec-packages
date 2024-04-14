@@ -41,6 +41,14 @@ export class Proof {
   public toBuffer() {
     return serializeToBuffer(this.buffer.length, this.buffer);
   }
+
+  public toString() {
+    return this.toBuffer().toString('hex');
+  }
+
+  static fromString(str: string) {
+    return Proof.fromBuffer(Buffer.from(str, 'hex'));
+  }
 }
 
 /**
