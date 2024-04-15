@@ -31,7 +31,7 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::goblin_batch_mul(const std::vector<
                                                               [[maybe_unused]] const size_t max_num_bits)
 {
     auto builder = points[0].get_context();
-
+    std::cout << "boop" << std::endl;
     // Check that the internal accumulator is zero?
     ASSERT(builder->op_queue->get_accumulator().is_point_at_infinity());
 
@@ -47,7 +47,11 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::goblin_batch_mul(const std::vector<
         if (scalar_is_constant_equal_one) { // if scalar is 1, there is no need to perform a mul
             op_tuple = builder->queue_ecc_add_accum(point.get_value());
         } else { // otherwise, perform a mul-then-accumulate
+            std::cout << "qstart" << std::endl;
+            std::cout << "pt " << point << std::endl;
+            std::cout << "sclar" << scalar << std::endl;
             op_tuple = builder->queue_ecc_mul_accum(point.get_value(), scalar.get_value());
+            std::cout << "qend" << std::endl;
         }
 
         // Add constraints demonstrating that the EC point coordinates were decomposed faithfully. In particular, show
@@ -57,6 +61,7 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::goblin_batch_mul(const std::vector<
         auto x_hi = Fr::from_witness_index(builder, op_tuple.x_hi);
         auto y_lo = Fr::from_witness_index(builder, op_tuple.y_lo);
         auto y_hi = Fr::from_witness_index(builder, op_tuple.y_hi);
+        std::cout << "z1" << std::endl;
         // Note: These constraints do not assume or enforce that the coordinates of the original point have been
         // asserted to be in the field, only that they are less than the smallest power of 2 greater than the field
         // modulus (a la the bigfield(lo, hi) constructor with can_overflow == false).
@@ -67,19 +72,21 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::goblin_batch_mul(const std::vector<
         x_hi.assert_equal(point.x.binary_basis_limbs[2].element + shift * point.x.binary_basis_limbs[3].element);
         y_lo.assert_equal(point.y.binary_basis_limbs[0].element + shift * point.y.binary_basis_limbs[1].element);
         y_hi.assert_equal(point.y.binary_basis_limbs[2].element + shift * point.y.binary_basis_limbs[3].element);
-
+        std::cout << "z2" << std::endl;
         // Add constraints demonstrating proper decomposition of scalar into endomorphism scalars
         if (!scalar_is_constant_equal_one) {
             auto z_1 = Fr::from_witness_index(builder, op_tuple.z_1);
             auto z_2 = Fr::from_witness_index(builder, op_tuple.z_2);
             auto beta = G::subgroup_field::cube_root_of_unity();
+            std::cout << "z3" << std::endl;
             scalar.assert_equal(z_1 - z_2 * beta);
+            std::cout << "z4" << std::endl;
         }
     }
-
+    std::cout << "z5" << std::endl;
     // Populate equality gates based on the internal accumulator point
     auto op_tuple = builder->queue_ecc_eq();
-
+    std::cout << "z6" << std::endl;
     // Reconstruct the result of the batch mul using indices into the variables array
     auto x_lo = Fr::from_witness_index(builder, op_tuple.x_lo);
     auto x_hi = Fr::from_witness_index(builder, op_tuple.x_hi);
@@ -87,7 +94,7 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::goblin_batch_mul(const std::vector<
     auto y_hi = Fr::from_witness_index(builder, op_tuple.y_hi);
     Fq point_x(x_lo, x_hi);
     Fq point_y(y_lo, y_hi);
-
+    std::cout << "z7" << std::endl;
     return element(point_x, point_y);
 }
 

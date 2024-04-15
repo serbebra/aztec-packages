@@ -76,6 +76,10 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::operator-(const element& other) con
 {
     if constexpr (IsGoblinBuilder<C> && std::same_as<G, bb::g1>) {
         // TODO(https://github.com/AztecProtocol/barretenberg/issues/707) Optimize
+        // element rhs(other);
+        // rhs.y = -rhs.y;
+        // std::vector<element> points{ *this, rhs };
+        // std::vector<Fr> scalars{ 1, 1 };
         std::vector<element> points{ *this, other };
         std::vector<Fr> scalars{ 1, -Fr(1) };
         return goblin_batch_mul(points, scalars);
@@ -623,6 +627,7 @@ element<C, Fq, Fr, G> element<C, Fq, Fr, G>::batch_mul(const std::vector<element
 {
     // Perform goblinized batched mul if available; supported only for BN254
     if constexpr (IsGoblinBuilder<C> && std::same_as<G, bb::g1>) {
+        std::cout << "beep" << std::endl;
         return goblin_batch_mul(points, scalars);
     } else {
 

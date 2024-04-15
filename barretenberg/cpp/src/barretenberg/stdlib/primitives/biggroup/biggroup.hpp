@@ -33,6 +33,7 @@ template <class Builder, class Fq, class Fr, class NativeGroup> class element {
         secp256k1_wnaf khi;
     };
 
+    using FNq = Fq;
     element();
     element(const typename NativeGroup::affine_element& input);
     element(const Fq& x, const Fq& y);

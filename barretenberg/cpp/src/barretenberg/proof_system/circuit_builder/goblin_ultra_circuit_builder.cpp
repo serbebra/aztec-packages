@@ -111,13 +111,16 @@ ecc_op_tuple GoblinUltraCircuitBuilder_<FF>::queue_ecc_add_accum(const bb::g1::a
 template <typename FF>
 ecc_op_tuple GoblinUltraCircuitBuilder_<FF>::queue_ecc_mul_accum(const bb::g1::affine_element& point, const FF& scalar)
 {
+    std::cout << "m1" << std::endl;
     // Add raw op to op queue
     op_queue->mul_accumulate(point, scalar);
+    std::cout << "m2" << std::endl;
 
     // Decompose operation inputs into width-four form and add ecc op gates
     auto op_tuple = decompose_ecc_operands(mul_accum_op_idx, point, scalar);
+    std::cout << "m3" << std::endl;
     populate_ecc_op_wires(op_tuple);
-
+    std::cout << "m4" << std::endl;
     return op_tuple;
 }
 

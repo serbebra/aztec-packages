@@ -114,6 +114,7 @@ template <class VerifierInstances>
 std::shared_ptr<typename VerifierInstances::Instance> ProtoGalaxyRecursiveVerifier_<
     VerifierInstances>::verify_folding_proof(const HonkProof& proof)
 {
+    std::cout << "verify_folding_prover_protogalaxyentrypoint" << std::endl;
     using Transcript = typename Flavor::Transcript;
 
     StdlibProof<Builder> stdlib_proof = bb::convert_proof_to_witness(builder, proof);
@@ -157,21 +158,73 @@ std::shared_ptr<typename VerifierInstances::Instance> ProtoGalaxyRecursiveVerifi
     next_accumulator->verification_key->pcs_verification_key = accumulator->verification_key->pcs_verification_key;
     next_accumulator->verification_key->pub_inputs_offset = accumulator->verification_key->pub_inputs_offset;
     next_accumulator->verification_key->public_inputs = accumulator->verification_key->public_inputs;
-    size_t vk_idx = 0;
-    for (auto& expected_vk : next_accumulator->verification_key->get_all()) {
-        size_t inst = 0;
-        std::vector<FF> scalars;
-        std::vector<Commitment> commitments;
-        for (auto& instance : instances) {
-            scalars.emplace_back(lagranges[inst]);
-            commitments.emplace_back(instance->verification_key->get_all()[vk_idx]);
-            inst++;
-        }
-        expected_vk = Commitment::batch_mul(commitments, scalars);
-        vk_idx++;
-    }
-    next_accumulator->is_accumulator = true;
+    //  size_t vk_idx = 0;
+    std::cout << "a" << std::endl;
+    struct ScalarMul {
+        FF scalar;
+        Commitment commitment;
+    };
+    using MSM = std::vector<ScalarMul>;
+    std::vector<MSM> msms;
+    std::vector<Commitment> msms_expected;
 
+    std::vector<Commitment> lhs_muls;
+    std::vector<Commitment> rhs_muls;
+    auto compute_folded_commitment = [&](Commitment accumulator, Commitment point, FF combiner_challenge) {
+        typename NativeFlavor::GroupElement acc = accumulator.get_value();
+        typename NativeFlavor::GroupElement p1 = point.get_value();
+        typename NativeFlavor::FF scalar = combiner_challenge.get_value();
+
+        typename NativeFlavor::GroupElement P = p1 - acc;
+        typename NativeFlavor::Commitment Q = P * scalar + acc;
+        return Commitment::from_witness(builder, Q);
+    };
+    std::cout << "b" << std::endl;
+    size_t vk_idxb = 0;
+    // for (auto& expected_vk : next_accumulator->verification_key->get_all()) {
+    for (auto& expected_vk : next_accumulator->verification_key->get_all()) {
+        Commitment accumulator = instances[0]->verification_key->get_all()[vk_idxb];
+        Commitment point = instances[1]->verification_key->get_all()[vk_idxb];
+
+        Commitment result = compute_folded_commitment(accumulator, point, lagranges[1]);
+        expected_vk = result;
+        // todo fix
+        if (point.get_value() == accumulator.get_value()) {
+            lhs_muls.emplace_back(point - accumulator);
+        } else {
+            lhs_muls.emplace_back(point);
+        }
+        if (result.get_value() == accumulator.get_value()) {
+            rhs_muls.emplace_back(result - accumulator);
+        } else {
+            rhs_muls.emplace_back(result);
+        }
+        // if (lhs_muls.back().get_value().y == bb::fq(0)) {
+        //     std::cout << "hey. vk. P1. idx = " << vk_idxb << std::endl;
+        //     std::cout << "num commitments = " << next_accumulator->verification_key->get_all().size() << std::endl;
+        //     ASSERT(vk_idxb == 100000);
+        // }
+        // if (rhs_muls.back().get_value().y == bb::fq(0)) {
+        //     std::cout << "hey. vk. P2. idx = " << vk_idxb << std::endl;
+        //     ASSERT(vk_idxb == 100000);
+        // }
+        vk_idxb++;
+    }
+    std::cout << "c" << std::endl;
+    // for (auto& expected_vk : next_accumulator->verification_key->get_all()) {
+    //     size_t inst = 0;
+    //     std::vector<FF> scalars;
+    //     std::vector<Commitment> commitments;
+    //     for (auto& instance : instances) {
+    //         scalars.emplace_back(lagranges[inst]);
+    //         commitments.emplace_back(instance->verification_key->get_all()[vk_idx]);
+    //         inst++;
+    //     }
+    //     expected_vk = Commitment::batch_mul(commitments, scalars);
+    //     vk_idx++;
+    // }
+    next_accumulator->is_accumulator = true;
+    std::cout << "d" << std::endl;
     // Compute next folding parameters and verify against the ones received from the prover
     next_accumulator->target_sum =
         perturbator_at_challenge * lagranges[0] + vanishing_polynomial_at_challenge * combiner_quotient_at_challenge;
@@ -180,20 +233,62 @@ std::shared_ptr<typename VerifierInstances::Instance> ProtoGalaxyRecursiveVerifi
 
     // Compute ϕ and verify against the data received from the prover
     auto& acc_witness_commitments = next_accumulator->witness_commitments;
-    size_t comm_idx = 0;
+    size_t comm_idxb = 0;
     for (auto& comm : acc_witness_commitments.get_all()) {
-        std::vector<FF> scalars;
-        std::vector<Commitment> commitments;
-        size_t inst = 0;
-        for (auto& instance : instances) {
-            scalars.emplace_back(lagranges[inst]);
-            commitments.emplace_back(instance->witness_commitments.get_all()[comm_idx]);
-            inst++;
-        }
-        comm = Commitment::batch_mul(commitments, scalars);
-        comm_idx++;
-    }
+        Commitment accumulator = instances[0]->witness_commitments.get_all()[comm_idxb];
+        Commitment point = instances[1]->witness_commitments.get_all()[comm_idxb];
 
+        Commitment result = compute_folded_commitment(accumulator, point, lagranges[1]);
+        comm = result;
+        lhs_muls.emplace_back(point - accumulator);
+        rhs_muls.emplace_back(result - accumulator);
+        if (lhs_muls.back().get_value().y == bb::fq(0)) {
+            std::cout << "hey. witness. P1. idx = " << comm_idxb << std::endl;
+            std::cout << "num commitments = " << acc_witness_commitments.get_all().size() << std::endl;
+            ASSERT(vk_idxb == 100000);
+        }
+        if (rhs_muls.back().get_value().y == bb::fq(0)) {
+            std::cout << "hey. witness. P2. idx = " << comm_idxb << std::endl;
+            ASSERT(vk_idxb == 100000);
+        }
+        comm_idxb++;
+    }
+    std::cout << "e" << std::endl;
+    // size_t comm_idx = 0;
+    // for (auto& comm : acc_witness_commitments.get_all()) {
+    //     std::vector<FF> scalars;
+    //     std::vector<Commitment> commitments;
+    //     size_t inst = 0;
+    //     for (auto& instance : instances) {
+    //         scalars.emplace_back(lagranges[inst]);
+    //         commitments.emplace_back(instance->witness_commitments.get_all()[comm_idx]);
+    //         inst++;
+    //     }
+    //     comm = Commitment::batch_mul(commitments, scalars);
+    //     comm_idx++;
+    // }
+
+    // Foooo
+    auto fold_challenges = std::vector<FF>(lhs_muls.size());
+    for (size_t idx = 0; idx < lhs_muls.size(); idx++) {
+        fold_challenges[idx] = FF(witness_t<Builder>(builder, bb::fr::random_element())); // TODO fix
+        //  gate_challenges[idx] = transcript->template get_challenge<FF>("Sumcheck:gate_challenge_" +
+        //  std::to_string(idx));
+    }
+    std::cout << "f" << std::endl;
+
+    Commitment lhs = Commitment::batch_mul(lhs_muls, fold_challenges);
+    std::cout << "g" << std::endl;
+    Commitment rhs = Commitment::batch_mul(rhs_muls, fold_challenges);
+    std::cout << "h" << std::endl;
+    lhs = lhs * combiner_challenge;
+    std::cout << "i" << std::endl;
+    lhs.x.assert_equal(rhs.x);
+    std::cout << "j" << std::endl;
+    lhs.y.assert_equal(rhs.y);
+    std::cout << "k" << std::endl;
+    // A + \sum (K_i - A).Li = C
+    // C - A = \sum (K_i - A).Li
     next_accumulator->verification_key->num_public_inputs = accumulator->verification_key->num_public_inputs;
     next_accumulator->verification_key->public_inputs =
         std::vector<FF>(next_accumulator->verification_key->num_public_inputs, 0);
@@ -232,6 +327,7 @@ std::shared_ptr<typename VerifierInstances::Instance> ProtoGalaxyRecursiveVerifi
         expected_parameters.lookup_grand_product_delta +=
             instance->relation_parameters.lookup_grand_product_delta * lagranges[inst_idx];
     }
+    std::cout << "exit" << std::endl;
     return next_accumulator;
 }
 

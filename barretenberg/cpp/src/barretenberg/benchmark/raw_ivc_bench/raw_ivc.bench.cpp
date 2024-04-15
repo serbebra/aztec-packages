@@ -1,4 +1,303 @@
 
+#include "barretenberg/client_ivc/client_ivc.hpp"
+#include "barretenberg/common/op_count.hpp"
+#include "barretenberg/common/op_count_google_bench.hpp"
+#include "barretenberg/flavor/flavor.hpp"
+#include "barretenberg/flavor/ultra.hpp"
+#include "barretenberg/goblin/mock_circuits.hpp"
+#include "barretenberg/stdlib/hash/keccak/keccak.hpp"
+#include "barretenberg/ultra_honk/ultra_prover.hpp"
+#include "barretenberg/ultra_honk/ultra_verifier.hpp"
+#include <benchmark/benchmark.h>
+
+using namespace benchmark;
+
+using Builder = bb::GoblinUltraCircuitBuilder;
+using ProverInstance = bb::ProverInstance_<bb::GoblinUltraFlavor>;
+using Prover = bb::UltraProver;
+using Verifier = bb::UltraVerifier;
+using VerificationKey = GoblinUltraFlavor::VerificationKey;
+// using Builder = GoblinUltraCircuitBuilder;
+using VerifierFoldData = GoblinMockCircuits::VerifierFoldData;
+using VerifierInstance = VerifierInstance_<GoblinUltraFlavor>;
+
+// constexpr size_t NUM_HASHES = 8;
+// constexpr size_t BYTES_PER_CHUNK = 512;
+// constexpr size_t START_BYTES = BYTES_PER_CHUNK - 9;
+// constexpr size_t MAX_BYTES = START_BYTES + (BYTES_PER_CHUNK * (NUM_HASHES - 1));
+
+class RawIVCBench : public benchmark::Fixture {
+  public:
+    // Number of function circuits to accumulate(based on Zacs target numbers)
+
+    void SetUp([[maybe_unused]] const ::benchmark::State& state) override
+    {
+        bb::srs::init_crs_factory("../srs_db/ignition");
+        bb::srs::init_grumpkin_crs_factory("../srs_db/grumpkin");
+    }
+
+    char get_random_char() { return static_cast<char>(bb::fr::random_element().data[0] % 8); }
+
+    static std::shared_ptr<VerifierInstance> construct_mock_folding_kernel(
+        Builder& builder,
+        const VerifierFoldData& func,
+        const VerifierFoldData& kernel,
+        std::shared_ptr<VerifierInstance>& prev_kernel_accum)
+    {
+        using GURecursiveFlavor = GoblinUltraRecursiveFlavor_<Builder>;
+        using RecursiveVerifierInstances =
+            bb::stdlib::recursion::honk::RecursiveVerifierInstances_<GURecursiveFlavor, 2>;
+        using FoldingRecursiveVerifier =
+            bb::stdlib::recursion::honk::ProtoGalaxyRecursiveVerifier_<RecursiveVerifierInstances>;
+
+        // Add operations representing general kernel logic e.g. state updates. Note: these are structured to make
+        // the kernel "full" within the dyadic size 2^17 (130914 gates)
+        stdlib::generate_sha256_test_circuit(builder, 1);
+
+        // // Initial kernel iteration does not have a previous kernel to fold
+        if (kernel.fold_proof.empty()) {
+            std::cout << "eeempty" << std::endl;
+            FoldingRecursiveVerifier verifier_1{ &builder, prev_kernel_accum, { func.inst_vk } };
+            auto fctn_verifier_accum = verifier_1.verify_folding_proof(func.fold_proof);
+            return std::make_shared<VerifierInstance>(fctn_verifier_accum->get_value());
+        }
+        std::cout << "not empty?" << std::endl;
+        FoldingRecursiveVerifier verifier_2{ &builder, prev_kernel_accum, { kernel.inst_vk } };
+        auto kernel_verifier_accum = verifier_2.verify_folding_proof(kernel.fold_proof);
+        return std::make_shared<VerifierInstance>(kernel_verifier_accum->get_value());
+    }
+
+    void construct_mock_function_circuit(Builder& builder)
+    {
+        stdlib::field_t<Builder> a = stdlib::witness_t<Builder>(&builder, 100);
+        stdlib::field_t<Builder> b = stdlib::witness_t<Builder>(&builder, 110);
+        stdlib::field_t<Builder> c = stdlib::witness_t<Builder>(&builder, 210);
+        auto d = a + b;
+        d.assert_equal(c);
+        stdlib::generate_sha256_test_circuit(builder, 1); // min gates: ~39k
+        MockCircuits::construct_goblin_ecc_op_circuit(builder);
+    }
+
+    void precompute_folding_verification_keys(bb::ClientIVC& ivc)
+    {
+        std::cout << "fa" << std::endl;
+        using VerifierInstance = VerifierInstance_<GoblinUltraFlavor>;
+
+        ClientIVC::ClientCircuit initial_function_circuit{ 1 << 15, ivc.goblin.op_queue };
+
+        construct_mock_function_circuit(initial_function_circuit);
+
+        // ivc.goblin.merge(initial_function_circuit); // Construct new merge proof
+        // ivc.prover_fold_output.accumulator = std::make_shared<ProverInstance>(initial_function_circuit);
+
+        // Initialise both the first prover and verifier accumulator from the inital function circuit
+        ivc.initialize(initial_function_circuit);
+        std::cout << "fbb" << std::endl;
+        ivc.vks.first_func_vk = std::make_shared<VerificationKey>(ivc.prover_fold_output.accumulator->proving_key);
+        std::cout << "fbd" << std::endl;
+        auto initial_verifier_acc = std::make_shared<VerifierInstance>(ivc.vks.first_func_vk);
+
+        ClientIVC::ClientCircuit function_circuit{ 1 << 15, ivc.goblin.op_queue };
+        construct_mock_function_circuit(function_circuit);
+        auto function_fold_proof = ivc.accumulate(function_circuit);
+        ivc.vks.func_vk = std::make_shared<VerificationKey>(ivc.prover_instance->proving_key);
+
+        //    auto function_fold_proof = ivc.accumulate(initial_function_circuit);
+        std::cout << "fc" << std::endl;
+
+        // Accumulate the next function circuit
+        // ClientIVC::ClientCircuit function_circuit{ goblin.op_queue };
+        // GoblinMockCircuits::construct_mock_function_circuit(function_circuit);
+        // auto function_fold_proof = accumulate(function_circuit);
+
+        // Create its verification key (we have called accumulate so it includes the recursive merge verifier)
+        // vks.func_vk = std::make_shared<VerificationKey>(prover_instance->proving_key);
+
+        // Create the initial kernel iteration and precompute its verification key
+        ClientIVC::ClientCircuit kernel_circuit{ 1 << 15, ivc.goblin.op_queue };
+        auto kernel_acc = construct_mock_folding_kernel(
+            kernel_circuit, { function_fold_proof, ivc.vks.func_vk }, {}, initial_verifier_acc);
+        std::cout << "fd" << std::endl;
+
+        auto kernel_fold_proof = ivc.accumulate(kernel_circuit);
+        std::cout << "fe" << std::endl;
+
+        ivc.vks.first_kernel_vk = std::make_shared<VerificationKey>(ivc.prover_instance->proving_key);
+
+        // Create another mock function circuit to run the full kernel
+        // auto function_circuit = ClientIVC::ClientCircuit{ ivc.goblin.op_queue };
+        // GoblinMockCircuits::construct_mock_function_circuit(function_circuit);
+        // function_fold_proof = accumulate(function_circuit);
+        std::cout << "fab" << std::endl;
+
+        // Create the full kernel circuit and compute verification key
+        kernel_circuit = GoblinUltraCircuitBuilder{ 1 << 15, ivc.goblin.op_queue };
+        kernel_acc = construct_mock_folding_kernel(
+            kernel_circuit, {}, { kernel_fold_proof, ivc.vks.first_kernel_vk }, kernel_acc);
+        kernel_fold_proof = ivc.accumulate(kernel_circuit);
+
+        ivc.vks.kernel_vk = std::make_shared<VerificationKey>(ivc.prover_instance->proving_key);
+
+        // Clean the Goblin state (reinitialise op_queue with mocking and clear merge proofs)
+        ivc.goblin = Goblin();
+        std::cout << "b" << std::endl;
+    }
+
+    // TODOS:::::
+    //  1: find nice way to bootstrap an accumulator
+    //     i.e. circuit that ASSIGNS an instance to an accumulator instead of folds
+    //  2: remove need for goblin ops in function circuits
+    void evaluate_ivc(size_t, bb::ClientIVC& ivc)
+    {
+        // std::cout << "ac" << std::endl;
+
+        // std::cout << "ba" << std::endl;
+        // Builder initial_function_circuit{ 1 << 15 };
+
+        // std::cout << "bb" << std::endl;
+        // construct_mock_function_circuit(initial_function_circuit);
+
+        // std::cout << "bc" << std::endl;
+        // initial_function_circuit.op_queue->prepend_previous_queue(*ivc.goblin.op_queue);
+        // std::cout << "bd" << std::endl;
+        // ivc.initialize(initial_function_circuit);
+        // std::cout << "be" << std::endl;
+        // std::swap(*ivc.goblin.op_queue, *initial_function_circuit.op_queue);
+        // std::cout << "bf" << std::endl;
+
+        // auto function_fold_proof = ivc.accumulate(initial_function_circuit);
+        // std::cout << "bg" << std::endl;
+        // VerifierFoldData function_fold_output = { function_fold_proof, ivc.vks.func_vk };
+        // std::cout << "bh" << std::endl;
+
+        // // // The accumulator for kernel uses the function accumulation verification key
+        // auto kernel_verifier_accumulator = std::make_shared<ClientIVC::VerifierInstance>(ivc.vks.first_func_vk);
+        // // std::cout << "bi" << std::endl;
+
+        precompute_folding_verification_keys(ivc);
+
+        std::vector<Builder> initial_function_circuits(2);
+
+        // Construct 2 starting function circuits in parallel
+        {
+            BB_OP_COUNT_TIME_NAME("construct_circuits");
+            parallel_for(2, [&](size_t circuit_index) {
+                construct_mock_function_circuit(initial_function_circuits[circuit_index]);
+            });
+        };
+
+        // Prepend queue to the first circuit
+        initial_function_circuits[0].op_queue->prepend_previous_queue(*ivc.goblin.op_queue);
+        // Initialize ivc
+        ivc.initialize(initial_function_circuits[0]);
+        // Retrieve the queue
+        std::swap(*ivc.goblin.op_queue, *initial_function_circuits[0].op_queue);
+
+        // Prepend queue to the second circuit
+        initial_function_circuits[1].op_queue->prepend_previous_queue(*ivc.goblin.op_queue);
+        // Accumulate another function circuit
+        auto function_fold_proof = ivc.accumulate(initial_function_circuits[1]);
+        // Retrieve the queue
+        std::swap(*ivc.goblin.op_queue, *initial_function_circuits[1].op_queue);
+        VerifierFoldData function_fold_output = { function_fold_proof, ivc.vks.func_vk };
+
+        // Free memory
+        initial_function_circuits.clear();
+
+        VerifierFoldData kernel_fold_output;
+        auto kernel_verifier_accumulator = std::make_shared<ClientIVC::VerifierInstance>(ivc.vks.first_func_vk);
+
+        size_t NUM_CIRCUITS = 10;
+        size_t size_hint = 1 << 15;
+        std::cout << "d" << std::endl;
+        for (size_t circuit_idx = 0; circuit_idx < NUM_CIRCUITS; ++circuit_idx) {
+            Builder kernel_circuit{ size_hint, ivc.goblin.op_queue };
+
+            if (circuit_idx == 0) {
+                //         kernel_verifier_accumulator = construct_mock_folding_kernel(
+                // kernel_circuit, {}, {}, kernel_verifier_accumulator);
+                kernel_circuit.op_queue->prepend_previous_queue(*ivc.goblin.op_queue);
+                kernel_verifier_accumulator = construct_mock_folding_kernel(
+                    kernel_circuit, function_fold_output, {}, kernel_verifier_accumulator);
+            } else {
+                kernel_verifier_accumulator = construct_mock_folding_kernel(
+                    kernel_circuit, function_fold_output, kernel_fold_output, kernel_verifier_accumulator);
+            }
+
+            ClientIVC::FoldProof kernel_fold_proof = ivc.accumulate(kernel_circuit);
+
+            // First iteration and the following ones differ
+            if (circuit_idx == 0) {
+                kernel_fold_output = { kernel_fold_proof, ivc.vks.first_kernel_vk };
+            } else {
+                kernel_fold_output = { kernel_fold_proof, ivc.vks.kernel_vk };
+            }
+        }
+
+        std::cout << "e" << std::endl;
+        Builder kernel_circuit{ size_hint, ivc.goblin.op_queue };
+        {
+            BB_OP_COUNT_TIME_NAME("construct_circuits");
+            kernel_verifier_accumulator = construct_mock_folding_kernel(
+                kernel_circuit, function_fold_output, kernel_fold_output, kernel_verifier_accumulator);
+        }
+
+        auto kernel_fold_proof = ivc.accumulate(kernel_circuit);
+        kernel_fold_output = { kernel_fold_proof, ivc.vks.kernel_vk };
+
+        std::cout << "f" << std::endl;
+        ivc.goblin.prove_eccvm();
+        ivc.goblin.prove_translator();
+    }
+};
+
+namespace {
+
+BENCHMARK_DEFINE_F(RawIVCBench, Prove)(benchmark::State& state)
+{
+    for (auto _ : state) {
+        bb::ClientIVC ivc;
+        evaluate_ivc(static_cast<size_t>(state.range(0)), ivc);
+    }
+}
+
+// BENCHMARK_DEFINE_F(RawIVCBench, Prove)(benchmark::State& state)
+// {
+//     for (auto _ : state) {
+//         state.PauseTiming();
+//         auto builder = generate_test_plonk_circuit(static_cast<size_t>(state.range(0)));
+//         state.ResumeTiming();
+//         auto instance = std::make_shared<ProverInstance>(builder);
+//         UltraProver prover(instance);
+//         auto proof = prover.construct_proof();
+//     }
+// }
+
+// BENCHMARK_DEFINE_F(StdlibKeccakBench, Full)(benchmark::State& state)
+// {
+//     for (auto _ : state) {
+//         auto builder = generate_test_plonk_circuit(static_cast<size_t>(state.range(0)));
+//         auto instance = std::make_shared<ProverInstance>(builder);
+//         UltraProver prover(instance);
+//         auto verification_key = std::make_shared<VerificationKey>(instance->proving_key);
+//         UltraVerifier verifier(verification_key);
+//         auto proof = prover.construct_proof();
+//         bool verified = verifier.verify_proof(proof);
+//         ASSERT(verified == true);
+//     }
+// }
+
+#define ARGS Arg(32)
+// ->Arg(64)->Arg(128)->Arg(256)->Arg(512)->Arg(1024)->Arg(2048)
+
+BENCHMARK_REGISTER_F(RawIVCBench, Prove)->Unit(benchmark::kMillisecond)->ARGS;
+// BENCHMARK_REGISTER_F(StdlibKeccakBench, Prove)->Unit(benchmark::kMillisecond)->ARGS;
+// BENCHMARK_REGISTER_F(StdlibKeccakBench, Full)->Unit(benchmark::kMillisecond)->ARGS;
+
+} // namespace
+
+BENCHMARK_MAIN();
+
 // #include <benchmark/benchmark.h>
 
 // #include "barretenberg/client_ivc/client_ivc.hpp"
@@ -86,7 +385,7 @@
 //      */
 //     static void perform_ivc_accumulation_rounds(State& state, ClientIVC& ivc)
 //     {
-//         const size_t size_hint = 1 << 17; // Size hint for reserving wires/selector vector memory in builders
+//         const size_t size_hint = 1 << 15; // Size hint for reserving wires/selector vector memory in builders
 //         std::vector<Builder> initial_function_circuits(2);
 
 //         // Construct 2 starting function circuits in parallel
