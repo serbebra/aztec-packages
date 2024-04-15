@@ -876,6 +876,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@aztec/simulator@workspace:simulator"
   dependencies:
+    "@aztec/archiver": "workspace:^"
     "@aztec/circuit-types": "workspace:^"
     "@aztec/circuits.js": "workspace:^"
     "@aztec/foundation": "workspace:^"

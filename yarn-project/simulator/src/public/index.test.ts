@@ -33,7 +33,7 @@ import { type MemDown, default as memdown } from 'memdown';
 import { toFunctionSelector } from 'viem';
 
 import { MessageLoadOracleInputs } from '../index.js';
-import { buildL1ToL2Message } from '../test/utils.js';
+import { buildL1ToL2Message } from '../mocks/fixtures.js';
 import { computeSlotForMapping } from '../utils.js';
 import { type CommitmentsDB, type PublicContractsDB, type PublicStateDB } from './db.js';
 import { type PublicExecution } from './execution.js';

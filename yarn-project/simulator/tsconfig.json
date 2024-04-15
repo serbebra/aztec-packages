@@ -28,6 +28,9 @@
       "path": "../world-state"
     },
     {
+      "path": "../archiver"
+    },
+    {
       "path": "../kv-store"
     },
     {

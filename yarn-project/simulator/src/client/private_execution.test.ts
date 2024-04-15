@@ -52,7 +52,7 @@ import { type MockProxy, mock } from 'jest-mock-extended';
 import { toFunctionSelector } from 'viem';
 
 import { type KeyPair, MessageLoadOracleInputs } from '../acvm/index.js';
-import { buildL1ToL2Message } from '../test/utils.js';
+import { buildL1ToL2Message } from '../mocks/fixtures.js';
 import { computeSlotForMapping } from '../utils.js';
 import { type DBOracle } from './db_oracle.js';
 import { collectUnencryptedLogs } from './execution_result.js';
