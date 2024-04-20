@@ -50,7 +50,15 @@ import { AztecLmdbStore } from '@aztec/kv-store/lmdb';
 import { initStoreForRollup, openTmpStore } from '@aztec/kv-store/utils';
 import { SHA256Trunc, StandardTree } from '@aztec/merkle-tree';
 import { AztecKVTxPool, type P2P, createP2PClient } from '@aztec/p2p';
-import { DummyProver, TxProver } from '@aztec/prover-client';
+import {
+  CircuitProverAgent,
+  DummyProver,
+  MemoryProvingQueue,
+  ProverPool,
+  TestCircuitProver,
+  TxProver,
+  createProvingQueueClient,
+} from '@aztec/prover-client';
 import { type GlobalVariableBuilder, SequencerClient, getGlobalVariableBuilder } from '@aztec/sequencer-client';
 import { PublicProcessorFactory, WASMSimulator } from '@aztec/simulator';
 import {
@@ -88,6 +96,7 @@ export class AztecNodeService implements AztecNode {
     protected readonly globalVariableBuilder: GlobalVariableBuilder,
     protected readonly merkleTreesDb: AztecKVStore,
     private readonly prover: ProverClient,
+    private readonly proverPool: ProverPool,
     private log = createDebugLogger('aztec:node'),
   ) {
     const message =
@@ -98,6 +107,10 @@ export class AztecNodeService implements AztecNode {
       `Outbox: ${config.l1Contracts.outboxAddress.toString()}\n` +
       `Availability Oracle: ${config.l1Contracts.availabilityOracleAddress.toString()}`;
     this.log.info(message);
+  }
+
+  public getProverPool() {
+    return this.proverPool;
   }
 
   /**
@@ -148,9 +161,20 @@ export class AztecNodeService implements AztecNode {
 
     // start the prover if we have been told to
     const simulationProvider = await getSimulationProvider(config, log);
+
+    const queue = config.proverUrl
+      ? createProvingQueueClient(config.proverUrl, 'provingQueue')
+      : new MemoryProvingQueue();
+
+    const proverPool = new ProverPool(
+      config.proverAgents ?? 0,
+      () => new CircuitProverAgent(new TestCircuitProver(simulationProvider)),
+      queue,
+    );
+
     const prover = config.disableProver
       ? await DummyProver.new()
-      : await TxProver.new(config, worldStateSynchronizer, simulationProvider);
+      : await TxProver.new(config, worldStateSynchronizer, simulationProvider, proverPool);
 
     // now create the sequencer
     const sequencer = config.disableSequencer
@@ -181,6 +205,7 @@ export class AztecNodeService implements AztecNode {
       getGlobalVariableBuilder(config),
       store,
       prover,
+      proverPool,
       log,
     );
   }

@@ -5,32 +5,22 @@ import { type SimulationProvider } from '@aztec/simulator';
 import { type WorldStateSynchronizer } from '@aztec/world-state';
 
 import { type ProverConfig } from '../config.js';
+import { CircuitProverAgent, ProverPool, TestCircuitProver } from '../index.js';
 import { type VerificationKeys, getVerificationKeys } from '../mocks/verification_keys.js';
 import { ProvingOrchestrator } from '../orchestrator/orchestrator.js';
-import { CircuitProverAgent } from '../prover-pool/circuit-prover-agent.js';
-import { ProverPool } from '../prover-pool/prover-pool.js';
-import { TestCircuitProver } from '../prover/test_circuit_prover.js';
 
 /**
  * A prover accepting individual transaction requests
  */
 export class TxProver implements ProverClient {
   private orchestrator: ProvingOrchestrator;
-  private proverPool: ProverPool;
 
   constructor(
     private worldStateSynchronizer: WorldStateSynchronizer,
-    simulationProvider: SimulationProvider,
     protected vks: VerificationKeys,
-    agentCount = 4,
-    agentPollIntervalMS = 10,
+    private proverPool: ProverPool,
   ) {
-    this.proverPool = new ProverPool(
-      agentCount,
-      i => new CircuitProverAgent(new TestCircuitProver(simulationProvider), agentPollIntervalMS, `${i}`),
-    );
-
-    this.orchestrator = new ProvingOrchestrator(worldStateSynchronizer.getLatest(), this.proverPool.queue);
+    this.orchestrator = new ProvingOrchestrator(worldStateSynchronizer.getLatest(), proverPool.queue);
   }
 
   /**
@@ -57,8 +47,10 @@ export class TxProver implements ProverClient {
     config: ProverConfig,
     worldStateSynchronizer: WorldStateSynchronizer,
     simulationProvider: SimulationProvider,
+    proverPool?: ProverPool,
   ) {
-    const prover = new TxProver(worldStateSynchronizer, simulationProvider, getVerificationKeys());
+    proverPool ??= new ProverPool(5, () => new CircuitProverAgent(new TestCircuitProver(simulationProvider)));
+    const prover = new TxProver(worldStateSynchronizer, getVerificationKeys(), proverPool);
     await prover.start();
     return prover;
   }

@@ -27,22 +27,26 @@ export class CircuitProverAgent implements ProvingAgent {
     }
 
     this.runningPromise = new RunningPromise(async () => {
-      const job = await queue.getProvingJob();
-      if (!job) {
-        return;
-      }
-
       try {
-        const [time, result] = await elapsed(() => this.work(job.request));
-        await queue.resolveProvingJob(job.id, result);
-        this.log.info(
-          `Processed proving job id=${job.id} type=${ProvingRequestType[job.request.type]} duration=${time}ms`,
-        );
+        const job = await queue.getProvingJob();
+        if (!job) {
+          return;
+        }
+
+        try {
+          const [time, result] = await elapsed(() => this.work(job.request));
+          await queue.resolveProvingJob(job.id, result);
+          this.log.info(
+            `Processed proving job id=${job.id} type=${ProvingRequestType[job.request.type]} duration=${time}ms`,
+          );
+        } catch (err) {
+          this.log.error(
+            `Error processing proving job id=${job.id} type=${ProvingRequestType[job.request.type]}: ${err}`,
+          );
+          await queue.rejectProvingJob(job.id, err as Error);
+        }
       } catch (err) {
-        this.log.error(
-          `Error processing proving job id=${job.id} type=${ProvingRequestType[job.request.type]}: ${err}`,
-        );
-        await queue.rejectProvingJob(job.id, err as Error);
+        this.log.error(`Error getting proving job: ${err}`);
       }
     }, this.intervalMs);
 
