@@ -7,7 +7,7 @@ use acvm::FieldElement;
 
 use crate::instructions::{
     AvmInstruction, AvmOperand, AvmTypeTag, ALL_DIRECT, FIRST_OPERAND_INDIRECT,
-    SECOND_OPERAND_INDIRECT, ZEROTH_OPERAND_INDIRECT,
+    SECOND_OPERAND_INDIRECT, THIRD_OPERAND_INDIRECT, ZEROTH_OPERAND_INDIRECT,
 };
 use crate::opcodes::AvmOpcode;
 use crate::utils::{dbg_print_avm_program, dbg_print_brillig_program};
@@ -930,6 +930,43 @@ fn handle_black_box_function(avm_instrs: &mut Vec<AvmInstruction>, operation: &B
                     },
                     AvmOperand::U32 {
                         value: message_size_offset as u32,
+                    },
+                ],
+                ..Default::default()
+            });
+        }
+        BlackBoxOp::Sha256Compression {
+            input,
+            hash_values,
+            output,
+        } => {
+            let inputs_offset = input.pointer.0;
+            let inputs_size_offset = input.size.0;
+            let hash_values_offset = hash_values.pointer.0;
+            let hash_values_size_offset = hash_values.size.0;
+            let dst_offset = output.pointer.0;
+            //assert_eq!(output.size, 32, "SHA256 output size must be 32!");
+
+            avm_instrs.push(AvmInstruction {
+                opcode: AvmOpcode::SHA256COMPRESSION,
+                indirect: Some(
+                    ZEROTH_OPERAND_INDIRECT | FIRST_OPERAND_INDIRECT | THIRD_OPERAND_INDIRECT,
+                ),
+                operands: vec![
+                    AvmOperand::U32 {
+                        value: dst_offset as u32,
+                    },
+                    AvmOperand::U32 {
+                        value: hash_values_offset as u32,
+                    },
+                    AvmOperand::U32 {
+                        value: hash_values_size_offset as u32,
+                    },
+                    AvmOperand::U32 {
+                        value: inputs_offset as u32,
+                    },
+                    AvmOperand::U32 {
+                        value: inputs_size_offset as u32,
                     },
                 ],
                 ..Default::default()
