@@ -117,6 +117,7 @@ export class AztecNodeService implements AztecNode {
 
     const log = createDebugLogger('aztec:node');
     const storeLog = createDebugLogger('aztec:node:lmdb');
+    log.info('opening node store');
     const store = await initStoreForRollup(
       AztecLmdbStore.open(config.dataDirectory, false, storeLog),
       config.l1Contracts.rollupAddress,
@@ -469,6 +470,7 @@ export class AztecNodeService implements AztecNode {
 
     const treeHeight = Math.ceil(Math.log2(l2ToL1Messages.length));
     // The root of this tree is the out_hash calculated in Noir => we truncate to match Noir's SHA
+    this.log.info(`Creating ephemeral tree with height ${treeHeight}`);
     const tree = new StandardTree(
       openTmpStore(true),
       new SHA256Trunc(),

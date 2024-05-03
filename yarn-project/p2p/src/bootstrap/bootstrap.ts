@@ -55,7 +55,7 @@ export class BootstrapNode {
     });
     (this.node as Discv5EventEmitter).on('discovered', async (enr: SignableENR) => {
       const addr = await enr.getFullMultiaddr('udp');
-      this.logger.verbose(`Discovered new peer, enr: ${enr.encodeTxt()}, addr: ${addr?.toString()}`);
+      this.logger.info(`Discovered new peer, enr: ${enr.encodeTxt()}, addr: ${addr?.toString()}`);
     });
 
     try {
@@ -75,7 +75,7 @@ export class BootstrapNode {
   public async stop() {
     // stop libp2p
     await this.node?.stop();
-    this.logger.debug('libp2p has stopped');
+    this.logger.info('libp2p has stopped');
   }
 
   /**

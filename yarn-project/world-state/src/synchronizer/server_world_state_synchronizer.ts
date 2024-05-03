@@ -251,6 +251,7 @@ export class ServerWorldStateSynchronizer implements WorldStateSynchronizer {
    * @throws If the L1 to L2 messages do not hash to the block inHash.
    */
   async #verifyMessagesHashToInHash(l1ToL2Messages: Fr[], inHash: Buffer) {
+    this.log.info('Verifying L1 to L2 messages hash to the block inHash');
     const tree = new StandardTree(
       openTmpStore(true),
       new SHA256Trunc(),

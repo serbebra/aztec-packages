@@ -31,6 +31,7 @@ export class ContractDataOracle {
 
   /** Returns a contract instance for a given address. Throws if not found. */
   public async getContractInstance(contractAddress: AztecAddress): Promise<ContractInstance> {
+    // console.log('\n\nlooking for contract\n\n', contractAddress.toString(), '\n\n\n');
     if (!this.contractInstances.has(contractAddress.toString())) {
       const instance = await this.db.getContractInstance(contractAddress);
       if (!instance) {

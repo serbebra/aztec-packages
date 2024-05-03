@@ -53,7 +53,7 @@ export class AztecDatastore implements Datastore {
     const dbItem = this.#dbDatastore.get(key.toString());
 
     if (!dbItem) {
-      throw new Error(`Key not found: ${key.toString()}`);
+      return new Uint8Array([]);
     }
 
     // don't call this._memoryDatastore.set directly

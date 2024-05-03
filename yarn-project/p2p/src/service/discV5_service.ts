@@ -71,7 +71,7 @@ export class DiscV5Service extends EventEmitter implements PeerDiscoveryService 
     (this.discv5 as Discv5EventEmitter).on('enrAdded', async (enr: ENR) => {
       const multiAddrTcp = await enr.getFullMultiaddr('tcp');
       const multiAddrUdp = await enr.getFullMultiaddr('udp');
-      this.logger.debug(`ENR multiaddr: ${multiAddrTcp?.toString()}, ${multiAddrUdp?.toString()}`);
+      this.logger.info(`ENR multiaddr: ${multiAddrTcp?.toString()}, ${multiAddrUdp?.toString()}`);
     });
 
     this.runningPromise = new RunningPromise(async () => {

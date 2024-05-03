@@ -16,10 +16,10 @@ export class PeerManager {
   async updateDiscoveryService() {
     const peerCount = this.libP2PNode.getPeers().length;
     if (peerCount >= this.config.maxPeerCount && this.discV5Node.getStatus() === PeerDiscoveryState.RUNNING) {
-      this.logger.debug('Max peer count reached, stopping discovery service');
+      this.logger.info('Max peer count reached, stopping discovery service');
       await this.discV5Node.stop();
     } else if (peerCount <= this.config.minPeerCount && this.discV5Node.getStatus() === PeerDiscoveryState.STOPPED) {
-      this.logger.debug('Min peer count reached, starting discovery service');
+      this.logger.info('Min peer count reached, starting discovery service');
       await this.discV5Node.start();
     }
   }

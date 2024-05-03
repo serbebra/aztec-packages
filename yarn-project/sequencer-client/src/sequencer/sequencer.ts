@@ -66,6 +66,7 @@ export class Sequencer {
    * @param config - New parameters.
    */
   public updateConfig(config: SequencerConfig) {
+    console.log('updating config', config);
     if (config.transactionPollingIntervalMS) {
       this.pollingIntervalMs = config.transactionPollingIntervalMS;
     }

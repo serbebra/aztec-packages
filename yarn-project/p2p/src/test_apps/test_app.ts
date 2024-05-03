@@ -21,10 +21,10 @@ import { tcp } from '@libp2p/tcp';
 import { pipe } from 'it-pipe';
 import { type Libp2p, createLibp2p } from 'libp2p';
 
-import { type P2PConfig, getP2PConfigEnvVars } from './config.js';
-import { AztecDatastore } from './service/data_store.js';
-import { DiscV5Service } from './service/discV5_service.js';
-import { createLibP2PPeerId } from './service/libp2p_service.js';
+import { type P2PConfig, getP2PConfigEnvVars } from '../config.js';
+import { AztecDatastore } from '../service/data_store.js';
+import { DiscV5Service } from '../service/discV5_service.js';
+import { createLibP2PPeerId } from '../service/libp2p_service.js';
 
 const { PRIVATE_KEY } = process.env;
 
