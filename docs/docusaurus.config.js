@@ -47,7 +47,11 @@ const config = {
       {
         docs: {
           path: process.env.ENV === "dev" ? "docs" : "processed-docs",
+<<<<<<< HEAD
           sidebarPath: "./sidebars.js",
+=======
+          sidebarPath: require.resolve("./sidebars.js"),
+>>>>>>> origin
           editUrl: (params) => {
             return (
               `https://github.com/AztecProtocol/aztec-packages/edit/master/docs/docs/` +
