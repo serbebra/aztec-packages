@@ -4,19 +4,13 @@ title: Sandbox Reference
 
 :::tip
 
-<<<<<<< HEAD:docs/docs/reference/reference/sandbox_reference/sandbox-reference.md
-For a quick start, follow the [guide](/getting_started/getting_started) to install the sandbox.
+For a quick start, follow the [guide](/getting_started/getting_started/index.md) to install the sandbox.
 
 You can run the Sandbox using Docker. See the [Quickstart](getting_started/getting_started/index.md#install-docker) for instructions on installing Docker.
-=======
-For a quick start, follow the [guide](../../getting_started/quickstart.md) to install the sandbox.
-
-:::
->>>>>>> origin:docs/docs/developers/sandbox/references/sandbox-reference.md
 
 ## Manual Install
 
-You can manually install the sandbox via the underlying script used in the [Aztec Boxes](../../getting_started/quickstart.md#run-the-npx-script).
+You can manually install the sandbox via the underlying script used in the [Aztec Boxes](/getting_started/getting_started/index.md#run-the-npx-script).
 
 ### Prerequisites
 
