@@ -41,7 +41,7 @@ E2E_TEST:
     END
   END
   # Run our docker compose, ending whenever sandbox ends, filtering out noisy eth_getLogs
-  RUN docker run --rm aztecprotocol/end-to-end:$AZTEC_DOCKER_TAG $test || [ "$allow_fail" == "true" ]
+  RUN docker run --rm aztecprotocol/end-to-end:$AZTEC_DOCKER_TAG $test || $allow_fail
 
 UPLOAD_LOGS:
   FUNCTION
