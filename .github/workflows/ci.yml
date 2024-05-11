@@ -96,9 +96,9 @@ jobs:
               # if someone took the lock, wait for image serialize
               for i in {1..20} ; do [ -f .copied ] && ! [ -f .finished ] && sleep 5 || break ; done
               touch .copied
-              ! [ -f image.brotli ] && docker save aztecprotocol/aztec:${{ github.event.pull_request.head.sha }} aztecprotocol/end-to-end:${{ github.event.pull_request.head.sha }} | brotli -2 > image.brotli
+              ! [ -f image.brotli ] && docker save aztecprotocol/aztec:${{ github.event.pull_request.head.sha }} aztecprotocol/end-to-end:${{ github.event.pull_request.head.sha }} | brotli -2 > image-${{ github.event.pull_request.head.sha }}.brotli
               touch .finished
-              cat image.brotli
+              cat image-${{ github.event.pull_request.head.sha }}.brotli
             " | brotli --decompress | docker load
 
       - name: Test
