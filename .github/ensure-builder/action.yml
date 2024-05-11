@@ -22,7 +22,7 @@ runs:
         TYPE=${{ inputs.runner_type }}
         # Try to use spot for every runner type for now
         echo "spot_strategy=BestEffort" >> $GITHUB_OUTPUT
-        echo "runner_label=$runnner_type" >> $GITHUB_OUTPUT
+        echo "runner_label=$runner_type" >> $GITHUB_OUTPUT
         if [[ $TYPE == builder-x86 ]]; then
           # 128-core x86 instance types with least evictions
           echo "instance_type=r6in.32xlarge r6a.32xlarge i4i.32xlarge r7iz.32xlarge" >> $GITHUB_OUTPUT
@@ -101,11 +101,11 @@ runs:
         set -x
         # detect run folder
         if ! scripts/run_on_builder "[ -d ~/run-$RUN_ID ]" ; then
-          echo "> Copying local repo to spot"
+          echo "Copying local repo to spot"
           tar czf - .git | scripts/run_on_builder \
             "mkdir -p ~/run-$RUN_ID-git && cd ~/run-$RUN_ID-git && tar xzf -" || true
           scripts/run_on_builder "
-            echo "> Unpacking repo"
+            echo "Unpacking repo"
             git config --global advice.detachedHead false
             git clone ~/run-$RUN_ID-git/.git ~/run-$RUN_ID
             echo ${{ env.BUILD_INSTANCE_SSH_KEY }} | base64 --decode > ~/.ssh/build_instance_key
@@ -122,11 +122,11 @@ runs:
         set -x
         # detect run folder
         if ! scripts/run_on_tester "[ -d ~/run-$RUN_ID-git ]" ; then
-          echo "> Copying local repo to spot"
+          echo "Copying local repo to spot"
           tar czf - .git | scripts/run_on_tester \
             "mkdir -p ~/run-$RUN_ID-git && cd ~/run-$RUN_ID-git && tar xzf -" || true
           scripts/run_on_tester "
-            echo "> Unpacking repo"
+            echo "Unpacking repo"
             git config --global advice.detachedHead false
             git clone ~/run-$RUN_ID-git/.git ~/run-$RUN_ID
             echo ${{ env.BUILD_INSTANCE_SSH_KEY }} | base64 --decode > ~/.ssh/build_instance_key
