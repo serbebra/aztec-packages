@@ -87,7 +87,7 @@ jobs:
       - name: Copy Docker Images to Tester
         uses: ./.github/ensure-builder
         with:
-          runner_type: ${{ matrix.test == 'client-prover-integration' && '16core-tester-x86' || '4core-tester-x86' }}
+          runner_type: ${{ matrix.test == 'client-prover-integration' && '32core-tester-x86' || '4core-tester-x86' }}
           run: |
             set -eux
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
@@ -143,7 +143,7 @@ jobs:
         # needed to use run-on-tester
         uses: ./.github/ensure-builder
         with:
-          runner_type: 16core-tester-x86
+          runner_type: 32core-tester-x86
           run: |
             set -eux
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
