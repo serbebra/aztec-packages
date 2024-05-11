@@ -94,8 +94,7 @@ jobs:
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             SHA=${{ github.event.pull_request.head.sha }}
             scripts/run_on_builder "
-              SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
-              flock $SHA.lock bash -c "$SCRIPT"
+              flock $SHA.lock bash -c '! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli'
               cat $SHA.brotli
             " | brotli --decompress | docker load
 
@@ -148,8 +147,7 @@ jobs:
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             SHA=${{ github.event.pull_request.head.sha }}
             scripts/run_on_builder "
-              SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
-              flock $SHA.lock bash -c "$SCRIPT"
+              flock $SHA.lock bash -c '! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli'
               cat $SHA.brotli
             " | brotli --decompress | docker load
 
