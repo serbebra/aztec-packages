@@ -93,7 +93,7 @@ jobs:
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             scripts/run_on_builder "
-              SHA=${{ github.event.pull_request.head.sha }}
+              export SHA=${{ github.event.pull_request.head.sha }}
               SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
               flock $SHA.lock bash -c "$SCRIPT"
               cat $SHA.brotli
@@ -147,7 +147,7 @@ jobs:
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             scripts/run_on_builder "
-              SHA=${{ github.event.pull_request.head.sha }}
+              export SHA=${{ github.event.pull_request.head.sha }}
               SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
               flock $SHA.lock bash -c "$SCRIPT"
               cat $SHA.brotli
