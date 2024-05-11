@@ -51,7 +51,7 @@ runs:
             echo "ami_id=ami-04d8422a9ba4de80f" >> $GITHUB_OUTPUT
             # no github runners, 'bare spot' in action code
             echo "runner_concurrency=0" >> $GITHUB_OUTPUT
-            echo "ttl=20" >> $GITHUB_OUTPUT
+            echo "ttl=30" >> $GITHUB_OUTPUT
           fi
           if [[ $TYPE == 4core-* ]]; then
             echo "instance_type=m6a.large" >> $GITHUB_OUTPUT

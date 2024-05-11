@@ -87,18 +87,16 @@ jobs:
       - name: Copy Docker Images to Tester
         uses: ./.github/ensure-builder
         with:
-          runner_type: ${{ matrix.test == 'client-prover-integration' && '32core-tester-x86' || '4core-tester-x86' }}
+          runner_type: ${{ matrix.test == 'client-prover-integration' && '32core-tester-x86' || '8core-tester-x86' }}
           run: |
             set -eux
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             scripts/run_on_builder "
-              # if someone took the lock, wait for image serialize
-              for i in {1..20} ; do [ -f .copied ] && ! [ -f .finished ] && sleep 5 || break ; done
-              touch .copied
-              ! [ -f image.brotli ] && docker save aztecprotocol/aztec:${{ github.event.pull_request.head.sha }} aztecprotocol/end-to-end:${{ github.event.pull_request.head.sha }} | brotli -2 > image-${{ github.event.pull_request.head.sha }}.brotli
-              touch .finished
-              cat image-${{ github.event.pull_request.head.sha }}.brotli
+              SHA=${{ github.event.pull_request.head.sha }}
+              SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
+              flock $SHA.lock bash -c "$SCRIPT"
+              cat $SHA.brotli
             " | brotli --decompress | docker load
 
       - name: Test
@@ -149,7 +147,10 @@ jobs:
             export BUILDER_SPOT_IP=${{ env.BUILDER_SPOT_IP }}
             export BUILDER_SPOT_KEY=~/.ssh/build_instance_key
             scripts/run_on_builder "
-              docker save aztecprotocol/aztec:${{ github.event.pull_request.head.sha }} aztecprotocol/end-to-end:${{ github.event.pull_request.head.sha }} | brotli -2
+              SHA=${{ github.event.pull_request.head.sha }}
+              SCRIPT="! [ -f $SHA.brotli ] && docker save aztecprotocol/aztec:$SHA aztecprotocol/end-to-end:$SHA | brotli -2 > $SHA.brotli"
+              flock $SHA.lock bash -c "$SCRIPT"
+              cat $SHA.brotli
             " | brotli --decompress | docker load
 
       - name: Test
