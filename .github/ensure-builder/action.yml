@@ -3,28 +3,10 @@ name: Setup Workflow
 description: "Reusable setup steps"
 
 inputs:
-  runner_label:
-    required: true
   runner_action:
     default: start
     required: false
   runner_type:
-    required: true
-  github_token:
-    required: true
-  aws_access_key_id:
-    required: true
-  aws_secret_access_key:
-    required: true
-  run_id:
-    required: false
-    # build instances need a folder per workflow run, testers can use default
-    default: "project"
-  run_attempt:
-    required: true
-  ec2_key:
-    required: true
-  concurrency_github_token:
     required: true
   run:
     # command to run once builder/tester available
@@ -40,12 +22,14 @@ runs:
         TYPE=${{ inputs.runner_type }}
         # Try to use spot for every runner type for now
         echo "spot_strategy=BestEffort" >> $GITHUB_OUTPUT
+        echo "runner_label=$runnner_type" >> $GITHUB_OUTPUT
         if [[ $TYPE == builder-x86 ]]; then
           # 128-core x86 instance types with least evictions
           echo "instance_type=r6in.32xlarge r6a.32xlarge i4i.32xlarge r7iz.32xlarge" >> $GITHUB_OUTPUT
           echo "ami_id=ami-04d8422a9ba4de80f" >> $GITHUB_OUTPUT
           echo "ebs_cache_size=256" >> $GITHUB_OUTPUT
           echo "runner_concurrency=50" >> $GITHUB_OUTPUT
+          echo "runner_label=$USERNAME-x86" >> $GITHUB_OUTPUT
           echo "ttl=40" >> $GITHUB_OUTPUT
         elif [[ $TYPE == builder-arm ]]; then
           # 64-core ARM instance type
@@ -53,6 +37,7 @@ runs:
           echo "ami_id=ami-0d8a9b0419ddb331a" >> $GITHUB_OUTPUT
           echo "ebs_cache_size=256" >> $GITHUB_OUTPUT
           echo "runner_concurrency=8" >> $GITHUB_OUTPUT
+          echo "runner_label=$USERNAME-arm" >> $GITHUB_OUTPUT
           echo "ttl=40" >> $GITHUB_OUTPUT
         elif [[ $TYPE == bb-bench-x86 ]]; then
           # 16-core x86 instance type
@@ -87,15 +72,15 @@ runs:
       uses: ./.github/spot-runner-action
       with:
         # inputs:
-        runner_label: ${{ inputs.runner_label || inputs.runner_type }}
+        runner_label: ${{ steps.select_instance.outputs.runner_label }}
         subaction: ${{ inputs.runner_action }}
-        github_token: ${{ inputs.github_token }}
-        aws_access_key_id: ${{ inputs.aws_access_key_id }}
-        aws_secret_access_key: ${{ inputs.aws_secret_access_key }}
-        ec2_key: ${{ inputs.ec2_key }}
+        github_token: ${{ env.GH_SELF_HOSTED_RUNNER_TOKEN }}
+        aws_access_key_id: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws_secret_access_key: ${{ env.AWS_SECRET_ACCESS_KEY }}
+        ec2_key: ${{ env.BUILD_INSTANCE_SSH_KEY }}
         # idempotency, see https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-idempotency.html
         # makes e2e tests hitting the API at once not cause multiple spots
-        client_token: ${{ inputs.run_attempt && format('ci-yml-{0}-{1}', inputs.run_id, inputs.run_attempt) || '' }}
+        client_token: ${{ !contains(inputs.runner_type, 'tester') && format('ci-yml-{0}-{1}', env.RUN_ID, env.RUN_ATTEMPT) || '' }}
         # constants:
         runner_concurrency: ${{ steps.select_instance.outputs.runner_concurrency }}
         ec2_instance_type: ${{ steps.select_instance.outputs.instance_type }}
@@ -113,8 +98,7 @@ runs:
       shell: bash
       if: ${{ !contains(inputs.runner_type, 'tester') }}
       run: |
-        export RUN_ID=${{ inputs.run_id }}
-        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
+        set -x
         # detect run folder
         if ! scripts/run_on_builder "[ -d ~/run-$RUN_ID ]" ; then
           echo "> Copying local repo to spot"
@@ -124,7 +108,7 @@ runs:
             echo "> Unpacking repo"
             git config --global advice.detachedHead false
             git clone ~/run-$RUN_ID-git/.git ~/run-$RUN_ID
-            echo ${{ inputs.ec2_key }} | base64 --decode > ~/.ssh/build_instance_key
+            echo ${{ env.BUILD_INSTANCE_SSH_KEY }} | base64 --decode > ~/.ssh/build_instance_key
             chmod 600 ~/.ssh/build_instance_key
           " || true
         fi
@@ -135,8 +119,6 @@ runs:
       shell: bash
       if: ${{ contains(inputs.runner_type, 'tester') }}
       run: |
-        export RUN_ID=${{ inputs.run_id }}
-        echo "RUN_ID=$RUN_ID" >> $GITHUB_ENV
         set -x
         # detect run folder
         if ! scripts/run_on_tester "[ -d ~/run-$RUN_ID-git ]" ; then
@@ -147,7 +129,7 @@ runs:
             echo "> Unpacking repo"
             git config --global advice.detachedHead false
             git clone ~/run-$RUN_ID-git/.git ~/run-$RUN_ID
-            echo ${{ inputs.ec2_key }} | base64 --decode > ~/.ssh/build_instance_key
+            echo ${{ env.BUILD_INSTANCE_SSH_KEY }} | base64 --decode > ~/.ssh/build_instance_key
             chmod 600 ~/.ssh/build_instance_key
           " || true
         fi
@@ -157,15 +139,15 @@ runs:
       if: ${{ !contains(inputs.runner_type, 'tester') }}
       with:
         run: |
-          export AWS_ACCESS_KEY_ID=${{ inputs.aws_access_key_id }}
-          export AWS_SECRET_ACCESS_KEY=${{ inputs.aws_secret_access_key }}
           # give time in case another instance started the clone first
           for i in {1..30} ; do
             [ -f ./scripts/ci/attach_ebs_cache.sh ] && break
             sleep 1
           done
           # attach {ebs_cache_size}-gb cache disk
-          ./scripts/ci/attach_ebs_cache.sh ${{ inputs.runner_label }} ${{ steps.select_instance.outputs.ebs_cache_size }}
+          export AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
+          export AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+          sudo -E ./scripts/ci/attach_ebs_cache.sh ${{ steps.select_instance.outputs.runner_label }} ${{ steps.select_instance.outputs.ebs_cache_size }}
 
     - name: Setup Graceful Exit
       uses: ./.github/run-on-builder
