@@ -19,25 +19,41 @@ def main():
             print(term.home + term.clear)
             while selection not in ('1', '2', '3', '4', '5', 'q'):
                 print(term.move_y(1) + "Please select an option:")
-                print("1. SSH into build machine")
-                print("2. SSH into bench machine")
+                print("1. Run CI locally")
+                print("2. SSH into build machine")
                 print("3. Start/Stop spot machines")
                 print("4. Manage Running Jobs")
                 print("5. Run ci.yml manually")
                 print("q. Quit")
                 with term.location(0, term.height - 1):
                     selection = term.inkey()
-
     if selection == '1':
-        ssh_into_machine('x86')
+        run_ci_locally()
     elif selection == '2':
-        ssh_into_machine('bench-x86')
+        ssh_into_machine('x86')
     elif selection == '3':
         manage_spot_instances()
     elif selection == '4':
         manage_ci_workflows()
     elif selection == '5':
         call_ci_workflow()
+
+def run_ci_locally():
+    ok = True
+    flags = []
+        DOCKERHUB_PASSWORD: "${{ secrets.DOCKERHUB_PASSWORD }}"
+        GH_SELF_HOSTED_RUNNER_TOKEN: ${{ secrets.GH_SELF_HOSTED_RUNNER_TOKEN }}
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+    for needed_secret in ["GITHUB_TOKEN", "AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "GH_SELF_HOSTED_RUNNER_TOKEN"]:
+        if needed_secret not in os.environ:
+            print("Need to define env variable in e.g. .bashrc/.zshrc:", needed_secret)
+            ok = False
+        flags.push(f"-s {needed_secret}=${needed_secret}")
+    if not ok:
+        return
+    subprocess.run(f'gh act --help 2>&1 >/dev/null || gh extension install nektos/gh-act', shell=True)
+    subprocess.run(f'gh act -W .github/workflows/ci.yml pull_request -s BUILD_INSTANCE_SSH_KEY=$(cat ~/.ssh/build_instance_key | base64) ' + " ".join(flags), shell=True)
 
 def ssh_into_machine(suffix):
     ssh_key_path = os.path.expanduser('~/.ssh/build_instance_key')
