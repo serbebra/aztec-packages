@@ -9,6 +9,7 @@
 #include "avm_mem_trace.hpp"
 #include "barretenberg/common/throw_or_abort.hpp"
 #include "barretenberg/vm/avm_trace/gadgets/avm_conversion_trace.hpp"
+#include "barretenberg/vm/avm_trace/gadgets/avm_sha256.hpp"
 #include "constants.hpp"
 
 #include "barretenberg/relations/generated/avm/avm_main.hpp"
@@ -134,6 +135,9 @@ class AvmTraceBuilder {
     // --- Conversions
     // To Radix LE conversion operation.
     void op_to_radix_le(uint8_t indirect, uint32_t src_offset, uint32_t dst_offset, uint32_t radix, uint32_t num_limbs);
+    // --- Hashing
+    // Sha256 compression operation
+    void op_sha256_compression(uint8_t indirect, uint32_t output_offset, uint32_t h_init_offset, uint32_t input_offset);
 
   private:
     // Used for the standard indirect address resolution of three operands opcode.
@@ -154,6 +158,7 @@ class AvmTraceBuilder {
     AvmBinaryTraceBuilder bin_trace_builder;
     AvmKernelTraceBuilder kernel_trace_builder;
     AvmConversionTraceBuilder conversion_trace_builder;
+    AvmSha256TraceBuilder sha256_trace_builder;
 
     Row create_kernel_lookup_opcode(uint32_t dst_offset, uint32_t selector, FF value, AvmMemoryTag w_tag);
     void finalise_mem_trace_lookup_counts();
@@ -165,5 +170,22 @@ class AvmTraceBuilder {
     uint32_t internal_return_ptr =
         0; // After a nested call, it should be initialized with MAX_SIZE_INTERNAL_STACK * call_ptr
     uint8_t call_ptr = 0;
+
+    // TODO(ilyas: #6383): Temporary way to bulk read slices
+    template <typename MEM, size_t T>
+    void read_slice_to_memory(uint8_t space_id,
+                              uint32_t clk,
+                              uint32_t src_offset,
+                              AvmMemoryTag r_tag,
+                              AvmMemoryTag w_tag,
+                              FF internal_return_ptr,
+                              std::array<MEM, T>& slice);
+    void write_slice_to_memory(uint8_t space_id,
+                               uint32_t clk,
+                               uint32_t dst_offset,
+                               AvmMemoryTag r_tag,
+                               AvmMemoryTag w_tag,
+                               FF internal_return_ptr,
+                               std::vector<FF> const& slice);
 };
 } // namespace bb::avm_trace
