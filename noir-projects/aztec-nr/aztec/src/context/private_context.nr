@@ -1,3 +1,8 @@
+// By updating the import here, you can "switch" between using an oracle for computing the encrypted 
+// logs, or constraining it in the circuit. The interfaces are the exact same, so just flip this.
+// use crate::oracle::logs::compute_encrypted_log;
+use crate::encrypted_logs::payload::compute_encrypted_log;
+
 use crate::{
     context::{inputs::PrivateContextInputs, interface::ContextInterface},
     messaging::process_l1_to_l2_message,
@@ -7,7 +12,7 @@ use crate::{
     oracle::{
     key_validation_request::get_key_validation_request, arguments, returns,
     call_private_function::call_private_function_internal, header::get_header_at,
-    logs::{emit_encrypted_log, emit_encrypted_note_log, compute_encrypted_log},
+    logs::{emit_encrypted_log, emit_encrypted_note_log},
     logs_traits::{LensForEncryptedLog, ToBytesForUnencryptedLog},
     enqueue_public_function_call::{
     enqueue_public_function_call_internal, set_public_teardown_function_call_internal,
@@ -267,7 +272,10 @@ impl PrivateContext {
     // --> might be a better approach to force devs to make a public function call that emits the log if needed then
     // it would be less easy to accidentally leak information.
     // If we decide to keep this function around would make sense to wait for traits and then merge it with emit_unencrypted_log.
-    pub fn emit_unencrypted_log<T, N, M>(&mut self, log: T) where T: ToBytesForUnencryptedLog<N, M> {
+    pub fn emit_unencrypted_log<T, N, M>(
+        &mut self,
+        log: T
+    ) where T: ToBytesForUnencryptedLog<N, M> {
         let event_selector = 5; // TODO: compute actual event selector.
         let contract_address = self.this_address();
         let counter = self.next_counter();
