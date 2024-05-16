@@ -365,6 +365,8 @@ bool AvmVerifier::verify_proof(const HonkProof& proof, const std::vector<FF>& pu
         transcript->template receive_from_prover<Commitment>(commitment_labels.avm_main_sel_op_or);
     commitments.avm_main_sel_op_portal =
         transcript->template receive_from_prover<Commitment>(commitment_labels.avm_main_sel_op_portal);
+    commitments.avm_main_sel_op_poseidon2 =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.avm_main_sel_op_poseidon2);
     commitments.avm_main_sel_op_radix_le =
         transcript->template receive_from_prover<Commitment>(commitment_labels.avm_main_sel_op_radix_le);
     commitments.avm_main_sel_op_sender =
@@ -448,6 +450,14 @@ bool AvmVerifier::verify_proof(const HonkProof& proof, const std::vector<FF>& pu
     commitments.avm_mem_val = transcript->template receive_from_prover<Commitment>(commitment_labels.avm_mem_val);
     commitments.avm_mem_w_in_tag =
         transcript->template receive_from_prover<Commitment>(commitment_labels.avm_mem_w_in_tag);
+    commitments.avm_poseidon2_clk =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.avm_poseidon2_clk);
+    commitments.avm_poseidon2_input =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.avm_poseidon2_input);
+    commitments.avm_poseidon2_output =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.avm_poseidon2_output);
+    commitments.avm_poseidon2_poseidon_perm_sel =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.avm_poseidon2_poseidon_perm_sel);
     commitments.avm_sha256_clk = transcript->template receive_from_prover<Commitment>(commitment_labels.avm_sha256_clk);
     commitments.avm_sha256_input =
         transcript->template receive_from_prover<Commitment>(commitment_labels.avm_sha256_input);
@@ -538,6 +548,8 @@ bool AvmVerifier::verify_proof(const HonkProof& proof, const std::vector<FF>& pu
     commitments.perm_main_conv = transcript->template receive_from_prover<Commitment>(commitment_labels.perm_main_conv);
     commitments.perm_main_sha256 =
         transcript->template receive_from_prover<Commitment>(commitment_labels.perm_main_sha256);
+    commitments.perm_main_pos2_perm =
+        transcript->template receive_from_prover<Commitment>(commitment_labels.perm_main_pos2_perm);
     commitments.perm_main_mem_a =
         transcript->template receive_from_prover<Commitment>(commitment_labels.perm_main_mem_a);
     commitments.perm_main_mem_b =
