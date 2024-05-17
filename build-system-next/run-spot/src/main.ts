@@ -6,7 +6,7 @@ require("aws-sdk/lib/maintenance_mode_message").suppress = true;
 
 async function pollSpotStatus(
   ec2Client: Ec2Instance,
-): Promise<string | "unusable" | "none"> {
+): Promise<string | "none"> {
   // 6 iters x 10000 ms = 1 minute
   for (let iter = 0; iter < 6; iter++) {
     const instances = await ec2Client.getInstancesForTags("running");
@@ -133,7 +133,7 @@ async function startPersistentSpot(config: ActionConfig) {
   let ip = "";
   if (spotStatus !== "none") {
     core.info(
-      `Runner already running. Continuing as we can target it with jobs.`
+      `Instance already running. Continuing as we can target it with jobs.`
     );
     instanceId = spotStatus;
     ip = await ec2Client.getPublicIpFromInstanceId(instanceId);
@@ -160,7 +160,7 @@ async function terminate(instanceStatus?: string, cleanupRunners = true) {
   }
 }
 
-(async function () {
+async function main() {
   try {
     const config = new ActionConfig();
     if (config.isPersistentSpot !== 0) {
@@ -174,4 +174,5 @@ async function terminate(instanceStatus?: string, cleanupRunners = true) {
     core.error(error);
     core.setFailed(error.message);
   }
-})();
+}
+main();
