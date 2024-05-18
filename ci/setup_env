@@ -1,0 +1,50 @@
+#!/bin/bash
+
+set -eu
+
+success=true
+for required in USERNAME AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY BUILD_INSTANCE_SSH_KEY ; do
+  if [ -z ${!required:-} ] ; then
+    echo "Error: To use aztec build system, define $required in your environment (e.g. .bashrc/.zshrc)."
+    success=false
+  fi
+done
+for optional in RUN_ID RUN_ATTEMPT DOCKERHUB_PASSWORD PULL_REQUEST BRANCH; do
+  if [ -z ${!required:-} ] ; then
+    echo "Warning: $optional is not set. Some functionality may not be available."
+  fi
+done
+if [ "$success" == false ] ; then
+  echo "Did not define all required variables, exiting..."
+  exit 1
+fi
+
+mkdir -p ~/.aztec/ci
+
+COMMIT_HASH=$(git rev-parse HEAD)
+RUN_ID=${RUN_ID:-$COMMIT_HASH}
+RUN_LOCATION=~/.aztec/ci/run-$RUN_ID
+CI_ENV=${GITHUB_ENV:~/.aztec/ci/.env/$RUN_ID}
+
+# Setup environment variables
+echo "Setting up environment variables..."
+echo "FORCE_COLOR=1" >> $CI_ENV
+echo "EARTHLY_BUILD_ARGS=PULL_REQUEST=$PULL_REQUEST,BRANCH=$BRANCH,COMMIT_HASH=$COMMIT_HASH" >> $CI_ENV
+
+# Docker login
+echo "Logging in to Docker..."
+echo $DOCKERHUB_PASSWORD | docker login -u aztecprotocolci --password-stdin
+
+# Make earthly-ci script available
+echo "PATH=$(dirname $(realpath $0)):$PATH" >> $CI_ENV
+echo "EARTHLY_CONFIG=$(git rev-parse --show-toplevel)/.github/earthly-ci-config.yml" >> $CI_ENV
+echo ECR_REGION=us-east-2 >> $CI_ENV
+echo AWS_ACCOUNT=278380418400 >> $CI_ENV
+echo ECR_URL=278380418400.dkr.ecr.us-east-2.amazonaws.com >> $CI_ENV
+echo ECR_DEPLOY_REGION=eu-west-2 >> $CI_ENV
+echo GIT_COMMIT=$(git rev-parse HEAD) >> $CI_ENV
+echo RUN_ID=$RUN_ID >> $CI_ENV
+echo COMMIT_HASH=$COMMIT_HASH >> $CI_ENV
+echo CI_ENV=$CI_ENV >> $CI_ENV
+
+export $(cat $CI_ENV | xargs)

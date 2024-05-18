@@ -1,0 +1,7 @@
+#!/bin/bash
+[ -n "${BUILD_SYSTEM_DEBUG:-}" ] && set -x # conditionally trace
+set -eu
+if ! git diff --no-index $1 $2; then
+  echo "Warning: $1 changes in master (or PR base). *Usually* you can continue just fine. If you hit trouble with missing files, please merge these changes. This is to alert about potential surprises from Github Action's merge behavior."
+  exit 1
+fi

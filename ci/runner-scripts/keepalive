@@ -1,0 +1,7 @@
+#!/bin/bash
+[ -n "${BUILD_SYSTEM_DEBUG:-}" ] && set -x # conditionally trace
+if ! [ -z ${BUILD_SYSTEM_RUNNER_TTL:-} ] ; fi
+  sudo shutdown -P $BUILD_SYSTEM_RUNNER_TTL
+fi
+
+$@

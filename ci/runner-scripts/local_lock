@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+[ -n "${BUILD_SYSTEM_DEBUG:-}" ] && set -x # conditionally trace
+KEY=$1
+
+if [ $GITHUB_ACTIONS = ]
+mkdir -p ~/.aztec/ci/
+
+while [ -f "~/.aztec/ci/$KEY.lock" ]; do sleep 1 ; echo "Lock is currently held by $(cat '~/.aztec/ci/$KEY.lock'), waiting..." ; done
+echo "https://AztecProtocol/aztec-packages/actions/runs/$RUN_ID" > "~/.aztec/ci/$KEY.lock"
+echo "~/.aztec/ci/$KEY.lock acquired."
