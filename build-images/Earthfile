@@ -2,6 +2,9 @@ VERSION 0.8
 
 base-build:
   FROM ubuntu:noble
+  # Enable apt install retries and longer timeouts, see https://manpages.ubuntu.com/manpages/xenial/en/man5/apt.conf.5.html
+  # This is needed as we get throttled sometimes in CI.
+  RUN echo 'Acquire::Retries "3"; Acquire::https::Timeout "240"; Acquire::http::Timeout "240";' > /etc/apt/apt.conf.d/99-aztec-build
   RUN export DEBIAN_FRONTEND="noninteractive" \
       && apt update && apt install --no-install-recommends -y \
         build-essential \

@@ -18,5 +18,6 @@ export INPUT_RUNNER_LABEL=""
 export GITHUB_ENV=.github-env-mock
 export GITHUB_REF=$(git rev-parse HEAD)
 cd $(git rev-parse --show-toplevel)
-npm -C build-system-next/run-spot run build
-node build-system-next/run-spot/dist/index.js
+npm -C ci/run-spot install
+npm -C ci/run-spot run build
+node ci/run-spot/dist/index.js

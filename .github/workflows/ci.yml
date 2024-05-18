@@ -12,12 +12,11 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # for determining runner
+  USERNAME: ${{ github.event.pull_request.user.login || github.actor }}
   DOCKERHUB_PASSWORD: "${{ secrets.DOCKERHUB_PASSWORD }}"
   RUN_ID: ${{ github.run_id }}
   RUN_ATTEMPT: ${{ github.run_attempt }}
-  USERNAME: ${{ github.event.pull_request.user.login || github.actor }}
-  GITHUB_TOKEN: ${{ github.token }}
-  GH_SELF_HOSTED_RUNNER_TOKEN: ${{ secrets.GH_SELF_HOSTED_RUNNER_TOKEN }}
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   BUILD_INSTANCE_SSH_KEY: ${{ secrets.BUILD_INSTANCE_SSH_KEY }}
@@ -26,7 +25,7 @@ env:
   WAIT_FOR_RUNNERS: false
 
 jobs:
-  ci-consistency:
+  ci-consistency-warning:
     runs-on: ubuntu-latest
     # Only check PRs for consistency (not master)
     if: ${{ github.event.pull_request.head.sha != '' }}
@@ -47,15 +46,8 @@ jobs:
       - name: Ensure CI Consistency
         if: ${{ github.event.pull_request.head.sha != '' }}
         run: |
-          # Compare the checked-out CI configuration files with the reference files
-          if ! git diff --no-index .github/workflows/ci.yml merge-commit-pipeline-files/.github/workflows/ci.yml; then
-            echo "Error: ci.yml changes in master (or PR base). *Usually* you can continue just fine. If you hit trouble with missing files, please merge these changes. This is to alert about potential surprises from Github Action's merge behavior."
-            exit 1
-          fi
-          if ! git diff --no-index .github/workflows/setup-runner.yml merge-commit-pipeline-files/.github/workflows/setup-runner.yml; then
-            echo "Error: setup-runner.yml changes in master (or PR base). *Usually* you can continue just fine. If you hit trouble with missing files, please merge these changes. This is to alert about potential surprises from Github Action's merge behavior."
-            exit 1
-          fi
+          ci/warn_if_pipeline_diff .github/workflows/ci.yml merge-commit-pipeline-files/.github/workflows/ci.yml
+          ci/warn_if_pipeline_diff .github/workflows/setup-runner.yml merge-commit-pipeline-files/.github/workflows/setup-runer.yml
 
   build:
     runs-on: ubuntu-latest
@@ -446,7 +438,6 @@ jobs:
   merge-check:
     runs-on: ubuntu-latest
     needs:
-      - setup
       - e2e
       - bb-native-tests
       - bb-bench

@@ -11,20 +11,12 @@ runs:
   # define an action, runs in OS of caller
   using: composite
   steps:
-    # Since we use multiple runners, dont want them clashing
-    - name: Generate Unique Home Directory
-      shell: bash
-      run: |
-        RUN_HOME=~/run-$RANDOM-$(date +%s)
-        echo HOME=$RUN_HOME >> $GITHUB_ENV
-        mkdir -p $RUN_HOME
-
     - name: Cache Submodules
       id: cache-submodules
       uses: actions/cache@v4
       with:
         path: .git/modules
-        key: submodules-${{ hashFiles('.gitmodules') }}-spot-ebs
+        key: submodules-${{ hashFiles('.gitmodules') }}
 
     - name: Checkout Submodules
       shell: bash
@@ -32,21 +24,15 @@ runs:
         git config --global --add safe.directory '*'
         git submodule sync --recursive && git submodule update --init --recursive
 
-    # TODO reconsider how jq gets into image
-    - name: Setup jq
-      uses: dcarbone/install-jq-action@v2.1.0
-
     - name: Setup Earthly
       uses: earthly/actions-setup@v1
       with:
-        # permission issue with spot runners, simpler to leave out
-        use-cache: false
-        # NOTE also update in .github/spot-runner-action/src/userdata.ts
+        # NOTE also update in ci/start-runner/src/userdata.ts
         version: "v0.8.10"
 
     - name: Setup Env
       shell: bash
-      run: ./scripts/setup_env.sh ${{ env.DOCKERHUB_PASSWORD }}
+      run: ./ci/setup_env.sh ${{ env.DOCKERHUB_PASSWORD }}
       env:
         PULL_REQUEST: "${{ github.event.pull_request.number }}"
         BRANCH: "${{ github.ref_name }}"
@@ -59,10 +45,9 @@ runs:
       if: ${{ inputs.concurrency_key }}
       with:
         run: |
-          while [ -f "/home/ubuntu/${{ inputs.concurrency_key }}.lock" ]; do sleep 1 ; echo "Lock is currently held by $(cat '/home/ubuntu/${{ inputs.concurrency_key }}.lock'), waiting..." ; done
-          echo "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" > "/home/ubuntu/${{ inputs.concurrency_key }}.lock"
-          echo "/home/ubuntu/${{ inputs.concurrency_key }}.lock acquired."
+          ci/runner-scripts/local_lock
         post: |
+          ci/runner-scripts/local_unlock
           rm "/home/ubuntu/${{ inputs.concurrency_key }}.lock" || true
           echo "/home/ubuntu/${{ inputs.concurrency_key }}.lock removed."
 

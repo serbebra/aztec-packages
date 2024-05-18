@@ -1,7 +1,5 @@
-import * as core from "@actions/core";
 import { ActionConfig } from "./config";
 import { Ec2Instance } from "./ec2";
-import { assertIsError } from "./utils";
 require("aws-sdk/lib/maintenance_mode_message").suppress = true;
 
 async function pollSpotStatus(
