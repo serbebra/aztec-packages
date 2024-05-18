@@ -1,6 +1,6 @@
 import { Fr } from '@aztec/foundation/fields';
 
-import { WorldStateAccessTrace } from './trace.js';
+import { WorldStateAccessTrace, MAX_PUBLIC_STORAGE_READS, MAX_PUBLIC_STORAGE_WRITES, MAX_NOTE_HASH_CHECKS, MAX_NEW_NOTE_HASHES, MAX_NULLIFIER_CHECKS, MAX_NEW_NULLIFIERS, MAX_L1_TO_L2_MESSAGE_CHECKS, MAX_NEW_LOGS_HASHES } from './trace.js';
 import { type TracedL1toL2MessageCheck, type TracedNullifier, type TracedNullifierCheck } from './trace_types.js';
 
 describe('world state access trace', () => {
