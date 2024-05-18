@@ -1,4 +1,5 @@
 #pragma once
+#include "barretenberg/bb/file_io.hpp"
 #include "barretenberg/common/mem.hpp"
 #include "barretenberg/crypto/sha256/sha256.hpp"
 #include "barretenberg/ecc/curves/grumpkin/grumpkin.hpp"

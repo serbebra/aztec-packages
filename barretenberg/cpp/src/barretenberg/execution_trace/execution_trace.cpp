@@ -25,6 +25,46 @@ void ExecutionTrace_<Flavor>::populate(Builder& builder, typename Flavor::Provin
     compute_permutation_argument_polynomials<Flavor>(builder, &proving_key, trace_data.copy_cycles);
 }
 
+std::string bytes_to_hex_string(const std::vector<uint8_t>& input)
+{
+    static const char characters[] = "0123456789ABCDEF";
+
+    // Zeroes out the buffer unnecessarily, can't be avoided for std::string.
+    std::string ret(input.size() * 2, 0);
+
+    // Hack... Against the rules but avoids copying the whole buffer.
+    auto buf = const_cast<char*>(ret.data());
+
+    for (const auto& oneInputByte : input) {
+        *buf++ = characters[oneInputByte >> 4];
+        *buf++ = characters[oneInputByte & 0x0F];
+    }
+    return ret;
+}
+
+void writeToFile(const std::string& filename, const std::string& content)
+{
+    std::ofstream file(filename);
+    if (file.is_open()) {
+        file << content;
+        file.close();
+    } else {
+        // Handle file opening error
+    }
+}
+
+void write_polynomial(Polynomial<fr>& poly, size_t size, const std::string& wire_name)
+{
+
+    std::vector<fr> coefficients_buffer;
+    coefficients_buffer.resize(size);
+
+    std::copy(poly.begin(), poly.end(), coefficients_buffer.data());
+
+    std::string hex = bytes_to_hex_string(to_buffer(coefficients_buffer));
+    writeToFile(wire_name, hex);
+}
+
 template <class Flavor>
 void ExecutionTrace_<Flavor>::add_wires_and_selectors_to_proving_key(TraceData& trace_data,
                                                                      Builder& builder,
@@ -42,7 +82,12 @@ void ExecutionTrace_<Flavor>::add_wires_and_selectors_to_proving_key(TraceData& 
         proving_key.pub_inputs_offset = trace_data.pub_inputs_offset;
     } else if constexpr (IsPlonkFlavor<Flavor>) {
         for (size_t idx = 0; idx < trace_data.wires.size(); ++idx) {
+            // debug output the trace data
             std::string wire_tag = "w_" + std::to_string(idx + 1) + "_lagrange";
+
+            // Output the built polynomials for the sound tool
+            write_polynomial(trace_data.wires[idx], trace_data.wires[idx].size(), wire_tag);
+
             proving_key.polynomial_store.put(wire_tag, std::move(trace_data.wires[idx]));
         }
         for (size_t idx = 0; idx < trace_data.selectors.size(); ++idx) {

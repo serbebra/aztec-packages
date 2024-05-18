@@ -1,11 +1,14 @@
 #include "prover.hpp"
 #include "../public_inputs/public_inputs.hpp"
+#include "barretenberg/common/serialize.hpp"
+#include "barretenberg/ecc/curves/bn254/fr.hpp"
 #include "barretenberg/ecc/scalar_multiplication/scalar_multiplication.hpp"
 #include "barretenberg/plonk/proof_system/types/prover_settings.hpp"
 #include "barretenberg/polynomials/iterate_over_domain.hpp"
 #include "barretenberg/polynomials/polynomial.hpp"
 #include "barretenberg/polynomials/polynomial_arithmetic.hpp"
 #include <chrono>
+#include <fstream>
 
 using namespace bb;
 
@@ -64,6 +67,43 @@ template <typename settings> ProverBase<settings>& ProverBase<settings>::operato
     return *this;
 }
 
+// {
+//     // Copy all coefficients into a new array
+//     size_t coeff_size = coefficients.get();
+//     for ()
+
+//         std::vector<uint8_t> coefficients_buffer = to_buffer(coefficients);
+//     write_file("coef", coefficients_buffer);
+// }
+
+// std::string bytes_to_hex_string(const std::vector<uint8_t>& input)
+// {
+//     static const char characters[] = "0123456789ABCDEF";
+
+//     // Zeroes out the buffer unnecessarily, can't be avoided for std::string.
+//     std::string ret(input.size() * 2, 0);
+
+//     // Hack... Against the rules but avoids copying the whole buffer.
+//     auto buf = const_cast<char*>(ret.data());
+
+//     for (const auto& oneInputByte : input) {
+//         *buf++ = characters[oneInputByte >> 4];
+//         *buf++ = characters[oneInputByte & 0x0F];
+//     }
+//     return ret;
+// }
+
+// void writeToFile(const std::string& filename, const std::string& content)
+// {
+//     std::ofstream file(filename);
+//     if (file.is_open()) {
+//         file << content;
+//         file.close();
+//     } else {
+//         // Handle file opening error
+//     }
+// }
+
 /**
  * - Compute wire commitments and add them to the transcript.
  * - Add public_inputs from w_2_fft to transcript.
@@ -79,6 +119,42 @@ template <typename settings> void ProverBase<settings>::compute_wire_commitments
         std::string commit_tag = "W_" + std::to_string(i + 1);
         auto poly = key->polynomial_store.get(wire_tag);
         auto coefficients = poly.data();
+
+        // size_t size = poly.size();
+
+        // yuck
+        // if (i == 0) {
+
+        //     info(poly);
+        //     auto i_poly = poly;
+        //     i_poly.ifft(key->small_domain);
+        //     info(i_poly);
+
+        //     std::vector<fr> coefficients_buffer;
+        //     coefficients_buffer.resize(size);
+
+        //     std::copy(i_poly.begin(), i_poly.end(), coefficients_buffer.data());
+
+        //     std::string hex = bytes_to_hex_string(to_buffer(coefficients_buffer));
+        //     writeToFile("w_1", hex);
+
+        //     // Test write another polynomial with known values -
+        //     Polynomial<fr> test_poly(size);
+        //     for (size_t i = 0; i < size; i++) {
+        //         test_poly[i] = i;
+        //     }
+
+        //     info("\n test poly");
+        //     info(test_poly);
+
+        //     std::vector<fr> coefficients_buffer_test;
+        //     coefficients_buffer_test.resize(size);
+
+        //     std::copy(test_poly.begin(), test_poly.end(), coefficients_buffer_test.data());
+
+        //     std::string hex_test = bytes_to_hex_string(to_buffer(coefficients_buffer_test));
+        //     writeToFile("test", hex_test);
+        // }
 
         // This automatically saves the computed point to the transcript
         fr domain_size_flag = i > 2 ? key->circuit_size : (key->circuit_size + 1);
@@ -201,12 +277,12 @@ template <typename settings> void ProverBase<settings>::execute_preamble_round()
         // NOTE: If in future there is a need to cut off more zeros off the vanishing polynomial, this method
         // will not change. This must be changed only if the number of evaluations of witness polynomials
         // change.
-        const size_t w_randomness = 3;
-        ASSERT(w_randomness < settings::num_roots_cut_out_of_vanishing_polynomial);
-        for (size_t k = 0; k < w_randomness; ++k) {
-            wire_lagrange.at(circuit_size - settings::num_roots_cut_out_of_vanishing_polynomial + k) =
-                fr::random_element();
-        }
+        // const size_t w_randomness = 3;
+        // ASSERT(w_randomness < settings::num_roots_cut_out_of_vanishing_polynomial);
+        // for (size_t k = 0; k < w_randomness; ++k) {
+        // wire_lagrange.at(circuit_size - settings::num_roots_cut_out_of_vanishing_polynomial + k) =
+        // fr::random_element();
+        // }
 
         key->polynomial_store.put(wire_tag + "_lagrange", std::move(wire_lagrange));
     }
@@ -294,13 +370,13 @@ template <typename settings> void ProverBase<settings>::execute_second_round()
         auto w_4_lagrange = key->polynomial_store.get(wire_tag + "_lagrange");
 
         // add randomness to w_4_lagrange
-        const size_t w_randomness = 3;
-        ASSERT(w_randomness < settings::num_roots_cut_out_of_vanishing_polynomial);
-        for (size_t k = 0; k < w_randomness; ++k) {
-            // Blinding
-            w_4_lagrange.at(circuit_size - settings::num_roots_cut_out_of_vanishing_polynomial + k) =
-                fr::random_element();
-        }
+        // const size_t w_randomness = 3;
+        // ASSERT(w_randomness < settings::num_roots_cut_out_of_vanishing_polynomial);
+        // for (size_t k = 0; k < w_randomness; ++k) {
+        // Blinding
+        // w_4_lagrange.at(circuit_size - settings::num_roots_cut_out_of_vanishing_polynomial + k) =
+        // fr::random_element();
+        // }
 
         // compute poly w_4 from w_4_lagrange and add it to the cache
         bb::polynomial w_4(key->circuit_size);
