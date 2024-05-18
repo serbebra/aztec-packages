@@ -10,6 +10,78 @@ describe('world state access trace', () => {
     trace = new WorldStateAccessTrace();
   });
 
+  it('Should enforce maximum number of public storage reads', () => {
+    for (let i = 0; i < MAX_PUBLIC_STORAGE_READS; i++) {
+      trace.tracePublicStorageRead(new Fr(i), new Fr(i), new Fr(i), true, true);
+    }
+    expect(() => trace.tracePublicStorageRead(new Fr(101), new Fr(101), new Fr(101), true, true)).toThrow(
+      `Exceeded maximum number of public storage reads: ${MAX_PUBLIC_STORAGE_READS}`,
+    );
+  });
+
+  it('Should enforce maximum number of public storage writes', () => {
+    for (let i = 0; i < MAX_PUBLIC_STORAGE_WRITES; i++) {
+      trace.tracePublicStorageWrite(new Fr(i), new Fr(i), new Fr(i));
+    }
+    expect(() => trace.tracePublicStorageWrite(new Fr(101), new Fr(101), new Fr(101))).toThrow(
+      `Exceeded maximum number of public storage writes: ${MAX_PUBLIC_STORAGE_WRITES}`,
+    );
+  });
+
+  it('Should enforce maximum number of note hash checks', () => {
+    for (let i = 0; i < MAX_NOTE_HASH_CHECKS; i++) {
+      trace.traceNoteHashCheck(new Fr(i), new Fr(i), true, new Fr(i));
+    }
+    expect(() => trace.traceNoteHashCheck(new Fr(101), new Fr(101), true, new Fr(101))).toThrow(
+      `Exceeded maximum number of note hash checks: ${MAX_NOTE_HASH_CHECKS}`,
+    );
+  });
+
+  it('Should enforce maximum number of new note hashes', () => {
+    for (let i = 0; i < MAX_NEW_NOTE_HASHES; i++) {
+      trace.traceNewNoteHash(new Fr(i), new Fr(i));
+    }
+    expect(() => trace.traceNewNoteHash(new Fr(101), new Fr(101))).toThrow(
+      `Exceeded maximum number of new note hashes: ${MAX_NEW_NOTE_HASHES}`,
+    );
+  });
+
+  it('Should enforce maximum number of nullifier checks', () => {
+    for (let i = 0; i < MAX_NULLIFIER_CHECKS; i++) {
+      trace.traceNullifierCheck(new Fr(i), new Fr(i), true, true, new Fr(i));
+    }
+    expect(() => trace.traceNullifierCheck(new Fr(101), new Fr(101), true, true, new Fr(101))).toThrow(
+      `Exceeded maximum number of nullifier checks: ${MAX_NULLIFIER_CHECKS}`,
+    );
+  });
+
+  it('Should enforce maximum number of new nullifiers', () => {
+    for (let i = 0; i < MAX_NEW_NULLIFIERS; i++) {
+      trace.traceNewNullifier(new Fr(i), new Fr(i));
+    }
+    expect(() => trace.traceNewNullifier(new Fr(101), new Fr(101))).toThrow(
+      `Exceeded maximum number of new nullifiers: ${MAX_NEW_NULLIFIERS}`,
+    );
+  });
+
+  it('Should enforce maximum number of L1 to L2 message checks', () => {
+    for (let i = 0; i < MAX_L1_TO_L2_MESSAGE_CHECKS; i++) {
+      trace.traceL1ToL2MessageCheck(new Fr(i), new Fr(i), true);
+    }
+    expect(() => trace.traceL1ToL2MessageCheck(new Fr(101), new Fr(101), true)).toThrow(
+      `Exceeded maximum number of L1 to L2 message checks: ${MAX_L1_TO_L2_MESSAGE_CHECKS}`,
+    );
+  });
+
+  it('Should enforce maximum number of new logs hashes', () => {
+    for (let i = 0; i < MAX_NEW_LOGS_HASHES; i++) {
+      trace.traceNewLog(new Fr(i));
+    }
+    expect(() => trace.traceNewLog(new Fr(101))).toThrow(
+      `Exceeded maximum number of new logs hashes: ${MAX_NEW_LOGS_HASHES}`,
+    );
+  });
+
   describe('Basic tracing', () => {
     it('Should trace note hash checks', () => {
       const contractAddress = new Fr(1);
