@@ -11,14 +11,14 @@ import {
   type TracedUnencryptedL2Log,
 } from './trace_types.js';
 
-const MAX_PUBLIC_STORAGE_READS = 100;
-const MAX_PUBLIC_STORAGE_WRITES = 100;
-const MAX_NOTE_HASH_CHECKS = 100;
-const MAX_NEW_NOTE_HASHES = 100;
-const MAX_NULLIFIER_CHECKS = 100;
-const MAX_NEW_NULLIFIERS = 100;
-const MAX_L1_TO_L2_MESSAGE_CHECKS = 100;
-const MAX_NEW_LOGS_HASHES = 100;
+export const MAX_PUBLIC_STORAGE_READS = 100;
+export const MAX_PUBLIC_STORAGE_WRITES = 100;
+export const MAX_NOTE_HASH_CHECKS = 100;
+export const MAX_NEW_NOTE_HASHES = 100;
+export const MAX_NULLIFIER_CHECKS = 100;
+export const MAX_NEW_NULLIFIERS = 100;
+export const MAX_L1_TO_L2_MESSAGE_CHECKS = 100;
+export const MAX_NEW_LOGS_HASHES = 100;
 
 export class WorldStateAccessTrace {
   public accessCounter: number;
