@@ -5,6 +5,7 @@
 #include "avm_alu_trace.hpp"
 #include "avm_binary_trace.hpp"
 #include "avm_common.hpp"
+#include "avm_gas_trace.hpp"
 #include "avm_instructions.hpp"
 #include "avm_mem_trace.hpp"
 #include "barretenberg/common/throw_or_abort.hpp"
@@ -153,6 +154,7 @@ class AvmTraceBuilder {
     AvmAluTraceBuilder alu_trace_builder;
     AvmBinaryTraceBuilder bin_trace_builder;
     AvmKernelTraceBuilder kernel_trace_builder;
+    AvmGasTraceBuilder gas_trace_builder;
     AvmConversionTraceBuilder conversion_trace_builder;
 
     Row create_kernel_lookup_opcode(uint32_t dst_offset, uint32_t selector, FF value, AvmMemoryTag w_tag);
