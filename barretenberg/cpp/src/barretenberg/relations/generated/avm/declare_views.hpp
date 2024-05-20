@@ -112,6 +112,9 @@
     [[maybe_unused]] auto avm_conversion_num_limbs = View(new_term.avm_conversion_num_limbs);                          \
     [[maybe_unused]] auto avm_conversion_radix = View(new_term.avm_conversion_radix);                                  \
     [[maybe_unused]] auto avm_conversion_to_radix_le_sel = View(new_term.avm_conversion_to_radix_le_sel);              \
+    [[maybe_unused]] auto avm_gas_add_to_gas_lookup_table = View(new_term.avm_gas_add_to_gas_lookup_table);            \
+    [[maybe_unused]] auto avm_gas_da_gas_fixed_table = View(new_term.avm_gas_da_gas_fixed_table);                      \
+    [[maybe_unused]] auto avm_gas_l2_gas_fixed_table = View(new_term.avm_gas_l2_gas_fixed_table);                      \
     [[maybe_unused]] auto avm_kernel_kernel_inputs__is_public = View(new_term.avm_kernel_kernel_inputs__is_public);    \
     [[maybe_unused]] auto avm_kernel_kernel_sel = View(new_term.avm_kernel_kernel_sel);                                \
     [[maybe_unused]] auto avm_kernel_q_public_input_kernel_add_to_table =                                              \
@@ -120,7 +123,12 @@
     [[maybe_unused]] auto avm_main_alu_sel = View(new_term.avm_main_alu_sel);                                          \
     [[maybe_unused]] auto avm_main_bin_op_id = View(new_term.avm_main_bin_op_id);                                      \
     [[maybe_unused]] auto avm_main_bin_sel = View(new_term.avm_main_bin_sel);                                          \
+<<<<<<< HEAD
     [[maybe_unused]] auto avm_main_call_ptr = View(new_term.avm_main_call_ptr);                                        \
+=======
+    [[maybe_unused]] auto avm_main_da_gas_op = View(new_term.avm_main_da_gas_op);                                      \
+    [[maybe_unused]] auto avm_main_da_gas_remaining = View(new_term.avm_main_da_gas_remaining);                        \
+>>>>>>> 4bb44191bf (feat: simple gas decrement test)
     [[maybe_unused]] auto avm_main_ia = View(new_term.avm_main_ia);                                                    \
     [[maybe_unused]] auto avm_main_ib = View(new_term.avm_main_ib);                                                    \
     [[maybe_unused]] auto avm_main_ic = View(new_term.avm_main_ic);                                                    \
@@ -136,6 +144,8 @@
     [[maybe_unused]] auto avm_main_ind_op_d = View(new_term.avm_main_ind_op_d);                                        \
     [[maybe_unused]] auto avm_main_internal_return_ptr = View(new_term.avm_main_internal_return_ptr);                  \
     [[maybe_unused]] auto avm_main_inv = View(new_term.avm_main_inv);                                                  \
+    [[maybe_unused]] auto avm_main_l2_gas_op = View(new_term.avm_main_l2_gas_op);                                      \
+    [[maybe_unused]] auto avm_main_l2_gas_remaining = View(new_term.avm_main_l2_gas_remaining);                        \
     [[maybe_unused]] auto avm_main_last = View(new_term.avm_main_last);                                                \
     [[maybe_unused]] auto avm_main_mem_idx_a = View(new_term.avm_main_mem_idx_a);                                      \
     [[maybe_unused]] auto avm_main_mem_idx_b = View(new_term.avm_main_mem_idx_b);                                      \
@@ -146,6 +156,8 @@
     [[maybe_unused]] auto avm_main_mem_op_c = View(new_term.avm_main_mem_op_c);                                        \
     [[maybe_unused]] auto avm_main_mem_op_d = View(new_term.avm_main_mem_op_d);                                        \
     [[maybe_unused]] auto avm_main_op_err = View(new_term.avm_main_op_err);                                            \
+    [[maybe_unused]] auto avm_main_opcode_active = View(new_term.avm_main_opcode_active);                              \
+    [[maybe_unused]] auto avm_main_opcode_idx = View(new_term.avm_main_opcode_idx);                                    \
     [[maybe_unused]] auto avm_main_pc = View(new_term.avm_main_pc);                                                    \
     [[maybe_unused]] auto avm_main_q_kernel_lookup = View(new_term.avm_main_q_kernel_lookup);                          \
     [[maybe_unused]] auto avm_main_r_in_tag = View(new_term.avm_main_r_in_tag);                                        \
@@ -238,6 +250,7 @@
     [[maybe_unused]] auto perm_main_mem_ind_d = View(new_term.perm_main_mem_ind_d);                                    \
     [[maybe_unused]] auto lookup_byte_lengths = View(new_term.lookup_byte_lengths);                                    \
     [[maybe_unused]] auto lookup_byte_operations = View(new_term.lookup_byte_operations);                              \
+    [[maybe_unused]] auto lookup_opcode_gas = View(new_term.lookup_opcode_gas);                                        \
     [[maybe_unused]] auto lookup_into_kernel = View(new_term.lookup_into_kernel);                                      \
     [[maybe_unused]] auto incl_main_tag_err = View(new_term.incl_main_tag_err);                                        \
     [[maybe_unused]] auto incl_mem_tag_err = View(new_term.incl_mem_tag_err);                                          \
@@ -273,6 +286,7 @@
     [[maybe_unused]] auto lookup_div_u16_7 = View(new_term.lookup_div_u16_7);                                          \
     [[maybe_unused]] auto lookup_byte_lengths_counts = View(new_term.lookup_byte_lengths_counts);                      \
     [[maybe_unused]] auto lookup_byte_operations_counts = View(new_term.lookup_byte_operations_counts);                \
+    [[maybe_unused]] auto lookup_opcode_gas_counts = View(new_term.lookup_opcode_gas_counts);                          \
     [[maybe_unused]] auto lookup_into_kernel_counts = View(new_term.lookup_into_kernel_counts);                        \
     [[maybe_unused]] auto incl_main_tag_err_counts = View(new_term.incl_main_tag_err_counts);                          \
     [[maybe_unused]] auto incl_mem_tag_err_counts = View(new_term.incl_mem_tag_err_counts);                            \
@@ -351,7 +365,9 @@
     [[maybe_unused]] auto avm_binary_acc_ic_shift = View(new_term.avm_binary_acc_ic_shift);                            \
     [[maybe_unused]] auto avm_binary_mem_tag_ctr_shift = View(new_term.avm_binary_mem_tag_ctr_shift);                  \
     [[maybe_unused]] auto avm_binary_op_id_shift = View(new_term.avm_binary_op_id_shift);                              \
+    [[maybe_unused]] auto avm_main_da_gas_remaining_shift = View(new_term.avm_main_da_gas_remaining_shift);            \
     [[maybe_unused]] auto avm_main_internal_return_ptr_shift = View(new_term.avm_main_internal_return_ptr_shift);      \
+    [[maybe_unused]] auto avm_main_l2_gas_remaining_shift = View(new_term.avm_main_l2_gas_remaining_shift);            \
     [[maybe_unused]] auto avm_main_pc_shift = View(new_term.avm_main_pc_shift);                                        \
     [[maybe_unused]] auto avm_mem_glob_addr_shift = View(new_term.avm_mem_glob_addr_shift);                            \
     [[maybe_unused]] auto avm_mem_mem_sel_shift = View(new_term.avm_mem_mem_sel_shift);                                \

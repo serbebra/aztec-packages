@@ -36,7 +36,11 @@
 #include "barretenberg/relations/generated/avm/lookup_into_kernel.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_hi.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_lo.hpp"
+<<<<<<< HEAD
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_mid.hpp"
+=======
+#include "barretenberg/relations/generated/avm/lookup_opcode_gas.hpp"
+>>>>>>> 4bb44191bf (feat: simple gas decrement test)
 #include "barretenberg/relations/generated/avm/lookup_pow_2_0.hpp"
 #include "barretenberg/relations/generated/avm/lookup_pow_2_1.hpp"
 #include "barretenberg/relations/generated/avm/lookup_u16_0.hpp"
@@ -182,6 +186,9 @@ template <typename FF> struct AvmFullRow {
     FF avm_conversion_num_limbs{};
     FF avm_conversion_radix{};
     FF avm_conversion_to_radix_le_sel{};
+    FF avm_gas_add_to_gas_lookup_table{};
+    FF avm_gas_da_gas_fixed_table{};
+    FF avm_gas_l2_gas_fixed_table{};
     FF avm_kernel_kernel_inputs__is_public{};
     FF avm_kernel_kernel_sel{};
     FF avm_kernel_q_public_input_kernel_add_to_table{};
@@ -189,7 +196,12 @@ template <typename FF> struct AvmFullRow {
     FF avm_main_alu_sel{};
     FF avm_main_bin_op_id{};
     FF avm_main_bin_sel{};
+<<<<<<< HEAD
     FF avm_main_call_ptr{};
+=======
+    FF avm_main_da_gas_op{};
+    FF avm_main_da_gas_remaining{};
+>>>>>>> 4bb44191bf (feat: simple gas decrement test)
     FF avm_main_ia{};
     FF avm_main_ib{};
     FF avm_main_ic{};
@@ -205,6 +217,8 @@ template <typename FF> struct AvmFullRow {
     FF avm_main_ind_op_d{};
     FF avm_main_internal_return_ptr{};
     FF avm_main_inv{};
+    FF avm_main_l2_gas_op{};
+    FF avm_main_l2_gas_remaining{};
     FF avm_main_last{};
     FF avm_main_mem_idx_a{};
     FF avm_main_mem_idx_b{};
@@ -215,6 +229,8 @@ template <typename FF> struct AvmFullRow {
     FF avm_main_mem_op_c{};
     FF avm_main_mem_op_d{};
     FF avm_main_op_err{};
+    FF avm_main_opcode_active{};
+    FF avm_main_opcode_idx{};
     FF avm_main_pc{};
     FF avm_main_q_kernel_lookup{};
     FF avm_main_r_in_tag{};
@@ -307,6 +323,7 @@ template <typename FF> struct AvmFullRow {
     FF perm_main_mem_ind_d{};
     FF lookup_byte_lengths{};
     FF lookup_byte_operations{};
+    FF lookup_opcode_gas{};
     FF lookup_into_kernel{};
     FF incl_main_tag_err{};
     FF incl_mem_tag_err{};
@@ -342,6 +359,7 @@ template <typename FF> struct AvmFullRow {
     FF lookup_div_u16_7{};
     FF lookup_byte_lengths_counts{};
     FF lookup_byte_operations_counts{};
+    FF lookup_opcode_gas_counts{};
     FF lookup_into_kernel_counts{};
     FF incl_main_tag_err_counts{};
     FF incl_mem_tag_err_counts{};
@@ -419,7 +437,9 @@ template <typename FF> struct AvmFullRow {
     FF avm_binary_acc_ic_shift{};
     FF avm_binary_mem_tag_ctr_shift{};
     FF avm_binary_op_id_shift{};
+    FF avm_main_da_gas_remaining_shift{};
     FF avm_main_internal_return_ptr_shift{};
+    FF avm_main_l2_gas_remaining_shift{};
     FF avm_main_pc_shift{};
     FF avm_mem_glob_addr_shift{};
     FF avm_mem_mem_sel_shift{};
@@ -439,8 +459,13 @@ class AvmCircuitBuilder {
     using Polynomial = Flavor::Polynomial;
     using ProverPolynomials = Flavor::ProverPolynomials;
 
+<<<<<<< HEAD
     static constexpr size_t num_fixed_columns = 355;
     static constexpr size_t num_polys = 303;
+=======
+    static constexpr size_t num_fixed_columns = 361;
+    static constexpr size_t num_polys = 307;
+>>>>>>> 4bb44191bf (feat: simple gas decrement test)
     std::vector<Row> rows;
 
     void set_trace(std::vector<Row>&& trace) { rows = std::move(trace); }
@@ -566,6 +591,9 @@ class AvmCircuitBuilder {
             polys.avm_conversion_num_limbs[i] = rows[i].avm_conversion_num_limbs;
             polys.avm_conversion_radix[i] = rows[i].avm_conversion_radix;
             polys.avm_conversion_to_radix_le_sel[i] = rows[i].avm_conversion_to_radix_le_sel;
+            polys.avm_gas_add_to_gas_lookup_table[i] = rows[i].avm_gas_add_to_gas_lookup_table;
+            polys.avm_gas_da_gas_fixed_table[i] = rows[i].avm_gas_da_gas_fixed_table;
+            polys.avm_gas_l2_gas_fixed_table[i] = rows[i].avm_gas_l2_gas_fixed_table;
             polys.avm_kernel_kernel_inputs__is_public[i] = rows[i].avm_kernel_kernel_inputs__is_public;
             polys.avm_kernel_kernel_sel[i] = rows[i].avm_kernel_kernel_sel;
             polys.avm_kernel_q_public_input_kernel_add_to_table[i] =
@@ -574,7 +602,12 @@ class AvmCircuitBuilder {
             polys.avm_main_alu_sel[i] = rows[i].avm_main_alu_sel;
             polys.avm_main_bin_op_id[i] = rows[i].avm_main_bin_op_id;
             polys.avm_main_bin_sel[i] = rows[i].avm_main_bin_sel;
+<<<<<<< HEAD
             polys.avm_main_call_ptr[i] = rows[i].avm_main_call_ptr;
+=======
+            polys.avm_main_da_gas_op[i] = rows[i].avm_main_da_gas_op;
+            polys.avm_main_da_gas_remaining[i] = rows[i].avm_main_da_gas_remaining;
+>>>>>>> 4bb44191bf (feat: simple gas decrement test)
             polys.avm_main_ia[i] = rows[i].avm_main_ia;
             polys.avm_main_ib[i] = rows[i].avm_main_ib;
             polys.avm_main_ic[i] = rows[i].avm_main_ic;
@@ -590,6 +623,8 @@ class AvmCircuitBuilder {
             polys.avm_main_ind_op_d[i] = rows[i].avm_main_ind_op_d;
             polys.avm_main_internal_return_ptr[i] = rows[i].avm_main_internal_return_ptr;
             polys.avm_main_inv[i] = rows[i].avm_main_inv;
+            polys.avm_main_l2_gas_op[i] = rows[i].avm_main_l2_gas_op;
+            polys.avm_main_l2_gas_remaining[i] = rows[i].avm_main_l2_gas_remaining;
             polys.avm_main_last[i] = rows[i].avm_main_last;
             polys.avm_main_mem_idx_a[i] = rows[i].avm_main_mem_idx_a;
             polys.avm_main_mem_idx_b[i] = rows[i].avm_main_mem_idx_b;
@@ -600,6 +635,8 @@ class AvmCircuitBuilder {
             polys.avm_main_mem_op_c[i] = rows[i].avm_main_mem_op_c;
             polys.avm_main_mem_op_d[i] = rows[i].avm_main_mem_op_d;
             polys.avm_main_op_err[i] = rows[i].avm_main_op_err;
+            polys.avm_main_opcode_active[i] = rows[i].avm_main_opcode_active;
+            polys.avm_main_opcode_idx[i] = rows[i].avm_main_opcode_idx;
             polys.avm_main_pc[i] = rows[i].avm_main_pc;
             polys.avm_main_q_kernel_lookup[i] = rows[i].avm_main_q_kernel_lookup;
             polys.avm_main_r_in_tag[i] = rows[i].avm_main_r_in_tag;
@@ -681,6 +718,7 @@ class AvmCircuitBuilder {
             polys.avm_mem_w_in_tag[i] = rows[i].avm_mem_w_in_tag;
             polys.lookup_byte_lengths_counts[i] = rows[i].lookup_byte_lengths_counts;
             polys.lookup_byte_operations_counts[i] = rows[i].lookup_byte_operations_counts;
+            polys.lookup_opcode_gas_counts[i] = rows[i].lookup_opcode_gas_counts;
             polys.lookup_into_kernel_counts[i] = rows[i].lookup_into_kernel_counts;
             polys.incl_main_tag_err_counts[i] = rows[i].incl_main_tag_err_counts;
             polys.incl_mem_tag_err_counts[i] = rows[i].incl_mem_tag_err_counts;
@@ -760,7 +798,9 @@ class AvmCircuitBuilder {
         polys.avm_binary_acc_ic_shift = Polynomial(polys.avm_binary_acc_ic.shifted());
         polys.avm_binary_mem_tag_ctr_shift = Polynomial(polys.avm_binary_mem_tag_ctr.shifted());
         polys.avm_binary_op_id_shift = Polynomial(polys.avm_binary_op_id.shifted());
+        polys.avm_main_da_gas_remaining_shift = Polynomial(polys.avm_main_da_gas_remaining.shifted());
         polys.avm_main_internal_return_ptr_shift = Polynomial(polys.avm_main_internal_return_ptr.shifted());
+        polys.avm_main_l2_gas_remaining_shift = Polynomial(polys.avm_main_l2_gas_remaining.shifted());
         polys.avm_main_pc_shift = Polynomial(polys.avm_main_pc.shifted());
         polys.avm_mem_glob_addr_shift = Polynomial(polys.avm_mem_glob_addr.shifted());
         polys.avm_mem_mem_sel_shift = Polynomial(polys.avm_mem_mem_sel.shifted());
@@ -915,6 +955,10 @@ class AvmCircuitBuilder {
         auto lookup_byte_operations = [=]() {
             return evaluate_logderivative.template operator()<lookup_byte_operations_relation<FF>>(
                 "LOOKUP_BYTE_OPERATIONS");
+        };
+
+        auto lookup_opcode_gas = [=]() {
+            return evaluate_logderivative.template operator()<lookup_opcode_gas_relation<FF>>("LOOKUP_OPCODE_GAS");
         };
 
         auto lookup_into_kernel = [=]() {
@@ -1093,6 +1137,8 @@ class AvmCircuitBuilder {
 
         relation_futures.emplace_back(std::async(std::launch::async, lookup_byte_operations));
 
+        relation_futures.emplace_back(std::async(std::launch::async, lookup_opcode_gas));
+
         relation_futures.emplace_back(std::async(std::launch::async, lookup_into_kernel));
 
         relation_futures.emplace_back(std::async(std::launch::async, incl_main_tag_err));
@@ -1203,6 +1249,8 @@ class AvmCircuitBuilder {
         lookup_byte_lengths();
 
         lookup_byte_operations();
+
+        lookup_opcode_gas();
 
         lookup_into_kernel();
 
