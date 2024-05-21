@@ -6,10 +6,12 @@ contract PrivateToken {
     use dep::compressed_string::FieldCompressedString;
     use dep::aztec::{
         hash::compute_secret_hash,
-        prelude::{NoteGetterOptions, Map, PublicMutable, SharedImmutable, PrivateSet, AztecAddress}
+        prelude::{NoteGetterOptions, Map, PublicMutable, SharedImmutable, PrivateSet, AztecAddress},
+        protocol_types::abis::function_selector::FunctionSelector, oracle::unsafe_rand::unsafe_rand
     };
     use dep::authwit::{auth::{assert_current_call_valid_authwit, assert_current_call_valid_authwit_public}};
     use crate::types::{transparent_note::TransparentNote, token_note::{TokenNote, TOKEN_NOTE_LEN}, balances_map::BalancesMap};
+    use dep::std::embedded_curve_ops::EmbeddedCurvePoint;
 
     #[aztec(storage)]
     struct Storage {
@@ -156,6 +158,35 @@ contract PrivateToken {
         storage.balances.sub(from, U128::from_integer(amount));
 
         PrivateToken::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+    }
+
+    #[aztec(private)]
+    fn setup_refund(fee_payer: AztecAddress, sponsored_user: AztecAddress, funded_amount: Field) {
+        storage.balances.sub(sponsored_user, U128::from_integer(funded_amount));
+        let points = TokenNote::generate_refund_points(fee_payer, sponsored_user, funded_amount);
+        context.set_public_teardown_function(
+            context.this_address(),
+            FunctionSelector::from_signature("complete_refund(Field, Field, Field, Field)"),
+            [points[0].x, points[0].y, points[1].x, points[1].y]
+        );
+    }
+
+    #[aztec(public)]
+    #[aztec(internal)]
+    fn complete_refund(
+        fpc_point_x: Field,
+        fpc_point_y: Field,
+        user_point_x: Field,
+        user_point_y: Field
+    ) {
+        let fpc_point = EmbeddedCurvePoint { x: fpc_point_x, y: fpc_point_y, is_infinite: false };
+        let user_point = EmbeddedCurvePoint { x: user_point_x, y: user_point_y, is_infinite: false };
+
+        let tx_fee = context.transaction_fee();
+        let note_hashes = TokenNote::complete_refund(fpc_point, user_point, tx_fee);
+
+        context.push_new_note_hash(note_hashes[0]);
+        context.push_new_note_hash(note_hashes[1]);
     }
 
     /// Internal ///

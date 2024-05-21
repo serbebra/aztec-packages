@@ -5,12 +5,27 @@ use dep::aztec::{
     note::note_getter_options::PropertySelector, oracle::nullifier_keys::get_nsk_app
 };
 use dep::std::hash::pedersen_commitment;
+use dep::std::embedded_curve_ops::EmbeddedCurvePoint;
 
 trait OwnedNote {
     fn new(amount: U128, owner_npk_m_hash: Field) -> Self;
     fn get_amount(self) -> U128;
     fn get_owner_npk_m_hash(self) -> Field;
     fn get_owner_selector() -> PropertySelector;
+}
+
+trait PrivatelyRefundable {
+    fn generate_refund_points(
+        fee_payer: AztecAddress,
+        sponsored_user: AztecAddress,
+        funded_amount: Field
+    ) -> [EmbeddedCurvePoint; 2];
+
+    fn complete_refund(
+        fee_payer_point: EmbeddedCurvePoint,
+        sponsored_user_point: EmbeddedCurvePoint,
+        transaction_fee: Field
+    ) -> [Field; 2];
 }
 
 global TOKEN_NOTE_LEN: Field = 3; // 3 plus a header.
@@ -64,11 +79,9 @@ impl NoteInterface<TOKEN_NOTE_LEN> for TokenNote {
     }
 
     fn compute_note_content_hash(self) -> Field {
-        let point = pedersen_commitment([
-            self.amount.to_integer(),
-            self.npk_m_hash,
-            self.randomness,
-        ]);
+        let point = pedersen_commitment([self.amount.to_integer()])
+            + pedersen_commitment([self.npk_m_hash]) 
+            + pedersen_commitment([self.randomness]);
         point.x
     }
 }
@@ -93,5 +106,27 @@ impl OwnedNote for TokenNote {
 
     fn get_owner_selector() -> PropertySelector {
         PropertySelector { index: 1, offset: 0, length: 32 }
+    }
+}
+
+impl PrivatelyRefundable for TokenNote {
+    fn generate_refund_points(fee_payer: AztecAddress, sponsored_user: AztecAddress, funded_amount: Field) -> [EmbeddedCurvePoint; 2] {
+        let fee_payer_nonce = unsafe_rand();
+        let fee_payer_point = pedersen_commitment([fee_payer.to_field()]) + pedersen_commitment([fee_payer_nonce]);
+
+        let sponsored_user_nonce = unsafe_rand();
+        let sponsored_user_point = pedersen_commitment([sponsored_user.to_field()]) 
+            + pedersen_commitment([funded_amount])
+            + pedersen_commitment([sponsored_user_nonce]);
+        [fee_payer_point, sponsored_user_point]
+    }
+
+    fn complete_refund(fee_payer_point: EmbeddedCurvePoint, sponsored_user_point: EmbeddedCurvePoint, transaction_fee: Field) -> [Field; 2] {
+        let fee_point = pedersen_commitment([transaction_fee]);
+
+        let completed_fpc_point = fee_payer_point + fee_point;
+        let completed_user_point = sponsored_user_point - fee_point;
+
+        [completed_fpc_point.x, completed_user_point.x]
     }
 }

@@ -13,9 +13,12 @@ use crate::types::token_note::{TokenNote, OwnedNote};
 use dep::std::option::Option;
 
 struct BalancesMap<T> {
-    map: PrivateSet<T>,
-    // Code smell. Why can't I constrain T
-    // owner_selector: PropertySelector
+    // We call it a map, but the backing store is a set,
+    // since every note owner needs to have the same storage slot
+    // since the storage slot is mixed in with the note hash,
+    // and since we want to be able to compute the storage slot in public 
+    // without revealing the owner, we need to store all notes in the same set.
+    map: PrivateSet<T>
 }
 
 impl<T> BalancesMap<T> {
