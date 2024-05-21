@@ -2,18 +2,18 @@ use dep::aztec::{
     prelude::{AztecAddress, NoteHeader, NoteInterface, PrivateContext},
     protocol_types::{constants::GENERATOR_INDEX__NOTE_NULLIFIER, grumpkin_point::GrumpkinPoint, hash::poseidon2_hash},
     note::utils::compute_note_hash_for_consumption, oracle::unsafe_rand::unsafe_rand,
-    keys::getters::get_nsk_app
+    note::note_getter_options::PropertySelector, oracle::nullifier_keys::get_nsk_app
 };
+use dep::std::hash::pedersen_commitment;
 
 trait OwnedNote {
     fn new(amount: U128, owner_npk_m_hash: Field) -> Self;
     fn get_amount(self) -> U128;
     fn get_owner_npk_m_hash(self) -> Field;
+    fn get_owner_selector() -> PropertySelector;
 }
 
 global TOKEN_NOTE_LEN: Field = 3; // 3 plus a header.
-// TOKEN_NOTE_LEN * 32 + 32(storage_slot as bytes) + 32(note_type_id as bytes)
-global TOKEN_NOTE_BYTES_LEN: Field = 3 * 32 + 64;
 
 #[aztec(note)]
 struct TokenNote {
@@ -25,7 +25,7 @@ struct TokenNote {
     randomness: Field,
 }
 
-impl NoteInterface<TOKEN_NOTE_LEN, TOKEN_NOTE_BYTES_LEN> for TokenNote {
+impl NoteInterface<TOKEN_NOTE_LEN> for TokenNote {
     // docs:start:nullifier
     fn compute_nullifier(self, context: &mut PrivateContext) -> Field {
         let note_hash_for_nullify = compute_note_hash_for_consumption(self);
@@ -62,6 +62,15 @@ impl NoteInterface<TOKEN_NOTE_LEN, TOKEN_NOTE_BYTES_LEN> for TokenNote {
           );
       }
     }
+
+    fn compute_note_content_hash(self) -> Field {
+        let point = pedersen_commitment([
+            self.amount.to_integer(),
+            self.npk_m_hash,
+            self.randomness,
+        ]);
+        point.x
+    }
 }
 
 impl OwnedNote for TokenNote {
@@ -82,4 +91,7 @@ impl OwnedNote for TokenNote {
         self.npk_m_hash
     }
 
+    fn get_owner_selector() -> PropertySelector {
+        PropertySelector { index: 1, offset: 0, length: 32 }
+    }
 }
