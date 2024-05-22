@@ -344,8 +344,8 @@ class AvmFlavor {
                               avm_conversion_num_limbs,
                               avm_conversion_radix,
                               avm_conversion_to_radix_le_sel,
-                              avm_gas_add_to_gas_lookup_table,
                               avm_gas_da_gas_fixed_table,
+                              avm_gas_gas_cost_sel,
                               avm_gas_l2_gas_fixed_table,
                               avm_kernel_kernel_inputs__is_public,
                               avm_kernel_kernel_sel,
@@ -388,7 +388,7 @@ class AvmFlavor {
                               avm_main_mem_op_d,
                               avm_main_op_err,
                               avm_main_opcode_active,
-                              avm_main_opcode_idx,
+                              avm_main_opcode_val,
                               avm_main_pc,
                               avm_main_q_kernel_lookup,
                               avm_main_r_in_tag,
@@ -662,8 +662,8 @@ class AvmFlavor {
                      avm_conversion_num_limbs,
                      avm_conversion_radix,
                      avm_conversion_to_radix_le_sel,
-                     avm_gas_add_to_gas_lookup_table,
                      avm_gas_da_gas_fixed_table,
+                     avm_gas_gas_cost_sel,
                      avm_gas_l2_gas_fixed_table,
                      avm_kernel_kernel_inputs__is_public,
                      avm_kernel_kernel_sel,
@@ -706,7 +706,7 @@ class AvmFlavor {
                      avm_main_mem_op_d,
                      avm_main_op_err,
                      avm_main_opcode_active,
-                     avm_main_opcode_idx,
+                     avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
                      avm_main_r_in_tag,
@@ -985,8 +985,8 @@ class AvmFlavor {
                               avm_conversion_num_limbs,
                               avm_conversion_radix,
                               avm_conversion_to_radix_le_sel,
-                              avm_gas_add_to_gas_lookup_table,
                               avm_gas_da_gas_fixed_table,
+                              avm_gas_gas_cost_sel,
                               avm_gas_l2_gas_fixed_table,
                               avm_kernel_kernel_inputs__is_public,
                               avm_kernel_kernel_sel,
@@ -1029,7 +1029,7 @@ class AvmFlavor {
                               avm_main_mem_op_d,
                               avm_main_op_err,
                               avm_main_opcode_active,
-                              avm_main_opcode_idx,
+                              avm_main_opcode_val,
                               avm_main_pc,
                               avm_main_q_kernel_lookup,
                               avm_main_r_in_tag,
@@ -1359,8 +1359,8 @@ class AvmFlavor {
                      avm_conversion_num_limbs,
                      avm_conversion_radix,
                      avm_conversion_to_radix_le_sel,
-                     avm_gas_add_to_gas_lookup_table,
                      avm_gas_da_gas_fixed_table,
+                     avm_gas_gas_cost_sel,
                      avm_gas_l2_gas_fixed_table,
                      avm_kernel_kernel_inputs__is_public,
                      avm_kernel_kernel_sel,
@@ -1403,7 +1403,7 @@ class AvmFlavor {
                      avm_main_mem_op_d,
                      avm_main_op_err,
                      avm_main_opcode_active,
-                     avm_main_opcode_idx,
+                     avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
                      avm_main_r_in_tag,
@@ -1733,8 +1733,8 @@ class AvmFlavor {
                      avm_conversion_num_limbs,
                      avm_conversion_radix,
                      avm_conversion_to_radix_le_sel,
-                     avm_gas_add_to_gas_lookup_table,
                      avm_gas_da_gas_fixed_table,
+                     avm_gas_gas_cost_sel,
                      avm_gas_l2_gas_fixed_table,
                      avm_kernel_kernel_inputs__is_public,
                      avm_kernel_kernel_sel,
@@ -1777,7 +1777,7 @@ class AvmFlavor {
                      avm_main_mem_op_d,
                      avm_main_op_err,
                      avm_main_opcode_active,
-                     avm_main_opcode_idx,
+                     avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
                      avm_main_r_in_tag,
@@ -2431,8 +2431,8 @@ class AvmFlavor {
             Base::avm_conversion_num_limbs = "AVM_CONVERSION_NUM_LIMBS";
             Base::avm_conversion_radix = "AVM_CONVERSION_RADIX";
             Base::avm_conversion_to_radix_le_sel = "AVM_CONVERSION_TO_RADIX_LE_SEL";
-            Base::avm_gas_add_to_gas_lookup_table = "AVM_GAS_ADD_TO_GAS_LOOKUP_TABLE";
             Base::avm_gas_da_gas_fixed_table = "AVM_GAS_DA_GAS_FIXED_TABLE";
+            Base::avm_gas_gas_cost_sel = "AVM_GAS_GAS_COST_SEL";
             Base::avm_gas_l2_gas_fixed_table = "AVM_GAS_L2_GAS_FIXED_TABLE";
             Base::avm_kernel_kernel_inputs__is_public = "AVM_KERNEL_KERNEL_INPUTS__IS_PUBLIC";
             Base::avm_kernel_kernel_sel = "AVM_KERNEL_KERNEL_SEL";
@@ -2475,7 +2475,7 @@ class AvmFlavor {
             Base::avm_main_mem_op_d = "AVM_MAIN_MEM_OP_D";
             Base::avm_main_op_err = "AVM_MAIN_OP_ERR";
             Base::avm_main_opcode_active = "AVM_MAIN_OPCODE_ACTIVE";
-            Base::avm_main_opcode_idx = "AVM_MAIN_OPCODE_IDX";
+            Base::avm_main_opcode_val = "AVM_MAIN_OPCODE_VAL";
             Base::avm_main_pc = "AVM_MAIN_PC";
             Base::avm_main_q_kernel_lookup = "AVM_MAIN_Q_KERNEL_LOOKUP";
             Base::avm_main_r_in_tag = "AVM_MAIN_R_IN_TAG";
@@ -2765,8 +2765,8 @@ class AvmFlavor {
         Commitment avm_conversion_num_limbs;
         Commitment avm_conversion_radix;
         Commitment avm_conversion_to_radix_le_sel;
-        Commitment avm_gas_add_to_gas_lookup_table;
         Commitment avm_gas_da_gas_fixed_table;
+        Commitment avm_gas_gas_cost_sel;
         Commitment avm_gas_l2_gas_fixed_table;
         Commitment avm_kernel_kernel_inputs__is_public;
         Commitment avm_kernel_kernel_sel;
@@ -2809,7 +2809,7 @@ class AvmFlavor {
         Commitment avm_main_mem_op_d;
         Commitment avm_main_op_err;
         Commitment avm_main_opcode_active;
-        Commitment avm_main_opcode_idx;
+        Commitment avm_main_opcode_val;
         Commitment avm_main_pc;
         Commitment avm_main_q_kernel_lookup;
         Commitment avm_main_r_in_tag;
@@ -3100,8 +3100,8 @@ class AvmFlavor {
             avm_conversion_num_limbs = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_conversion_radix = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_conversion_to_radix_le_sel = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-            avm_gas_add_to_gas_lookup_table = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_gas_da_gas_fixed_table = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
+            avm_gas_gas_cost_sel = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_gas_l2_gas_fixed_table = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_kernel_kernel_inputs__is_public =
                 deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3146,7 +3146,7 @@ class AvmFlavor {
             avm_main_mem_op_d = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_op_err = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_opcode_active = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-            avm_main_opcode_idx = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
+            avm_main_opcode_val = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_pc = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_q_kernel_lookup = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_r_in_tag = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3440,8 +3440,8 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(avm_conversion_num_limbs, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_conversion_radix, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_conversion_to_radix_le_sel, Transcript::proof_data);
-            serialize_to_buffer<Commitment>(avm_gas_add_to_gas_lookup_table, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_gas_da_gas_fixed_table, Transcript::proof_data);
+            serialize_to_buffer<Commitment>(avm_gas_gas_cost_sel, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_gas_l2_gas_fixed_table, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_kernel_kernel_inputs__is_public, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_kernel_kernel_sel, Transcript::proof_data);
@@ -3484,7 +3484,7 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(avm_main_mem_op_d, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_op_err, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_opcode_active, Transcript::proof_data);
-            serialize_to_buffer<Commitment>(avm_main_opcode_idx, Transcript::proof_data);
+            serialize_to_buffer<Commitment>(avm_main_opcode_val, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_pc, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_q_kernel_lookup, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_r_in_tag, Transcript::proof_data);
