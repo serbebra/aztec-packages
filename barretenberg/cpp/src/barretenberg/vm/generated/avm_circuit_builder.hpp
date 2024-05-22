@@ -71,7 +71,6 @@
 #include "barretenberg/relations/generated/avm/perm_main_mem_ind_c.hpp"
 #include "barretenberg/relations/generated/avm/perm_main_mem_ind_d.hpp"
 #include "barretenberg/relations/generated/avm/perm_main_pos2_perm.hpp"
-#include "barretenberg/relations/generated/avm/perm_main_sha256.hpp"
 #include "barretenberg/vm/generated/avm_flavor.hpp"
 
 namespace bb {
@@ -318,7 +317,6 @@ template <typename FF> struct AvmFullRow {
     FF perm_main_alu{};
     FF perm_main_bin{};
     FF perm_main_conv{};
-    FF perm_main_sha256{};
     FF perm_main_pos2_perm{};
     FF perm_main_mem_a{};
     FF perm_main_mem_b{};
@@ -462,8 +460,8 @@ class AvmCircuitBuilder {
     using Polynomial = Flavor::Polynomial;
     using ProverPolynomials = Flavor::ProverPolynomials;
 
-    static constexpr size_t num_fixed_columns = 373;
-    static constexpr size_t num_polys = 321;
+    static constexpr size_t num_fixed_columns = 372;
+    static constexpr size_t num_polys = 320;
     std::vector<Row> rows;
 
     void set_trace(std::vector<Row>&& trace) { rows = std::move(trace); }
@@ -930,10 +928,6 @@ class AvmCircuitBuilder {
             return evaluate_logderivative.template operator()<perm_main_conv_relation<FF>>("PERM_MAIN_CONV");
         };
 
-        auto perm_main_sha256 = [=]() {
-            return evaluate_logderivative.template operator()<perm_main_sha256_relation<FF>>("PERM_MAIN_SHA256");
-        };
-
         auto perm_main_pos2_perm = [=]() {
             return evaluate_logderivative.template operator()<perm_main_pos2_perm_relation<FF>>("PERM_MAIN_POS2_PERM");
         };
@@ -1141,8 +1135,6 @@ class AvmCircuitBuilder {
 
         relation_futures.emplace_back(std::async(std::launch::async, perm_main_conv));
 
-        relation_futures.emplace_back(std::async(std::launch::async, perm_main_sha256));
-
         relation_futures.emplace_back(std::async(std::launch::async, perm_main_pos2_perm));
 
         relation_futures.emplace_back(std::async(std::launch::async, perm_main_mem_a));
@@ -1261,8 +1253,6 @@ class AvmCircuitBuilder {
         perm_main_bin();
 
         perm_main_conv();
-
-        perm_main_sha256();
 
         perm_main_pos2_perm();
 

@@ -68,7 +68,6 @@
 #include "barretenberg/relations/generated/avm/perm_main_mem_ind_c.hpp"
 #include "barretenberg/relations/generated/avm/perm_main_mem_ind_d.hpp"
 #include "barretenberg/relations/generated/avm/perm_main_pos2_perm.hpp"
-#include "barretenberg/relations/generated/avm/perm_main_sha256.hpp"
 #include "barretenberg/transcript/transcript.hpp"
 
 namespace bb {
@@ -90,16 +89,15 @@ class AvmFlavor {
     using RelationSeparator = FF;
 
     static constexpr size_t NUM_PRECOMPUTED_ENTITIES = 2;
-    static constexpr size_t NUM_WITNESS_ENTITIES = 319;
+    static constexpr size_t NUM_WITNESS_ENTITIES = 318;
     static constexpr size_t NUM_WIRES = NUM_WITNESS_ENTITIES + NUM_PRECOMPUTED_ENTITIES;
     // We have two copies of the witness entities, so we subtract the number of fixed ones (they have no shift), one for
     // the unshifted and one for the shifted
-    static constexpr size_t NUM_ALL_ENTITIES = 373;
+    static constexpr size_t NUM_ALL_ENTITIES = 372;
 
     using GrandProductRelations = std::tuple<perm_main_alu_relation<FF>,
                                              perm_main_bin_relation<FF>,
                                              perm_main_conv_relation<FF>,
-                                             perm_main_sha256_relation<FF>,
                                              perm_main_pos2_perm_relation<FF>,
                                              perm_main_mem_a_relation<FF>,
                                              perm_main_mem_b_relation<FF>,
@@ -156,7 +154,6 @@ class AvmFlavor {
                                  perm_main_alu_relation<FF>,
                                  perm_main_bin_relation<FF>,
                                  perm_main_conv_relation<FF>,
-                                 perm_main_sha256_relation<FF>,
                                  perm_main_pos2_perm_relation<FF>,
                                  perm_main_mem_a_relation<FF>,
                                  perm_main_mem_b_relation<FF>,
@@ -473,7 +470,6 @@ class AvmFlavor {
                               perm_main_alu,
                               perm_main_bin,
                               perm_main_conv,
-                              perm_main_sha256,
                               perm_main_pos2_perm,
                               perm_main_mem_a,
                               perm_main_mem_b,
@@ -795,7 +791,6 @@ class AvmFlavor {
                      perm_main_alu,
                      perm_main_bin,
                      perm_main_conv,
-                     perm_main_sha256,
                      perm_main_pos2_perm,
                      perm_main_mem_a,
                      perm_main_mem_b,
@@ -1122,7 +1117,6 @@ class AvmFlavor {
                               perm_main_alu,
                               perm_main_bin,
                               perm_main_conv,
-                              perm_main_sha256,
                               perm_main_pos2_perm,
                               perm_main_mem_a,
                               perm_main_mem_b,
@@ -1498,7 +1492,6 @@ class AvmFlavor {
                      perm_main_alu,
                      perm_main_bin,
                      perm_main_conv,
-                     perm_main_sha256,
                      perm_main_pos2_perm,
                      perm_main_mem_a,
                      perm_main_mem_b,
@@ -1874,7 +1867,6 @@ class AvmFlavor {
                      perm_main_alu,
                      perm_main_bin,
                      perm_main_conv,
-                     perm_main_sha256,
                      perm_main_pos2_perm,
                      perm_main_mem_a,
                      perm_main_mem_b,
@@ -2140,8 +2132,6 @@ class AvmFlavor {
             bb::compute_logderivative_inverse<AvmFlavor, perm_main_bin_relation<FF>>(
                 prover_polynomials, relation_parameters, this->circuit_size);
             bb::compute_logderivative_inverse<AvmFlavor, perm_main_conv_relation<FF>>(
-                prover_polynomials, relation_parameters, this->circuit_size);
-            bb::compute_logderivative_inverse<AvmFlavor, perm_main_sha256_relation<FF>>(
                 prover_polynomials, relation_parameters, this->circuit_size);
             bb::compute_logderivative_inverse<AvmFlavor, perm_main_pos2_perm_relation<FF>>(
                 prover_polynomials, relation_parameters, this->circuit_size);
@@ -2572,7 +2562,6 @@ class AvmFlavor {
             Base::perm_main_alu = "PERM_MAIN_ALU";
             Base::perm_main_bin = "PERM_MAIN_BIN";
             Base::perm_main_conv = "PERM_MAIN_CONV";
-            Base::perm_main_sha256 = "PERM_MAIN_SHA256";
             Base::perm_main_pos2_perm = "PERM_MAIN_POS2_PERM";
             Base::perm_main_mem_a = "PERM_MAIN_MEM_A";
             Base::perm_main_mem_b = "PERM_MAIN_MEM_B";
@@ -2910,7 +2899,6 @@ class AvmFlavor {
         Commitment perm_main_alu;
         Commitment perm_main_bin;
         Commitment perm_main_conv;
-        Commitment perm_main_sha256;
         Commitment perm_main_pos2_perm;
         Commitment perm_main_mem_a;
         Commitment perm_main_mem_b;
@@ -3252,7 +3240,6 @@ class AvmFlavor {
             perm_main_alu = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             perm_main_bin = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             perm_main_conv = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-            perm_main_sha256 = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             perm_main_pos2_perm = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             perm_main_mem_a = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             perm_main_mem_b = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3594,7 +3581,6 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(perm_main_alu, Transcript::proof_data);
             serialize_to_buffer<Commitment>(perm_main_bin, Transcript::proof_data);
             serialize_to_buffer<Commitment>(perm_main_conv, Transcript::proof_data);
-            serialize_to_buffer<Commitment>(perm_main_sha256, Transcript::proof_data);
             serialize_to_buffer<Commitment>(perm_main_pos2_perm, Transcript::proof_data);
             serialize_to_buffer<Commitment>(perm_main_mem_a, Transcript::proof_data);
             serialize_to_buffer<Commitment>(perm_main_mem_b, Transcript::proof_data);
