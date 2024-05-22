@@ -33,11 +33,8 @@
 #include "barretenberg/relations/generated/avm/lookup_into_kernel.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_hi.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_lo.hpp"
-<<<<<<< HEAD
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_mid.hpp"
-=======
 #include "barretenberg/relations/generated/avm/lookup_opcode_gas.hpp"
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
 #include "barretenberg/relations/generated/avm/lookup_pow_2_0.hpp"
 #include "barretenberg/relations/generated/avm/lookup_pow_2_1.hpp"
 #include "barretenberg/relations/generated/avm/lookup_u16_0.hpp"
@@ -89,19 +86,11 @@ class AvmFlavor {
     using RelationSeparator = FF;
 
     static constexpr size_t NUM_PRECOMPUTED_ENTITIES = 2;
-<<<<<<< HEAD
-    static constexpr size_t NUM_WITNESS_ENTITIES = 301;
+    static constexpr size_t NUM_WITNESS_ENTITIES = 312;
     static constexpr size_t NUM_WIRES = NUM_WITNESS_ENTITIES + NUM_PRECOMPUTED_ENTITIES;
     // We have two copies of the witness entities, so we subtract the number of fixed ones (they have no shift), one for
     // the unshifted and one for the shifted
-    static constexpr size_t NUM_ALL_ENTITIES = 355;
-=======
-    static constexpr size_t NUM_WITNESS_ENTITIES = 305;
-    static constexpr size_t NUM_WIRES = NUM_WITNESS_ENTITIES + NUM_PRECOMPUTED_ENTITIES;
-    // We have two copies of the witness entities, so we subtract the number of fixed ones (they have no shift), one for
-    // the unshifted and one for the shifted
-    static constexpr size_t NUM_ALL_ENTITIES = 361;
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
+    static constexpr size_t NUM_ALL_ENTITIES = 368;
 
     using GrandProductRelations = std::tuple<perm_main_alu_relation<FF>,
                                              perm_main_bin_relation<FF>,
@@ -354,12 +343,9 @@ class AvmFlavor {
                               avm_main_alu_sel,
                               avm_main_bin_op_id,
                               avm_main_bin_sel,
-<<<<<<< HEAD
                               avm_main_call_ptr,
-=======
                               avm_main_da_gas_op,
                               avm_main_da_gas_remaining,
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
                               avm_main_ia,
                               avm_main_ib,
                               avm_main_ic,
@@ -672,12 +658,9 @@ class AvmFlavor {
                      avm_main_alu_sel,
                      avm_main_bin_op_id,
                      avm_main_bin_sel,
-<<<<<<< HEAD
                      avm_main_call_ptr,
-=======
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -995,12 +978,9 @@ class AvmFlavor {
                               avm_main_alu_sel,
                               avm_main_bin_op_id,
                               avm_main_bin_sel,
-<<<<<<< HEAD
                               avm_main_call_ptr,
-=======
                               avm_main_da_gas_op,
                               avm_main_da_gas_remaining,
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
                               avm_main_ia,
                               avm_main_ib,
                               avm_main_ic,
@@ -1369,12 +1349,9 @@ class AvmFlavor {
                      avm_main_alu_sel,
                      avm_main_bin_op_id,
                      avm_main_bin_sel,
-<<<<<<< HEAD
                      avm_main_call_ptr,
-=======
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -1743,12 +1720,9 @@ class AvmFlavor {
                      avm_main_alu_sel,
                      avm_main_bin_op_id,
                      avm_main_bin_sel,
-<<<<<<< HEAD
                      avm_main_call_ptr,
-=======
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -2441,12 +2415,9 @@ class AvmFlavor {
             Base::avm_main_alu_sel = "AVM_MAIN_ALU_SEL";
             Base::avm_main_bin_op_id = "AVM_MAIN_BIN_OP_ID";
             Base::avm_main_bin_sel = "AVM_MAIN_BIN_SEL";
-<<<<<<< HEAD
             Base::avm_main_call_ptr = "AVM_MAIN_CALL_PTR";
-=======
             Base::avm_main_da_gas_op = "AVM_MAIN_DA_GAS_OP";
             Base::avm_main_da_gas_remaining = "AVM_MAIN_DA_GAS_REMAINING";
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
             Base::avm_main_ia = "AVM_MAIN_IA";
             Base::avm_main_ib = "AVM_MAIN_IB";
             Base::avm_main_ic = "AVM_MAIN_IC";
@@ -2775,12 +2746,9 @@ class AvmFlavor {
         Commitment avm_main_alu_sel;
         Commitment avm_main_bin_op_id;
         Commitment avm_main_bin_sel;
-<<<<<<< HEAD
         Commitment avm_main_call_ptr;
-=======
         Commitment avm_main_da_gas_op;
         Commitment avm_main_da_gas_remaining;
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
         Commitment avm_main_ia;
         Commitment avm_main_ib;
         Commitment avm_main_ic;
@@ -3112,12 +3080,9 @@ class AvmFlavor {
             avm_main_alu_sel = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_bin_op_id = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_bin_sel = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-<<<<<<< HEAD
             avm_main_call_ptr = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-=======
             avm_main_da_gas_op = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_da_gas_remaining = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
             avm_main_ia = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_ib = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_ic = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3450,12 +3415,9 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(avm_main_alu_sel, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_bin_op_id, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_bin_sel, Transcript::proof_data);
-<<<<<<< HEAD
             serialize_to_buffer<Commitment>(avm_main_call_ptr, Transcript::proof_data);
-=======
             serialize_to_buffer<Commitment>(avm_main_da_gas_op, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_da_gas_remaining, Transcript::proof_data);
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
             serialize_to_buffer<Commitment>(avm_main_ia, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_ib, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_ic, Transcript::proof_data);

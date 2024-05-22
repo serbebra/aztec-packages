@@ -36,11 +36,8 @@
 #include "barretenberg/relations/generated/avm/lookup_into_kernel.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_hi.hpp"
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_lo.hpp"
-<<<<<<< HEAD
 #include "barretenberg/relations/generated/avm/lookup_mem_rng_chk_mid.hpp"
-=======
 #include "barretenberg/relations/generated/avm/lookup_opcode_gas.hpp"
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
 #include "barretenberg/relations/generated/avm/lookup_pow_2_0.hpp"
 #include "barretenberg/relations/generated/avm/lookup_pow_2_1.hpp"
 #include "barretenberg/relations/generated/avm/lookup_u16_0.hpp"
@@ -196,12 +193,9 @@ template <typename FF> struct AvmFullRow {
     FF avm_main_alu_sel{};
     FF avm_main_bin_op_id{};
     FF avm_main_bin_sel{};
-<<<<<<< HEAD
     FF avm_main_call_ptr{};
-=======
     FF avm_main_da_gas_op{};
     FF avm_main_da_gas_remaining{};
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
     FF avm_main_ia{};
     FF avm_main_ib{};
     FF avm_main_ic{};
@@ -459,13 +453,8 @@ class AvmCircuitBuilder {
     using Polynomial = Flavor::Polynomial;
     using ProverPolynomials = Flavor::ProverPolynomials;
 
-<<<<<<< HEAD
-    static constexpr size_t num_fixed_columns = 355;
-    static constexpr size_t num_polys = 303;
-=======
-    static constexpr size_t num_fixed_columns = 361;
-    static constexpr size_t num_polys = 307;
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
+    static constexpr size_t num_fixed_columns = 368;
+    static constexpr size_t num_polys = 314;
     std::vector<Row> rows;
 
     void set_trace(std::vector<Row>&& trace) { rows = std::move(trace); }
@@ -602,12 +591,9 @@ class AvmCircuitBuilder {
             polys.avm_main_alu_sel[i] = rows[i].avm_main_alu_sel;
             polys.avm_main_bin_op_id[i] = rows[i].avm_main_bin_op_id;
             polys.avm_main_bin_sel[i] = rows[i].avm_main_bin_sel;
-<<<<<<< HEAD
             polys.avm_main_call_ptr[i] = rows[i].avm_main_call_ptr;
-=======
             polys.avm_main_da_gas_op[i] = rows[i].avm_main_da_gas_op;
             polys.avm_main_da_gas_remaining[i] = rows[i].avm_main_da_gas_remaining;
->>>>>>> 4bb44191bf (feat: simple gas decrement test)
             polys.avm_main_ia[i] = rows[i].avm_main_ia;
             polys.avm_main_ib[i] = rows[i].avm_main_ib;
             polys.avm_main_ic[i] = rows[i].avm_main_ic;
