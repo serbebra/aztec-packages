@@ -94,6 +94,12 @@ template <typename FF> struct Avm_mainRow {
 inline std::string get_relation_label_avm_main(int index)
 {
     switch (index) {
+    case 0:
+        return "L2_GAS_REMAINING_DECREMENT";
+
+    case 1:
+        return "DA_GAS_REMAINING_DECREMENT";
+
     case 50:
         return "OUTPUT_U8";
 
@@ -1078,10 +1084,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(83);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_address * (avm_kernel_kernel_sel - FF(1)));
 =======
             auto tmp = (avm_main_sel_op_fee_per_da_gas * (avm_kernel_kernel_sel - FF(37)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_sender * (avm_kernel_kernel_sel - FF(0)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<83>(evals) += tmp;
         }
@@ -1090,10 +1100,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(84);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_portal * (avm_kernel_kernel_sel - FF(2)));
 =======
             auto tmp = (avm_main_sel_op_fee_per_l2_gas * (avm_kernel_kernel_sel - FF(38)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_address * (avm_kernel_kernel_sel - FF(1)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<84>(evals) += tmp;
         }
@@ -1102,10 +1116,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(85);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_fee_per_da_gas * (avm_kernel_kernel_sel - FF(38)));
 =======
             auto tmp = (avm_main_sel_op_transaction_fee * (avm_kernel_kernel_sel - FF(39)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_portal * (avm_kernel_kernel_sel - FF(2)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<85>(evals) += tmp;
         }
@@ -1114,10 +1132,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(86);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_fee_per_l2_gas * (avm_kernel_kernel_sel - FF(39)));
 =======
             auto tmp = (avm_main_sel_op_chain_id * (avm_kernel_kernel_sel - FF(28)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_fee_per_da_gas * (avm_kernel_kernel_sel - FF(38)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<86>(evals) += tmp;
         }
@@ -1126,10 +1148,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(87);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_transaction_fee * (avm_kernel_kernel_sel - FF(40)));
 =======
             auto tmp = (avm_main_sel_op_version * (avm_kernel_kernel_sel - FF(29)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_fee_per_l2_gas * (avm_kernel_kernel_sel - FF(39)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<87>(evals) += tmp;
         }
@@ -1138,10 +1164,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(88);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_chain_id * (avm_kernel_kernel_sel - FF(29)));
 =======
             auto tmp = (avm_main_sel_op_block_number * (avm_kernel_kernel_sel - FF(30)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_transaction_fee * (avm_kernel_kernel_sel - FF(40)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<88>(evals) += tmp;
         }
@@ -1150,10 +1180,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(89);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_version * (avm_kernel_kernel_sel - FF(30)));
 =======
             auto tmp = (avm_main_sel_op_coinbase * (avm_kernel_kernel_sel - FF(32)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_chain_id * (avm_kernel_kernel_sel - FF(29)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<89>(evals) += tmp;
         }
@@ -1162,10 +1196,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(90);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_block_number * (avm_kernel_kernel_sel - FF(31)));
 =======
             auto tmp = (avm_main_sel_op_timestamp * (avm_kernel_kernel_sel - FF(31)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_version * (avm_kernel_kernel_sel - FF(30)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<90>(evals) += tmp;
         }
@@ -1174,10 +1212,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(91);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_coinbase * (avm_kernel_kernel_sel - FF(33)));
 =======
             auto tmp = (avm_main_sel_op_block_number * (avm_kernel_kernel_sel - FF(30)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_block_number * (avm_kernel_kernel_sel - FF(31)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<91>(evals) += tmp;
         }
@@ -1186,10 +1228,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(92);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_sel_op_timestamp * (avm_kernel_kernel_sel - FF(32)));
 =======
             auto tmp = (avm_main_sel_op_coinbase * (avm_kernel_kernel_sel - FF(32)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_coinbase * (avm_kernel_kernel_sel - FF(33)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<92>(evals) += tmp;
         }
@@ -1198,10 +1244,14 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(93);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
             auto tmp = (avm_main_bin_op_id - (avm_main_sel_op_or + (avm_main_sel_op_xor * FF(2))));
 =======
             auto tmp = (avm_main_sel_op_timestamp * (avm_kernel_kernel_sel - FF(31)));
 >>>>>>> 4bb44191bf (feat: simple gas decrement test)
+=======
+            auto tmp = (avm_main_sel_op_timestamp * (avm_kernel_kernel_sel - FF(32)));
+>>>>>>> 9bcbc00a00 (6542: some renaming and comments)
             tmp *= scaling_factor;
             std::get<93>(evals) += tmp;
         }

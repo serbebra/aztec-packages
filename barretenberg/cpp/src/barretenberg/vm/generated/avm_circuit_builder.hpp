@@ -186,8 +186,8 @@ template <typename FF> struct AvmFullRow {
     FF avm_conversion_num_limbs{};
     FF avm_conversion_radix{};
     FF avm_conversion_to_radix_le_sel{};
-    FF avm_gas_add_to_gas_lookup_table{};
     FF avm_gas_da_gas_fixed_table{};
+    FF avm_gas_gas_cost_sel{};
     FF avm_gas_l2_gas_fixed_table{};
     FF avm_kernel_kernel_inputs__is_public{};
     FF avm_kernel_kernel_sel{};
@@ -230,7 +230,7 @@ template <typename FF> struct AvmFullRow {
     FF avm_main_mem_op_d{};
     FF avm_main_op_err{};
     FF avm_main_opcode_active{};
-    FF avm_main_opcode_idx{};
+    FF avm_main_opcode_val{};
     FF avm_main_pc{};
     FF avm_main_q_kernel_lookup{};
     FF avm_main_r_in_tag{};
@@ -591,8 +591,8 @@ class AvmCircuitBuilder {
             polys.avm_conversion_num_limbs[i] = rows[i].avm_conversion_num_limbs;
             polys.avm_conversion_radix[i] = rows[i].avm_conversion_radix;
             polys.avm_conversion_to_radix_le_sel[i] = rows[i].avm_conversion_to_radix_le_sel;
-            polys.avm_gas_add_to_gas_lookup_table[i] = rows[i].avm_gas_add_to_gas_lookup_table;
             polys.avm_gas_da_gas_fixed_table[i] = rows[i].avm_gas_da_gas_fixed_table;
+            polys.avm_gas_gas_cost_sel[i] = rows[i].avm_gas_gas_cost_sel;
             polys.avm_gas_l2_gas_fixed_table[i] = rows[i].avm_gas_l2_gas_fixed_table;
             polys.avm_kernel_kernel_inputs__is_public[i] = rows[i].avm_kernel_kernel_inputs__is_public;
             polys.avm_kernel_kernel_sel[i] = rows[i].avm_kernel_kernel_sel;
@@ -636,7 +636,7 @@ class AvmCircuitBuilder {
             polys.avm_main_mem_op_d[i] = rows[i].avm_main_mem_op_d;
             polys.avm_main_op_err[i] = rows[i].avm_main_op_err;
             polys.avm_main_opcode_active[i] = rows[i].avm_main_opcode_active;
-            polys.avm_main_opcode_idx[i] = rows[i].avm_main_opcode_idx;
+            polys.avm_main_opcode_val[i] = rows[i].avm_main_opcode_val;
             polys.avm_main_pc[i] = rows[i].avm_main_pc;
             polys.avm_main_q_kernel_lookup[i] = rows[i].avm_main_q_kernel_lookup;
             polys.avm_main_r_in_tag[i] = rows[i].avm_main_r_in_tag;

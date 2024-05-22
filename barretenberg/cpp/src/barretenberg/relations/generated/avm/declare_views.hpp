@@ -112,8 +112,8 @@
     [[maybe_unused]] auto avm_conversion_num_limbs = View(new_term.avm_conversion_num_limbs);                          \
     [[maybe_unused]] auto avm_conversion_radix = View(new_term.avm_conversion_radix);                                  \
     [[maybe_unused]] auto avm_conversion_to_radix_le_sel = View(new_term.avm_conversion_to_radix_le_sel);              \
-    [[maybe_unused]] auto avm_gas_add_to_gas_lookup_table = View(new_term.avm_gas_add_to_gas_lookup_table);            \
     [[maybe_unused]] auto avm_gas_da_gas_fixed_table = View(new_term.avm_gas_da_gas_fixed_table);                      \
+    [[maybe_unused]] auto avm_gas_gas_cost_sel = View(new_term.avm_gas_gas_cost_sel);                                  \
     [[maybe_unused]] auto avm_gas_l2_gas_fixed_table = View(new_term.avm_gas_l2_gas_fixed_table);                      \
     [[maybe_unused]] auto avm_kernel_kernel_inputs__is_public = View(new_term.avm_kernel_kernel_inputs__is_public);    \
     [[maybe_unused]] auto avm_kernel_kernel_sel = View(new_term.avm_kernel_kernel_sel);                                \
@@ -157,7 +157,7 @@
     [[maybe_unused]] auto avm_main_mem_op_d = View(new_term.avm_main_mem_op_d);                                        \
     [[maybe_unused]] auto avm_main_op_err = View(new_term.avm_main_op_err);                                            \
     [[maybe_unused]] auto avm_main_opcode_active = View(new_term.avm_main_opcode_active);                              \
-    [[maybe_unused]] auto avm_main_opcode_idx = View(new_term.avm_main_opcode_idx);                                    \
+    [[maybe_unused]] auto avm_main_opcode_val = View(new_term.avm_main_opcode_val);                                    \
     [[maybe_unused]] auto avm_main_pc = View(new_term.avm_main_pc);                                                    \
     [[maybe_unused]] auto avm_main_q_kernel_lookup = View(new_term.avm_main_q_kernel_lookup);                          \
     [[maybe_unused]] auto avm_main_r_in_tag = View(new_term.avm_main_r_in_tag);                                        \
