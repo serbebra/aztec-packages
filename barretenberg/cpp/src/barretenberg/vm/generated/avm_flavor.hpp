@@ -346,6 +346,7 @@ class AvmFlavor {
                               avm_main_call_ptr,
                               avm_main_da_gas_op,
                               avm_main_da_gas_remaining,
+                              avm_main_gas_cost_active,
                               avm_main_ia,
                               avm_main_ib,
                               avm_main_ic,
@@ -373,7 +374,6 @@ class AvmFlavor {
                               avm_main_mem_op_c,
                               avm_main_mem_op_d,
                               avm_main_op_err,
-                              avm_main_opcode_active,
                               avm_main_opcode_val,
                               avm_main_pc,
                               avm_main_q_kernel_lookup,
@@ -661,6 +661,7 @@ class AvmFlavor {
                      avm_main_call_ptr,
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
+                     avm_main_gas_cost_active,
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -688,7 +689,6 @@ class AvmFlavor {
                      avm_main_mem_op_c,
                      avm_main_mem_op_d,
                      avm_main_op_err,
-                     avm_main_opcode_active,
                      avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
@@ -981,6 +981,7 @@ class AvmFlavor {
                               avm_main_call_ptr,
                               avm_main_da_gas_op,
                               avm_main_da_gas_remaining,
+                              avm_main_gas_cost_active,
                               avm_main_ia,
                               avm_main_ib,
                               avm_main_ic,
@@ -1008,7 +1009,6 @@ class AvmFlavor {
                               avm_main_mem_op_c,
                               avm_main_mem_op_d,
                               avm_main_op_err,
-                              avm_main_opcode_active,
                               avm_main_opcode_val,
                               avm_main_pc,
                               avm_main_q_kernel_lookup,
@@ -1352,6 +1352,7 @@ class AvmFlavor {
                      avm_main_call_ptr,
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
+                     avm_main_gas_cost_active,
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -1379,7 +1380,6 @@ class AvmFlavor {
                      avm_main_mem_op_c,
                      avm_main_mem_op_d,
                      avm_main_op_err,
-                     avm_main_opcode_active,
                      avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
@@ -1723,6 +1723,7 @@ class AvmFlavor {
                      avm_main_call_ptr,
                      avm_main_da_gas_op,
                      avm_main_da_gas_remaining,
+                     avm_main_gas_cost_active,
                      avm_main_ia,
                      avm_main_ib,
                      avm_main_ic,
@@ -1750,7 +1751,6 @@ class AvmFlavor {
                      avm_main_mem_op_c,
                      avm_main_mem_op_d,
                      avm_main_op_err,
-                     avm_main_opcode_active,
                      avm_main_opcode_val,
                      avm_main_pc,
                      avm_main_q_kernel_lookup,
@@ -2418,6 +2418,7 @@ class AvmFlavor {
             Base::avm_main_call_ptr = "AVM_MAIN_CALL_PTR";
             Base::avm_main_da_gas_op = "AVM_MAIN_DA_GAS_OP";
             Base::avm_main_da_gas_remaining = "AVM_MAIN_DA_GAS_REMAINING";
+            Base::avm_main_gas_cost_active = "AVM_MAIN_GAS_COST_ACTIVE";
             Base::avm_main_ia = "AVM_MAIN_IA";
             Base::avm_main_ib = "AVM_MAIN_IB";
             Base::avm_main_ic = "AVM_MAIN_IC";
@@ -2445,7 +2446,6 @@ class AvmFlavor {
             Base::avm_main_mem_op_c = "AVM_MAIN_MEM_OP_C";
             Base::avm_main_mem_op_d = "AVM_MAIN_MEM_OP_D";
             Base::avm_main_op_err = "AVM_MAIN_OP_ERR";
-            Base::avm_main_opcode_active = "AVM_MAIN_OPCODE_ACTIVE";
             Base::avm_main_opcode_val = "AVM_MAIN_OPCODE_VAL";
             Base::avm_main_pc = "AVM_MAIN_PC";
             Base::avm_main_q_kernel_lookup = "AVM_MAIN_Q_KERNEL_LOOKUP";
@@ -2749,6 +2749,7 @@ class AvmFlavor {
         Commitment avm_main_call_ptr;
         Commitment avm_main_da_gas_op;
         Commitment avm_main_da_gas_remaining;
+        Commitment avm_main_gas_cost_active;
         Commitment avm_main_ia;
         Commitment avm_main_ib;
         Commitment avm_main_ic;
@@ -2776,7 +2777,6 @@ class AvmFlavor {
         Commitment avm_main_mem_op_c;
         Commitment avm_main_mem_op_d;
         Commitment avm_main_op_err;
-        Commitment avm_main_opcode_active;
         Commitment avm_main_opcode_val;
         Commitment avm_main_pc;
         Commitment avm_main_q_kernel_lookup;
@@ -3083,6 +3083,7 @@ class AvmFlavor {
             avm_main_call_ptr = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_da_gas_op = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_da_gas_remaining = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
+            avm_main_gas_cost_active = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_ia = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_ib = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_ic = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3110,7 +3111,6 @@ class AvmFlavor {
             avm_main_mem_op_c = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_mem_op_d = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_op_err = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
-            avm_main_opcode_active = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_opcode_val = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_pc = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
             avm_main_q_kernel_lookup = deserialize_from_buffer<Commitment>(Transcript::proof_data, num_frs_read);
@@ -3418,6 +3418,7 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(avm_main_call_ptr, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_da_gas_op, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_da_gas_remaining, Transcript::proof_data);
+            serialize_to_buffer<Commitment>(avm_main_gas_cost_active, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_ia, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_ib, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_ic, Transcript::proof_data);
@@ -3445,7 +3446,6 @@ class AvmFlavor {
             serialize_to_buffer<Commitment>(avm_main_mem_op_c, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_mem_op_d, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_op_err, Transcript::proof_data);
-            serialize_to_buffer<Commitment>(avm_main_opcode_active, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_opcode_val, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_pc, Transcript::proof_data);
             serialize_to_buffer<Commitment>(avm_main_q_kernel_lookup, Transcript::proof_data);

@@ -17,6 +17,7 @@ template <typename FF> struct Avm_mainRow {
     FF avm_main_da_gas_remaining{};
     FF avm_main_da_gas_remaining_shift{};
     FF avm_main_first{};
+    FF avm_main_gas_cost_active{};
     FF avm_main_ia{};
     FF avm_main_ib{};
     FF avm_main_ic{};
@@ -39,7 +40,6 @@ template <typename FF> struct Avm_mainRow {
     FF avm_main_mem_op_c{};
     FF avm_main_mem_op_d{};
     FF avm_main_op_err{};
-    FF avm_main_opcode_active{};
     FF avm_main_pc{};
     FF avm_main_pc_shift{};
     FF avm_main_q_kernel_lookup{};
@@ -223,7 +223,7 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(0);
 
-            auto tmp = (avm_main_opcode_active *
+            auto tmp = (avm_main_gas_cost_active *
                         ((avm_main_l2_gas_remaining_shift - avm_main_l2_gas_remaining) + avm_main_l2_gas_op));
             tmp *= scaling_factor;
             std::get<0>(evals) += tmp;
@@ -232,7 +232,7 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(1);
 
-            auto tmp = (avm_main_opcode_active *
+            auto tmp = (avm_main_gas_cost_active *
                         ((avm_main_da_gas_remaining_shift - avm_main_da_gas_remaining) + avm_main_da_gas_op));
             tmp *= scaling_factor;
             std::get<1>(evals) += tmp;
@@ -241,7 +241,7 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(2);
 
-            auto tmp = ((-avm_main_opcode_active + FF(1)) * avm_main_l2_gas_op);
+            auto tmp = ((-avm_main_gas_cost_active + FF(1)) * avm_main_l2_gas_op);
             tmp *= scaling_factor;
             std::get<2>(evals) += tmp;
         }
@@ -249,7 +249,7 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(3);
 
-            auto tmp = ((-avm_main_opcode_active + FF(1)) * avm_main_da_gas_op);
+            auto tmp = ((-avm_main_gas_cost_active + FF(1)) * avm_main_da_gas_op);
             tmp *= scaling_factor;
             std::get<3>(evals) += tmp;
         }
@@ -815,7 +815,7 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(72);
 
-            auto tmp = (avm_main_opcode_active -
+            auto tmp = (avm_main_gas_cost_active -
                         (((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
                                    avm_main_sel_op_fdiv) +
                                   avm_main_sel_op_mul) +
@@ -843,7 +843,27 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(73);
 
-            auto tmp = ((((-avm_main_first + FF(1)) * (-avm_main_sel_halt + FF(1))) * avm_main_opcode_active) *
+            auto tmp = ((((-avm_main_first + FF(1)) * (-avm_main_sel_halt + FF(1))) *
+                         (((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
+                                    avm_main_sel_op_fdiv) +
+                                   avm_main_sel_op_mul) +
+                                  avm_main_sel_op_not) +
+                                 avm_main_sel_op_eq) +
+                                avm_main_sel_op_and) +
+                               avm_main_sel_op_or) +
+                              avm_main_sel_op_xor) +
+                             avm_main_sel_op_cast) +
+                            avm_main_sel_op_lt) +
+                           avm_main_sel_op_lte) +
+                          ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
+                                  avm_main_sel_op_chain_id) +
+                                 avm_main_sel_op_version) +
+                                avm_main_sel_op_block_number) +
+                               avm_main_sel_op_coinbase) +
+                              avm_main_sel_op_timestamp) +
+                             avm_main_sel_op_fee_per_l2_gas) +
+                            avm_main_sel_op_fee_per_da_gas) +
+                           avm_main_sel_op_transaction_fee))) *
                         (avm_main_pc_shift - (avm_main_pc + FF(1))));
             tmp *= scaling_factor;
             std::get<73>(evals) += tmp;
