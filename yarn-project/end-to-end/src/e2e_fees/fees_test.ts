@@ -23,6 +23,8 @@ import {
   CounterContract,
   FPCContract,
   GasTokenContract,
+  PrivateFPCContract,
+  PrivateTokenContract,
 } from '@aztec/noir-contracts.js';
 
 import { getContract } from 'viem';
@@ -69,6 +71,8 @@ export class FeesTest {
   public gasTokenContract!: GasTokenContract;
   public bananaCoin!: BananaCoin;
   public bananaFPC!: FPCContract;
+  public privateToken!: PrivateTokenContract;
+  public privateFPC!: PrivateFPCContract;
   public counterContract!: CounterContract;
   public subscriptionContract!: AppSubscriptionContract;
 
@@ -76,6 +80,7 @@ export class FeesTest {
   public gasBalances!: BalancesFn;
   public bananaPublicBalances!: BalancesFn;
   public bananaPrivateBalances!: BalancesFn;
+  public privateTokenBalances!: BalancesFn;
 
   public readonly INITIAL_GAS_BALANCE = BigInt(1e15);
   public readonly ALICE_INITIAL_BANANAS = BigInt(1e12);
@@ -99,16 +104,16 @@ export class FeesTest {
   }
 
   /** Alice mints bananaCoin tokens privately to the target address. */
-  async mintPrivate(amount: bigint, address: AztecAddress) {
+  async mintPrivate(amount: bigint, address: AztecAddress, token: BananaCoin | PrivateTokenContract) {
     const secret = Fr.random();
     const secretHash = computeSecretHash(secret);
-    const balanceBefore = await this.bananaCoin.methods.balance_of_private(this.aliceAddress).simulate();
+    const balanceBefore = await token.methods.balance_of_private(this.aliceAddress).simulate();
     this.logger.debug(`Minting ${amount} bananas privately for ${address} with secret ${secretHash.toString()}`);
-    const receipt = await this.bananaCoin.methods.mint_private(amount, secretHash).send().wait();
+    const receipt = await token.methods.mint_private(amount, secretHash).send().wait();
 
     await this.addPendingShieldNoteToPXE(this.aliceWallet, amount, secretHash, receipt.txHash);
-    await this.bananaCoin.methods.redeem_shield(address, amount, secret).send().wait();
-    const balanceAfter = await this.bananaCoin.methods.balance_of_private(this.aliceAddress).simulate();
+    await token.methods.redeem_shield(address, amount, secret).send().wait();
+    const balanceAfter = await token.methods.balance_of_private(this.aliceAddress).simulate();
     expect(balanceAfter).toEqual(balanceBefore + amount);
   }
 
@@ -187,9 +192,23 @@ export class FeesTest {
 
         await harness.bridgeFromL1ToL2(this.INITIAL_GAS_BALANCE, this.INITIAL_GAS_BALANCE, bananaFPC.address);
 
+        // Deploy token/fpc flavors for private refunds
+
+        const privateToken = await PrivateTokenContract.deploy(this.aliceWallet, bananaCoin.address, 'PVT', 'PVT', 18n)
+          .send()
+          .deployed();
+
+        this.logger.info(`PrivateToken deployed at ${privateToken.address}`);
+
+        const privateFPC = await PrivateFPCContract.deploy(this.aliceWallet, privateToken.address).send().deployed();
+
+        this.logger.info(`PrivateFPC deployed at ${privateFPC.address}`);
+
         return {
           bananaCoinAddress: bananaCoin.address,
           bananaFPCAddress: bananaFPC.address,
+          privateTokenAddress: privateToken.address,
+          privateFPCAddress: privateFPC.address,
           gasTokenAddress: gasTokenContract.address,
           l1GasTokenAddress: harness.l1GasTokenAddress,
         };
@@ -197,14 +216,19 @@ export class FeesTest {
       async (data, context) => {
         const bananaFPC = await FPCContract.at(data.bananaFPCAddress, this.aliceWallet);
         const bananaCoin = await BananaCoin.at(data.bananaCoinAddress, this.aliceWallet);
+        const privateToken = await PrivateTokenContract.at(data.privateTokenAddress, this.aliceWallet);
+        const privateFPC = await PrivateFPCContract.at(data.privateFPCAddress, this.aliceWallet);
         const gasTokenContract = await GasTokenContract.at(data.gasTokenAddress, this.aliceWallet);
 
         this.bananaCoin = bananaCoin;
         this.bananaFPC = bananaFPC;
+        this.privateToken = privateToken;
+        this.privateFPC = privateFPC;
         this.gasTokenContract = gasTokenContract;
 
         this.bananaPublicBalances = getBalancesFn('🍌.public', bananaCoin.methods.balance_of_public, this.logger);
         this.bananaPrivateBalances = getBalancesFn('🍌.private', bananaCoin.methods.balance_of_private, this.logger);
+        this.privateTokenBalances = getBalancesFn('🕵️.private', privateToken.methods.balance_of_private, this.logger);
         this.gasBalances = getBalancesFn('⛽', gasTokenContract.methods.balance_of_public, this.logger);
 
         this.getCoinbaseBalance = async () => {
@@ -224,8 +248,18 @@ export class FeesTest {
     await this.snapshotManager.snapshot(
       'fund_alice',
       async () => {
-        await this.mintPrivate(BigInt(this.ALICE_INITIAL_BANANAS), this.aliceAddress);
+        await this.mintPrivate(BigInt(this.ALICE_INITIAL_BANANAS), this.aliceAddress, this.bananaCoin);
         await this.bananaCoin.methods.mint_public(this.aliceAddress, this.ALICE_INITIAL_BANANAS).send().wait();
+      },
+      () => Promise.resolve(),
+    );
+  }
+
+  public async applyFundAliceWithPrivateTokens() {
+    await this.snapshotManager.snapshot(
+      'fund_alice_with_private_tokens',
+      async () => {
+        await this.mintPrivate(BigInt(this.ALICE_INITIAL_BANANAS), this.aliceAddress, this.privateToken);
       },
       () => Promise.resolve(),
     );

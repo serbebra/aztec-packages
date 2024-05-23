@@ -161,7 +161,17 @@ contract PrivateToken {
     }
 
     #[aztec(private)]
-    fn setup_refund(fee_payer: AztecAddress, sponsored_user: AztecAddress, funded_amount: Field) {
+    fn setup_refund(
+        fee_payer: AztecAddress,
+        sponsored_user: AztecAddress,
+        funded_amount: Field,
+        nonce: Field
+    ) {
+        if (!sponsored_user.eq(context.msg_sender())) {
+            assert_current_call_valid_authwit(&mut context, sponsored_user);
+        } else {
+            assert(nonce == 0, "invalid nonce");
+        }
         storage.balances.sub(sponsored_user, U128::from_integer(funded_amount));
         let points = TokenNote::generate_refund_points(fee_payer, sponsored_user, funded_amount);
         context.set_public_teardown_function(
