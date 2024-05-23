@@ -1,5 +1,5 @@
 /* eslint-disable jsdoc/require-jsdoc */
-import { type AztecAddress, type DebugLogger } from '@aztec/aztec.js';
+import { type AztecAddress, type DebugLogger, type Wallet } from '@aztec/aztec.js';
 import { type TokenContract } from '@aztec/noir-contracts.js/Token';
 
 export class TokenSimulator {
@@ -7,7 +7,17 @@ export class TokenSimulator {
   private balancePublic: Map<string, bigint> = new Map();
   public totalSupply: bigint = 0n;
 
+  private lookupProvider: Map<string, Wallet> = new Map();
+
   constructor(protected token: TokenContract, protected logger: DebugLogger, protected accounts: AztecAddress[]) {}
+
+  public addAccount(account: AztecAddress) {
+    this.accounts.push(account);
+  }
+
+  public setLookupProvider(account: AztecAddress, wallet: Wallet) {
+    this.lookupProvider.set(account.toString(), wallet);
+  }
 
   public mintPrivate(amount: bigint) {
     this.totalSupply += amount;
@@ -83,11 +93,21 @@ export class TokenSimulator {
   public async check() {
     expect(await this.token.methods.total_supply().simulate()).toEqual(this.totalSupply);
 
-    // Check that all our public matches
+    // Check public balances
+    // @todo Should be done with batch simulations, any PXE can be used.
     for (const address of this.accounts) {
       const actualPublicBalance = await this.token.methods.balance_of_public(address).simulate();
       expect(actualPublicBalance).toEqual(this.balanceOfPublic(address));
-      const actualPrivateBalance = await this.token.methods.balance_of_private({ address }).simulate();
+    }
+
+    // Check private balances
+    // @todo Should be done with batch simulations, but must respect the
+    // specified lookup provider to ensure proper data is returned.
+    for (const address of this.accounts) {
+      const wallet = this.lookupProvider.get(address.toString());
+      const asset = wallet ? this.token.withWallet(wallet) : this.token;
+
+      const actualPrivateBalance = await asset.methods.balance_of_private({ address }).simulate();
       expect(actualPrivateBalance).toEqual(this.balanceOfPrivate(address));
     }
   }
