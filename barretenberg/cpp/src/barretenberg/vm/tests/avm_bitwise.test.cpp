@@ -191,20 +191,6 @@ void common_validate_bit_op(std::vector<Row> const& trace,
     EXPECT_EQ(bin_row_start->avm_binary_in_tag, static_cast<uint8_t>(tag));
 }
 
-std::vector<Row> gen_mutated_trace_not(FF const& a, FF const& c_mutated, avm_trace::AvmMemoryTag tag)
-{
-    auto trace_builder = avm_trace::AvmTraceBuilder();
-    trace_builder.op_set(0, uint128_t{ a }, 0, tag);
-    trace_builder.op_not(0, 0, 1, tag);
-    trace_builder.halt();
-    auto trace = trace_builder.finalize();
-
-    auto select_row = [](Row r) { return r.avm_main_sel_op_not == FF(1); };
-    mutate_ic_in_trace(trace, select_row, c_mutated, true);
-
-    return trace;
-}
-
 // These are the potential failures we handle for the negative tests involving the binary trace.
 enum BIT_FAILURES {
     BitDecomposition,
@@ -360,10 +346,30 @@ std::vector<Row> gen_mutated_trace_bit(std::vector<Row> trace,
 class AvmBitwiseTests : public ::testing::Test {
   public:
     AvmTraceBuilder trace_builder;
+    std::array<FF, KERNEL_INPUTS_LENGTH> public_inputs{};
 
   protected:
     // TODO(640): The Standard Honk on Grumpkin test suite fails unless the SRS is initialised for every test.
-    void SetUp() override { srs::init_crs_factory("../srs_db/ignition"); };
+    void SetUp() override
+    {
+        srs::init_crs_factory("../srs_db/ignition");
+        public_inputs.at(DA_GAS_LEFT_CONTEXT_INPUTS_OFFSET) = 1000;
+        public_inputs.at(L2_GAS_LEFT_CONTEXT_INPUTS_OFFSET) = 1000;
+        trace_builder = AvmTraceBuilder(public_inputs);
+    };
+
+    std::vector<Row> gen_mutated_trace_not(FF const& a, FF const& c_mutated, avm_trace::AvmMemoryTag tag)
+    {
+        trace_builder.op_set(0, uint128_t{ a }, 0, tag);
+        trace_builder.op_not(0, 0, 1, tag);
+        trace_builder.halt();
+        auto trace = trace_builder.finalize();
+
+        auto select_row = [](Row r) { return r.avm_main_sel_op_not == FF(1); };
+        mutate_ic_in_trace(trace, select_row, c_mutated, true);
+
+        return trace;
+    }
 };
 
 /******************************************************************************
@@ -618,7 +624,6 @@ TEST_P(AvmBitwiseNegativeTestsAnd, AllNegativeTests)
     const auto [failure_string, failure_mode] = failure;
     const auto [operands, mem_tag] = params;
     const auto [a, b, output] = operands;
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     trace_builder.op_set(0, uint128_t{ a }, 0, mem_tag);
     trace_builder.op_set(0, uint128_t{ b }, 1, mem_tag);
     trace_builder.op_and(0, 0, 1, 2, mem_tag);
@@ -638,7 +643,6 @@ TEST_P(AvmBitwiseNegativeTestsOr, AllNegativeTests)
     const auto [failure_string, failure_mode] = failure;
     const auto [operands, mem_tag] = params;
     const auto [a, b, output] = operands;
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     trace_builder.op_set(0, uint128_t{ a }, 0, mem_tag);
     trace_builder.op_set(0, uint128_t{ b }, 1, mem_tag);
     trace_builder.op_or(0, 0, 1, 2, mem_tag);
@@ -657,7 +661,6 @@ TEST_P(AvmBitwiseNegativeTestsXor, AllNegativeTests)
     const auto [failure_string, failure_mode] = failure;
     const auto [operands, mem_tag] = params;
     const auto [a, b, output] = operands;
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     trace_builder.op_set(0, uint128_t{ a }, 0, mem_tag);
     trace_builder.op_set(0, uint128_t{ b }, 1, mem_tag);
     trace_builder.op_xor(0, 0, 1, 2, mem_tag);
@@ -676,7 +679,6 @@ TEST_P(AvmBitwiseNegativeTestsShr, AllNegativeTests)
     const auto [failure, params] = GetParam();
     const auto [operands, mem_tag] = params;
     const auto [a, b, output] = operands;
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     trace_builder.op_set(0, uint128_t{ a }, 0, mem_tag);
     trace_builder.op_set(0, uint128_t{ b }, 1, mem_tag);
     trace_builder.op_shr(0, 0, 1, 2, mem_tag);
@@ -696,7 +698,6 @@ TEST_P(AvmBitwiseNegativeTestsShl, AllNegativeTests)
     const auto [failure, params] = GetParam();
     const auto [operands, mem_tag] = params;
     const auto [a, b, output] = operands;
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     trace_builder.op_set(0, uint128_t{ a }, 0, mem_tag);
     trace_builder.op_set(0, uint128_t{ b }, 1, mem_tag);
     trace_builder.op_shl(0, 0, 1, 2, mem_tag);
@@ -714,7 +715,6 @@ INSTANTIATE_TEST_SUITE_P(AvmBitwiseNegativeTests,
 
 TEST_F(AvmBitwiseNegativeTestsFF, UndefinedOverFF)
 {
-    auto trace_builder = avm_trace::AvmTraceBuilder();
     // Triggers a write row 1 of mem_trace and alu_trace
     trace_builder.op_set(0, 10, 0, AvmMemoryTag::U8);
     // Triggers a write in row 2 of alu_trace
