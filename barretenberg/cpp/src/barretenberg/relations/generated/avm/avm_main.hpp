@@ -815,25 +815,27 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(72);
 
-            auto tmp =
-                (avm_main_opcode_active -
-                 (((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) + avm_main_sel_op_fdiv) +
-                         avm_main_sel_op_mul) +
-                        avm_main_sel_op_not) +
-                       avm_main_sel_op_eq) +
-                      avm_main_sel_op_and) +
-                     avm_main_sel_op_or) +
-                    avm_main_sel_op_xor) +
-                   avm_main_sel_op_cast) +
-                  ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
-                          avm_main_sel_op_chain_id) +
-                         avm_main_sel_op_version) +
-                        avm_main_sel_op_block_number) +
-                       avm_main_sel_op_coinbase) +
-                      avm_main_sel_op_timestamp) +
-                     avm_main_sel_op_fee_per_l2_gas) +
-                    avm_main_sel_op_fee_per_da_gas) +
-                   avm_main_sel_op_transaction_fee)));
+            auto tmp = (avm_main_opcode_active -
+                        (((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
+                                   avm_main_sel_op_fdiv) +
+                                  avm_main_sel_op_mul) +
+                                 avm_main_sel_op_not) +
+                                avm_main_sel_op_eq) +
+                               avm_main_sel_op_and) +
+                              avm_main_sel_op_or) +
+                             avm_main_sel_op_xor) +
+                            avm_main_sel_op_cast) +
+                           avm_main_sel_op_lt) +
+                          avm_main_sel_op_lte) +
+                         ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
+                                 avm_main_sel_op_chain_id) +
+                                avm_main_sel_op_version) +
+                               avm_main_sel_op_block_number) +
+                              avm_main_sel_op_coinbase) +
+                             avm_main_sel_op_timestamp) +
+                            avm_main_sel_op_fee_per_l2_gas) +
+                           avm_main_sel_op_fee_per_da_gas) +
+                          avm_main_sel_op_transaction_fee)));
             tmp *= scaling_factor;
             std::get<72>(evals) += tmp;
         }
@@ -869,25 +871,27 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(76);
 
-            auto tmp =
-                ((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) + avm_main_sel_op_fdiv) +
-                         avm_main_sel_op_mul) +
-                        avm_main_sel_op_not) +
-                       avm_main_sel_op_eq) +
-                      avm_main_sel_op_and) +
-                     avm_main_sel_op_or) +
-                    avm_main_sel_op_xor) +
-                   avm_main_sel_op_cast) +
-                  ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
-                          avm_main_sel_op_chain_id) +
-                         avm_main_sel_op_version) +
-                        avm_main_sel_op_block_number) +
-                       avm_main_sel_op_coinbase) +
-                      avm_main_sel_op_timestamp) +
-                     avm_main_sel_op_fee_per_l2_gas) +
-                    avm_main_sel_op_fee_per_da_gas) +
-                   avm_main_sel_op_transaction_fee)) *
-                 (avm_main_call_ptr - avm_main_space_id));
+            auto tmp = ((((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
+                                   avm_main_sel_op_fdiv) +
+                                  avm_main_sel_op_mul) +
+                                 avm_main_sel_op_not) +
+                                avm_main_sel_op_eq) +
+                               avm_main_sel_op_and) +
+                              avm_main_sel_op_or) +
+                             avm_main_sel_op_xor) +
+                            avm_main_sel_op_cast) +
+                           avm_main_sel_op_lt) +
+                          avm_main_sel_op_lte) +
+                         ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
+                                 avm_main_sel_op_chain_id) +
+                                avm_main_sel_op_version) +
+                               avm_main_sel_op_block_number) +
+                              avm_main_sel_op_coinbase) +
+                             avm_main_sel_op_timestamp) +
+                            avm_main_sel_op_fee_per_l2_gas) +
+                           avm_main_sel_op_fee_per_da_gas) +
+                          avm_main_sel_op_transaction_fee)) *
+                        (avm_main_call_ptr - avm_main_space_id));
             tmp *= scaling_factor;
             std::get<76>(evals) += tmp;
         }
