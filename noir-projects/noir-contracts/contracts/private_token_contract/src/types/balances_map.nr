@@ -3,53 +3,48 @@ use dep::aztec::prelude::{
     PrivateSet, Map
 };
 use dep::aztec::{
-    context::{PublicContext, Context}, hash::pedersen_hash,
-    protocol_types::constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
-    note::{note_getter::view_notes, note_getter_options::SortOrder},
-    note::note_getter_options::{Comparator, PropertySelector},
+    hash::pedersen_hash, protocol_types::constants::MAX_NOTE_HASH_READ_REQUESTS_PER_CALL,
+    note::{note_getter::view_notes, note_getter_options::{SortOrder, Comparator}},
     keys::getters::{get_npk_m_hash, get_ivpk_m}
 };
 use crate::types::token_note::{TokenNote, OwnedNote};
-use dep::std::option::Option;
 
-struct BalancesMap<T> {
-    // We call it a map, but the backing store is a set,
-    // since every note owner needs to have the same storage slot
-    // since the storage slot is mixed in with the note hash,
-    // and since we want to be able to compute the storage slot in public 
-    // without revealing the owner, we need to store all notes in the same set.
-    map: PrivateSet<T>
+struct BalancesMap<T, Context> {
+    map: PrivateSet<T, Context>
 }
 
-impl<T> BalancesMap<T> {
+impl<T, Context> BalancesMap<T, Context> {
     pub fn new(context: Context, storage_slot: Field) -> Self {
         assert(storage_slot != 0, "Storage slot 0 not allowed. Storage slots must start from 1.");
         Self { map: PrivateSet::new(context, storage_slot) }
     }
+}
 
-    unconstrained pub fn balance_of<T_SERIALIZED_LEN>(
+impl<T> BalancesMap<T, &mut PrivateContext> {
+    pub fn balance_of<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
         owner: AztecAddress
-    ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN> + OwnedNote {
+    ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
         self.balance_of_with_offset(owner, 0)
     }
 
-    unconstrained pub fn balance_of_with_offset<T_SERIALIZED_LEN>(
+    pub fn balance_of_with_offset<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
         owner: AztecAddress,
         offset: u32
-    ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN> + OwnedNote {
+    ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
         let mut balance = U128::from_integer(0);
-        let mut options = NoteViewerOptions::new();
-        let context = self.map.context.private.unwrap();
-        let owner_npk_m_hash = get_npk_m_hash(context, owner);
-        let opt_notes = self.map.view_notes(
+        let mut options = NoteGetterOptions::new();
+        let owner_npk_m_hash = get_npk_m_hash(self.map.context, owner);
+
+        let opt_notes = self.map.get_notes(
             options.select(
                 T::get_owner_selector(),
                 owner_npk_m_hash,
                 Option::some(Comparator.EQ)
             )
         );
+
         let len = opt_notes.len();
         for i in 0..len {
             if opt_notes[i].is_some() {
@@ -63,12 +58,12 @@ impl<T> BalancesMap<T> {
         balance
     }
 
-    pub fn add<T_SERIALIZED_LEN>(
+    pub fn add<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
         owner: AztecAddress,
         addend: U128
-    ) where T: NoteInterface<T_SERIALIZED_LEN> + OwnedNote {
-        let context = self.map.context.private.unwrap();
+    ) where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
+        let context = self.map.context;
         let owner_ivpk_m = get_ivpk_m(context, owner);
 
         // We fetch the nullifier public key hash from the registry / from our PXE
@@ -78,23 +73,13 @@ impl<T> BalancesMap<T> {
         self.map.insert(&mut addend_note, true, owner_ivpk_m);
     }
 
-    pub fn sub<T_SERIALIZED_LEN>(
+    pub fn sub<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
         owner: AztecAddress,
         subtrahend: U128
-    ) where T: NoteInterface<T_SERIALIZED_LEN> + OwnedNote {
-        // docs:start:get_notes
-        let mut options = NoteGetterOptions::with_filter(filter_notes_min_sum, subtrahend);
-        let context = self.map.context.private.unwrap();
-        let owner_npk_m_hash = get_npk_m_hash(context, owner);
-        let maybe_notes = self.map.get_notes(
-            options.select(
-                T::get_owner_selector(),
-                owner_npk_m_hash,
-                Option::some(Comparator.EQ)
-            )
-        );
-        // docs:end:get_notes
+    ) where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
+        let options = NoteGetterOptions::with_filter(filter_notes_min_sum, subtrahend);
+        let maybe_notes = self.map.get_notes(options);
 
         let mut minuend: U128 = U128::from_integer(0);
         for i in 0..maybe_notes.len() {
@@ -122,10 +107,10 @@ impl<T> BalancesMap<T> {
     }
 }
 
-pub fn filter_notes_min_sum<T, T_SERIALIZED_LEN>(
+pub fn filter_notes_min_sum<T, T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
     notes: [Option<T>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL],
     min_sum: U128
-) -> [Option<T>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] where T: NoteInterface<T_SERIALIZED_LEN> + OwnedNote {
+) -> [Option<T>; MAX_NOTE_HASH_READ_REQUESTS_PER_CALL] where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
     let mut selected = [Option::none(); MAX_NOTE_HASH_READ_REQUESTS_PER_CALL];
     let mut sum = U128::from_integer(0);
     for i in 0..notes.len() {

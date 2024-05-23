@@ -7,10 +7,11 @@ contract PrivateToken {
     use dep::aztec::{
         hash::compute_secret_hash,
         prelude::{NoteGetterOptions, Map, PublicMutable, SharedImmutable, PrivateSet, AztecAddress},
-        protocol_types::abis::function_selector::FunctionSelector, oracle::unsafe_rand::unsafe_rand
+        protocol_types::abis::function_selector::FunctionSelector, oracle::unsafe_rand::unsafe_rand,
+        keys::getters::get_npk_m_hash
     };
     use dep::authwit::{auth::{assert_current_call_valid_authwit, assert_current_call_valid_authwit_public}};
-    use crate::types::{transparent_note::TransparentNote, token_note::{TokenNote, TOKEN_NOTE_LEN}, balances_map::BalancesMap};
+    use crate::types::{token_note::{TokenNote, TOKEN_NOTE_LEN}, balances_map::BalancesMap};
     use dep::std::embedded_curve_ops::EmbeddedCurvePoint;
 
     #[aztec(storage)]
@@ -19,7 +20,6 @@ contract PrivateToken {
         minters: Map<AztecAddress, PublicMutable<bool>>,
         balances: BalancesMap<TokenNote>,
         total_supply: PublicMutable<U128>,
-        pending_shields: PrivateSet<TransparentNote>,
         symbol: SharedImmutable<FieldCompressedString>,
         name: SharedImmutable<FieldCompressedString>,
         decimals: SharedImmutable<u8>,
@@ -90,17 +90,6 @@ contract PrivateToken {
         storage.minters.at(minter).write(approve);
     }
 
-    #[aztec(public)]
-    fn mint_private(amount: Field, secret_hash: Field) {
-        assert(storage.minters.at(context.msg_sender()).read(), "caller is not minter");
-        let pending_shields = storage.pending_shields;
-        let mut note = TransparentNote::new(amount, secret_hash);
-        let supply = storage.total_supply.read().add(U128::from_integer(amount));
-
-        storage.total_supply.write(supply);
-        pending_shields.insert_from_public(&mut note);
-    }
-
     #[aztec(private)]
     fn privately_mint_private_note(amount: Field) {
         storage.balances.add(context.msg_sender(), U128::from_integer(amount));
@@ -116,25 +105,6 @@ contract PrivateToken {
     }
 
     #[aztec(private)]
-    fn redeem_shield(to: AztecAddress, amount: Field, secret: Field) {
-        let pending_shields = storage.pending_shields;
-        let secret_hash = compute_secret_hash(secret);
-        // Get 1 note (set_limit(1)) which has amount stored in field with index 0 (select(0, amount)) and secret_hash
-        // stored in field with index 1 (select(1, secret_hash)).
-        let mut options = NoteGetterOptions::new();
-        options = options.select(TransparentNote::properties().amount, amount, Option::none()).select(
-            TransparentNote::properties().secret_hash,
-            secret_hash,
-            Option::none()
-        ).set_limit(1);
-        let notes = pending_shields.get_notes(options);
-        let note = notes[0].unwrap_unchecked();
-        pending_shields.remove(note);
-
-        storage.balances.add(to, U128::from_integer(amount));
-    }
-
-    #[aztec(private)]
     fn transfer(from: AztecAddress, to: AztecAddress, amount: Field, nonce: Field) {
         if (!from.eq(context.msg_sender())) {
             assert_current_call_valid_authwit(&mut context, from);
@@ -147,17 +117,22 @@ contract PrivateToken {
         storage.balances.add(to, amount);
     }
 
+    // #[aztec(private)]
+    // fn burn(from: AztecAddress, amount: Field, nonce: Field) {
+    //     if (!from.eq(context.msg_sender())) {
+    //         assert_current_call_valid_authwit(&mut context, from);
+    //     } else {
+    //         assert(nonce == 0, "invalid nonce");
+    //     }
+
+    //     storage.balances.sub(from, U128::from_integer(amount));
+
+    //     PrivateToken::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+    // }
+
     #[aztec(private)]
-    fn burn(from: AztecAddress, amount: Field, nonce: Field) {
-        if (!from.eq(context.msg_sender())) {
-            assert_current_call_valid_authwit(&mut context, from);
-        } else {
-            assert(nonce == 0, "invalid nonce");
-        }
-
-        storage.balances.sub(from, U128::from_integer(amount));
-
-        PrivateToken::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
+    fn balance_of_private(owner: AztecAddress) -> pub Field {
+        storage.balances.balance_of(owner).to_integer()
     }
 
     #[aztec(private)]
@@ -221,9 +196,5 @@ contract PrivateToken {
 
     unconstrained fn total_supply() -> pub Field {
         storage.total_supply.read().to_integer()
-    }
-
-    unconstrained fn balance_of_private(owner: AztecAddress) -> pub Field {
-        storage.balances.balance_of(owner).to_integer()
     }
 }
