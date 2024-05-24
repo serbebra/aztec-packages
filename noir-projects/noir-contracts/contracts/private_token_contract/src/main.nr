@@ -117,22 +117,10 @@ contract PrivateToken {
         storage.balances.add(to, amount);
     }
 
-    // #[aztec(private)]
-    // fn burn(from: AztecAddress, amount: Field, nonce: Field) {
-    //     if (!from.eq(context.msg_sender())) {
-    //         assert_current_call_valid_authwit(&mut context, from);
-    //     } else {
-    //         assert(nonce == 0, "invalid nonce");
-    //     }
-
-    //     storage.balances.sub(from, U128::from_integer(amount));
-
-    //     PrivateToken::at(context.this_address())._reduce_total_supply(amount).enqueue(&mut context);
-    // }
-
     #[aztec(private)]
     fn balance_of_private(owner: AztecAddress) -> pub Field {
-        storage.balances.balance_of(owner).to_integer()
+        let owner_npk_m_hash = get_npk_m_hash(&mut context, owner);
+        storage.balances.to_unconstrained().balance_of(owner_npk_m_hash).to_integer()
     }
 
     #[aztec(private)]

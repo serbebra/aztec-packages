@@ -20,24 +20,23 @@ impl<T, Context> BalancesMap<T, Context> {
     }
 }
 
-impl<T> BalancesMap<T, &mut PrivateContext> {
-    pub fn balance_of<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
+impl<T> BalancesMap<T, ()> {
+    unconstrained fn balance_of<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
-        owner: AztecAddress
+        owner_npk_m_hash: Field
     ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
-        self.balance_of_with_offset(owner, 0)
+        self.balance_of_with_offset(owner_npk_m_hash, 0)
     }
 
-    pub fn balance_of_with_offset<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
+    unconstrained fn balance_of_with_offset<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
         self: Self,
-        owner: AztecAddress,
+        owner_npk_m_hash: Field,
         offset: u32
     ) -> U128 where T: NoteInterface<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN> + OwnedNote {
         let mut balance = U128::from_integer(0);
-        let mut options = NoteGetterOptions::new();
-        let owner_npk_m_hash = get_npk_m_hash(self.map.context, owner);
+        let mut options = NoteViewerOptions::new();
 
-        let opt_notes = self.map.get_notes(
+        let opt_notes = self.map.view_notes(
             options.select(
                 T::get_owner_selector(),
                 owner_npk_m_hash,
@@ -52,10 +51,17 @@ impl<T> BalancesMap<T, &mut PrivateContext> {
             }
         }
         if (opt_notes[len - 1].is_some()) {
-            balance = balance + self.balance_of_with_offset(owner, offset + opt_notes.len() as u32);
+            balance = balance + self.balance_of_with_offset(owner_npk_m_hash, offset + opt_notes.len() as u32);
         }
 
         balance
+    }
+}
+
+impl<T> BalancesMap<T, &mut PrivateContext> {
+
+    pub fn to_unconstrained(self: Self) -> BalancesMap<T, ()> {
+        BalancesMap { map: PrivateSet::new((), self.map.storage_slot) }
     }
 
     pub fn add<T_SERIALIZED_LEN, T_SERIALIZED_BYTES_LEN>(
