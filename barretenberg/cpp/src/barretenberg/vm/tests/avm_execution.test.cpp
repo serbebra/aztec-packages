@@ -15,11 +15,28 @@ using bb::utils::hex_to_bytes;
 
 class AvmExecutionTests : public ::testing::Test {
   public:
-    AvmTraceBuilder trace_builder;
+    std::array<FF, KERNEL_INPUTS_LENGTH> public_inputs{};
 
   protected:
     // TODO(640): The Standard Honk on Grumpkin test suite fails unless the SRS is initialised for every test.
-    void SetUp() override { srs::init_crs_factory("../srs_db/ignition"); };
+    void SetUp() override
+    {
+        srs::init_crs_factory("../srs_db/ignition");
+        public_inputs.at(DA_GAS_LEFT_CONTEXT_INPUTS_OFFSET) = 1000;
+        public_inputs.at(L2_GAS_LEFT_CONTEXT_INPUTS_OFFSET) = 1000;
+    };
+
+    /**
+     * @brief Generate the execution trace pertaining to the supplied instructions.
+     *
+     * @param instructions A vector of the instructions to be executed.
+     * @return The trace as a vector of Row.
+     */
+    std::vector<Row> gen_trace_from_instr(std::vector<Instruction> const& instructions)
+    {
+        std::vector<FF> returndata{};
+        return Execution::gen_trace(instructions, returndata, public_inputs);
+    }
 };
 
 // Basic positive test with an ADD and RETURN opcode.
@@ -59,8 +76,8 @@ TEST_F(AvmExecutionTests, basicAddReturn)
                       Field(&Instruction::operands,
                             ElementsAre(VariantWith<uint8_t>(0), VariantWith<uint32_t>(0), VariantWith<uint32_t>(0)))));
 
-    auto trace = Execution::gen_trace(instructions);
-    validate_trace(std::move(trace), {}, true);
+    auto trace = gen_trace_from_instr(instructions);
+    validate_trace(std::move(trace), { public_inputs }, true);
 }
 
 // Positive test for SET and SUB opcodes
@@ -120,12 +137,12 @@ TEST_F(AvmExecutionTests, setAndSubOpcodes)
                                         VariantWith<uint32_t>(51),
                                         VariantWith<uint32_t>(1)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the subtraction selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_op_sub == 1; });
     EXPECT_EQ(row->avm_main_ic, 10000); // 47123 - 37123 = 10000
-    validate_trace(std::move(trace), {}, true);
+    validate_trace(std::move(trace), { public_inputs }, true);
 }
 
 // Positive test for multiple MUL opcodes
@@ -198,7 +215,7 @@ TEST_F(AvmExecutionTests, powerWithMulOpcodes)
                       Field(&Instruction::operands,
                             ElementsAre(VariantWith<uint8_t>(0), VariantWith<uint32_t>(0), VariantWith<uint32_t>(0)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the multiplication selector and pc = 13
     auto row = std::ranges::find_if(
@@ -259,7 +276,7 @@ TEST_F(AvmExecutionTests, simpleInternalCall)
     // INTERNALRETURN
     EXPECT_EQ(instructions.at(5).op_code, OpCode::INTERNALRETURN);
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Expected sequence of PCs during execution
     std::vector<FF> pc_sequence{ 0, 1, 4, 5, 2, 3 };
@@ -338,7 +355,7 @@ TEST_F(AvmExecutionTests, nestedInternalCalls)
         EXPECT_EQ(instructions.at(i).op_code, opcode_sequence.at(i));
     }
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Expected sequence of PCs during execution
     std::vector<FF> pc_sequence{ 0, 1, 2, 8, 6, 7, 9, 10, 4, 5, 11, 3 };
@@ -408,7 +425,8 @@ TEST_F(AvmExecutionTests, jumpAndCalldatacopy)
                 AllOf(Field(&Instruction::op_code, OpCode::JUMP),
                       Field(&Instruction::operands, ElementsAre(VariantWith<uint32_t>(3)))));
 
-    auto trace = Execution::gen_trace(instructions, std::vector<FF>{ 13, 156 });
+    std::vector<FF> returndata{};
+    auto trace = Execution::gen_trace(instructions, returndata, public_inputs, std::vector<FF>{ 13, 156 });
 
     // Expected sequence of PCs during execution
     std::vector<FF> pc_sequence{ 0, 1, 3, 4 };
@@ -467,7 +485,7 @@ TEST_F(AvmExecutionTests, movOpcode)
               Field(&Instruction::operands,
                     ElementsAre(VariantWith<uint8_t>(0), VariantWith<uint32_t>(171), VariantWith<uint32_t>(33)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the MOV selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_mov == 1; });
@@ -521,7 +539,7 @@ TEST_F(AvmExecutionTests, cmovOpcode)
                                         VariantWith<uint32_t>(32),
                                         VariantWith<uint32_t>(18)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the CMOV selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_cmov == 1; });
@@ -571,7 +589,7 @@ TEST_F(AvmExecutionTests, indMovOpcode)
                       Field(&Instruction::operands,
                             ElementsAre(VariantWith<uint8_t>(1), VariantWith<uint32_t>(1), VariantWith<uint32_t>(2)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the MOV selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_mov == 1; });
@@ -613,7 +631,7 @@ TEST_F(AvmExecutionTests, setAndCastOpcodes)
                                         VariantWith<uint32_t>(17),
                                         VariantWith<uint32_t>(18)))));
 
-    auto trace = Execution::gen_trace(instructions);
+    auto trace = gen_trace_from_instr(instructions);
 
     // Find the first row enabling the cast selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_op_cast == 1; });
@@ -668,7 +686,7 @@ TEST_F(AvmExecutionTests, toRadixLeOpcode)
 
     // Assign a vector that we will mutate internally in gen_trace to store the return values;
     std::vector<FF> returndata = std::vector<FF>();
-    auto trace = Execution::gen_trace(instructions, returndata, std::vector<FF>{ FF::modulus - FF(1) });
+    auto trace = Execution::gen_trace(instructions, returndata, public_inputs, std::vector<FF>{ FF::modulus - FF(1) });
 
     // Find the first row enabling the TORADIXLE selector
     auto row = std::ranges::find_if(trace.begin(), trace.end(), [](Row r) { return r.avm_main_sel_op_radix_le == 1; });
