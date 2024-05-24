@@ -126,6 +126,7 @@ export {
   createAztecNodeClient,
   merkleTreeIds,
   mockTx,
+  TaggedNote,
 } from '@aztec/circuit-types';
 export { NodeInfo } from '@aztec/types/interfaces';
 
