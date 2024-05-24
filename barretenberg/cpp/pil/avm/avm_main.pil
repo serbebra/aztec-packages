@@ -362,9 +362,11 @@ namespace avm_main(256);
 
     //===== CONTROL_FLOW_CONSISTENCY ============================================
     pol INTERNAL_CALL_STACK_SELECTORS = (first + sel_internal_call + sel_internal_return + sel_halt);
-    pol OPCODE_SELECTORS = (sel_op_add + sel_op_sub + sel_op_div + sel_op_fdiv + sel_op_mul + sel_op_not
-                          + sel_op_eq + sel_op_and + sel_op_or + sel_op_xor + sel_op_cast + sel_op_lt
-                          + sel_op_lte + KERNEL_SELECTORS);
+
+    pol ALL_BINARY_SEL = sel_op_and + sel_op_or + sel_op_xor;
+    pol ALL_GADGET_SEL = sel_op_radix_le;
+    pol ALL_MEMORY_SEL = sel_cmov + sel_mov;
+    pol OPCODE_SELECTORS = sel_op_fdiv + ALU_ALL_SEL + ALL_BINARY_SEL + ALL_MEMORY_SEL + ALL_GADGET_SEL + KERNEL_SELECTORS;
 
     pol commit gas_cost_active;
     gas_cost_active - OPCODE_SELECTORS = 0;

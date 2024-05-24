@@ -167,5 +167,13 @@ class AvmTraceBuilder {
     uint32_t internal_return_ptr =
         0; // After a nested call, it should be initialized with MAX_SIZE_INTERNAL_STACK * call_ptr
     uint8_t call_ptr = 0;
+
+    void write_slice_to_memory(uint8_t space_id,
+                               uint32_t clk,
+                               uint32_t dst_offset,
+                               AvmMemoryTag r_tag,
+                               AvmMemoryTag w_tag,
+                               FF internal_return_ptr,
+                               std::vector<FF> const& slice);
 };
 } // namespace bb::avm_trace

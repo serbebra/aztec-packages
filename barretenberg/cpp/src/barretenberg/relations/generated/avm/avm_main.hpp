@@ -816,17 +816,19 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(72);
 
             auto tmp = (avm_main_gas_cost_active -
-                        (((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
-                                   avm_main_sel_op_fdiv) +
-                                  avm_main_sel_op_mul) +
-                                 avm_main_sel_op_not) +
-                                avm_main_sel_op_eq) +
-                               avm_main_sel_op_and) +
-                              avm_main_sel_op_or) +
-                             avm_main_sel_op_xor) +
-                            avm_main_sel_op_cast) +
-                           avm_main_sel_op_lt) +
-                          avm_main_sel_op_lte) +
+                        (((((avm_main_sel_op_fdiv +
+                             ((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_mul) +
+                                     avm_main_sel_op_div) +
+                                    avm_main_sel_op_not) +
+                                   avm_main_sel_op_eq) +
+                                  avm_main_sel_op_lt) +
+                                 avm_main_sel_op_lte) +
+                                avm_main_sel_op_shr) +
+                               avm_main_sel_op_shl) +
+                              avm_main_sel_op_cast)) +
+                            ((avm_main_sel_op_and + avm_main_sel_op_or) + avm_main_sel_op_xor)) +
+                           (avm_main_sel_cmov + avm_main_sel_mov)) +
+                          avm_main_sel_op_radix_le) +
                          ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
                                  avm_main_sel_op_chain_id) +
                                 avm_main_sel_op_version) +
@@ -844,17 +846,19 @@ template <typename FF_> class avm_mainImpl {
             Avm_DECLARE_VIEWS(73);
 
             auto tmp = ((((-avm_main_first + FF(1)) * (-avm_main_sel_halt + FF(1))) *
-                         (((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
-                                    avm_main_sel_op_fdiv) +
-                                   avm_main_sel_op_mul) +
-                                  avm_main_sel_op_not) +
-                                 avm_main_sel_op_eq) +
-                                avm_main_sel_op_and) +
-                               avm_main_sel_op_or) +
-                              avm_main_sel_op_xor) +
-                             avm_main_sel_op_cast) +
-                            avm_main_sel_op_lt) +
-                           avm_main_sel_op_lte) +
+                         (((((avm_main_sel_op_fdiv +
+                              ((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_mul) +
+                                      avm_main_sel_op_div) +
+                                     avm_main_sel_op_not) +
+                                    avm_main_sel_op_eq) +
+                                   avm_main_sel_op_lt) +
+                                  avm_main_sel_op_lte) +
+                                 avm_main_sel_op_shr) +
+                                avm_main_sel_op_shl) +
+                               avm_main_sel_op_cast)) +
+                             ((avm_main_sel_op_and + avm_main_sel_op_or) + avm_main_sel_op_xor)) +
+                            (avm_main_sel_cmov + avm_main_sel_mov)) +
+                           avm_main_sel_op_radix_le) +
                           ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
                                   avm_main_sel_op_chain_id) +
                                  avm_main_sel_op_version) +
@@ -891,17 +895,19 @@ template <typename FF_> class avm_mainImpl {
         {
             Avm_DECLARE_VIEWS(76);
 
-            auto tmp = ((((((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_div) +
-                                   avm_main_sel_op_fdiv) +
-                                  avm_main_sel_op_mul) +
-                                 avm_main_sel_op_not) +
-                                avm_main_sel_op_eq) +
-                               avm_main_sel_op_and) +
-                              avm_main_sel_op_or) +
-                             avm_main_sel_op_xor) +
-                            avm_main_sel_op_cast) +
-                           avm_main_sel_op_lt) +
-                          avm_main_sel_op_lte) +
+            auto tmp = ((((((avm_main_sel_op_fdiv +
+                             ((((((((((avm_main_sel_op_add + avm_main_sel_op_sub) + avm_main_sel_op_mul) +
+                                     avm_main_sel_op_div) +
+                                    avm_main_sel_op_not) +
+                                   avm_main_sel_op_eq) +
+                                  avm_main_sel_op_lt) +
+                                 avm_main_sel_op_lte) +
+                                avm_main_sel_op_shr) +
+                               avm_main_sel_op_shl) +
+                              avm_main_sel_op_cast)) +
+                            ((avm_main_sel_op_and + avm_main_sel_op_or) + avm_main_sel_op_xor)) +
+                           (avm_main_sel_cmov + avm_main_sel_mov)) +
+                          avm_main_sel_op_radix_le) +
                          ((((((((((avm_main_sel_op_sender + avm_main_sel_op_address) + avm_main_sel_op_portal) +
                                  avm_main_sel_op_chain_id) +
                                 avm_main_sel_op_version) +
