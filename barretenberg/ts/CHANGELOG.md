@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.42.0](https://github.com/AztecProtocol/aztec-packages/compare/barretenberg.js-v0.41.0...barretenberg.js-v0.42.0) (2024-05-25)
+
+
+### Features
+
+* Fold acir programs ([#6563](https://github.com/AztecProtocol/aztec-packages/issues/6563)) ([f7d6541](https://github.com/AztecProtocol/aztec-packages/commit/f7d65416c741790ce5b5cda8cba08d869a659670))
+
+
+### Bug Fixes
+
+* Add cbind declarations for new methods to fix autogen ([#6622](https://github.com/AztecProtocol/aztec-packages/issues/6622)) ([2429cd8](https://github.com/AztecProtocol/aztec-packages/commit/2429cd87a980eca62d2ff4543e6887f5ee9dd600))
+
+
+### Miscellaneous
+
+* Ultra goblin --&gt; mega ([#6674](https://github.com/AztecProtocol/aztec-packages/issues/6674)) ([d272abd](https://github.com/AztecProtocol/aztec-packages/commit/d272abd1b332aae8d062b2340afd5cabf61e31d9))
+
 ## [0.41.0](https://github.com/AztecProtocol/aztec-packages/compare/barretenberg.js-v0.40.1...barretenberg.js-v0.41.0) (2024-05-21)
 
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.42.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.41.0...aztec-package-v0.42.0) (2024-05-25)
+
+
+### Features
+
+* Inject fee payment update in base rollup ([#6403](https://github.com/AztecProtocol/aztec-packages/issues/6403)) ([4991188](https://github.com/AztecProtocol/aztec-packages/commit/4991188afcab7c5c707fea99797bd3f5222ab2dc))
+
+
+### Miscellaneous
+
+* Devnet setup for p2p bootstrap node ([#6660](https://github.com/AztecProtocol/aztec-packages/issues/6660)) ([e0bb743](https://github.com/AztecProtocol/aztec-packages/commit/e0bb743e8f6db7c589f88265e1cf1ee93e3e0c88)), closes [#6513](https://github.com/AztecProtocol/aztec-packages/issues/6513)
+
 ## [0.41.0](https://github.com/AztecProtocol/aztec-packages/compare/aztec-package-v0.40.1...aztec-package-v0.41.0) (2024-05-21)
 
 
