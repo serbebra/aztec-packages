@@ -1,21 +1,25 @@
 name: Run on Builder
-description: "Target builder with actions"
+description: "Execute actions on a target builder environment"
 
 inputs:
   run:
+    description: "The script or command to run on the builder"
     required: true
+
 runs:
-  # define an action, runs in OS of caller
   using: composite
   steps:
-    # Assumes ensure-builder has ran and BUILDER_SPOT_IP/BUILDER_SPOT_KEY are defined
-    - name: Run On Builder
+    - name: Set Up Environment Variables
+      shell: bash
+      run: |
+        echo "RUN_SCRIPT=sudo shutdown -P +40" >> $GITHUB_ENV
+        echo "RUN_SCRIPT=$RUN_SCRIPT && export GITHUB_REF_NAME=${{ github.ref_name }}" >> $GITHUB_ENV
+        echo "RUN_SCRIPT=$RUN_SCRIPT && cd ~/run-${{ env.RUN_ID }}" >> $GITHUB_ENV
+        echo "RUN_SCRIPT=$RUN_SCRIPT && ${{ inputs.run }}" >> $GITHUB_ENV
+
+    - name: Execute on Builder
       env:
-        # avoid double shell interpolation
-        RUN_SCRIPT: |
-          sudo shutdown -P 40
-          export GITHUB_REF_NAME=${{ github.ref_name }}
-          cd ~/run-${{ env.RUN_ID }}
-          ${{ inputs.run }}
+        BUILDER_SPOT_IP: ${{ secrets.BUILDER_SPOT_IP }}
+        BUILDER_SPOT_KEY: ${{ secrets.BUILDER_SPOT_KEY }}
       shell: bash
       run: scripts/run_on_builder "$RUN_SCRIPT"
